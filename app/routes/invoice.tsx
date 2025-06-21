@@ -17,13 +17,10 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
-const updateClientAddress = (address: Partial<Address>) => (client: Client) => {
+const updateClientAddress = (address: Partial<Address>) => (client: Address) => {
   return {
     ...client,
-    address: {
-      ...client.address,
-      ...address
-    }
+    ...address
   }
 }
 
@@ -33,8 +30,8 @@ export default function Home() {
   const [id, setId] = useState<string>(`${(new Date()).getTime()}`.substring(0, 10));
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [purchaseOrder, setPurchaseOrder] = useState<string>('---');
-  const [from, setFrom] = useState<Client>(me);
-  const [to, setTo] = useState<Client>(NULL_CLIENT);
+  const [from, setFrom] = useState<Address>(me.address);
+  const [to, setTo] = useState<Address>(NULL_CLIENT.address);
   const [payment, setPayment] = useState({
     terms: 'NET 30',
     method: {
@@ -51,9 +48,9 @@ export default function Home() {
 
   return <LineItemProvider>
     <div>
-      <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i]) }} saveInvoice={() => { }} />
+      <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={() => { }} />
       <main className="flex items-center justify-center pt-16 pb-4">
-        <div className="screen:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
+        <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
           <div className="flex">
             <div className="w-1/2 p-2"><img alt="logo" src={logo.url} style={{ maxHeight: "80px" }} /></div>
             <div className="w-1/2">
@@ -76,8 +73,8 @@ export default function Home() {
             </div>
           </div>
           <div className="flex justify-between">
-            <AddressPanel title='From:' address={from.address} onChange={d => setFrom(updateClientAddress(d))} />
-            <AddressPanel title='To:' address={to.address} onChange={d => setTo(updateClientAddress(d))} />
+            <AddressPanel title='From:' address={from} onChange={d => setFrom(updateClientAddress(d))} />
+            <AddressPanel title='To:' address={to} onChange={d => setTo(updateClientAddress(d))} />
           </div>
           <LineItems />
           <div className="w-full flex">
@@ -107,37 +104,4 @@ export default function Home() {
       </main>
     </div>
   </LineItemProvider>
-    ;
 }
-// export class DropdownButton extends PureComponent<PropsWithChildren<{ options: { key: string; value: string }[], onClick: (value: string, index: number) => void }>, { open: boolean }> {
-//   constructor(props: PropsWithChildren<{ options: { key: string; value: string }[], onClick: (value: string, index: number) => void }>) {
-//     super(props);
-//     this.state = { open: false };
-//   }
-
-//   handleClick(value: string, index: number) {
-//     const { onClick } = this.props;
-//     onClick(value, index);
-//     this.setState({ open: false })
-//   }
-
-//   render() {
-//     const { options, children } = this.props;
-//     const { open } = this.state;
-//     return (
-
-//       <div className="p-2 group">
-//         <div className='relative'>
-//           <button className={`p-2 px-4 rounded-t-lg ${open || 'rounded-b-lg'} transition-all group-hover:bg-gray-600 ring-2 ring-white group-hover:ring-gray-900 bg-gray-700 text-white font-bold flex items-center`} type="button" onClick={() => this.setState({ open: !open })}>{children}{open ? <ChevronUpIcon className={"-mr-1 ml-2 h-5 w-5"} /> : <ChevronDownIcon className={"-mr-1 ml-2 h-5 w-5"} />}</button>
-//           <div className={`absolute bg-gray-700 rounded-b-lg transition-all ring-2 ring-white group-hover:ring-gray-900 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-//             {options.map(({ key, value }, i) => (
-//               <button key={key} className=' text-white text-xs block w-full justify-center px-2 py-1 hover:bg-gray-600' type="button" value={value} onClick={() => this.handleClick(value, i)}>{key}</button>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//     )
-//   }
-// }
-
