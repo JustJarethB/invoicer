@@ -6,7 +6,6 @@ import { formatCurrency } from "../../../utils/formatCurrency";
 const defaultOuterCellClasses = "p-1 table-cell"
 const defaultInnerCellClasses = "w-full font-bold"
 const lineTypeOptions = [
-    { label: '---', value: -1, disabled: true },
     { label: 'Service', value: 0 },
     { label: 'Rental', value: 1 },
     { label: 'Expense', value: 2 }

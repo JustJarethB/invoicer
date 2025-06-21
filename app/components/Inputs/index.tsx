@@ -57,7 +57,7 @@ export const DateInput = ({ placeholder = '', value, defaultValue, onChange, cla
     )
 
 }
-export const SelectInput = ({ placeholder = '', value, onChange, className = "", prefix, suffix, options = [], ...rest }: InputProps<'input'> & { options: string[] | { label: string, value: string | number | undefined, disabled?: boolean }[] }) => {
+export const SelectInput = ({ placeholder = '', value = "", onChange, className = "", prefix, suffix, options = [], ...rest }: InputProps<'input'> & { options: string[] | { label: string, value: string | number | undefined, disabled?: boolean }[] }) => {
     const optionsToUse = options.map(v => typeof v !== 'string' ? v : ({ label: v, value: v }));
     if (!value) {
         optionsToUse.unshift({ label: "---", value: "", disabled: true });
