@@ -14,13 +14,13 @@ export const NULL_CLIENT: Client = {
     phone: "",
     address: new Address("", "", "", "", ""),
 }
-export const useLoadSelf = (): Client => ({
-    id: "self",
-    contactName: "Jareth Bower",
-    address: new Address("Abbots Media Limited", "1 Summerhouse Way", "Abbots Langley", "Hertfordshire", "WD5 0DY"),
-    email: "JustJarethB@gmail.com",
-    phone: "(+44)7 414 464 648",
-})
+// export const useLoadSelf = (): Client => ({
+//     id: "self",
+//     contactName: "Jareth Bower",
+//     address: new Address("Abbots Media Limited", "1 Summerhouse Way", "Abbots Langley", "Hertfordshire", "WD5 0DY"),
+//     email: "JustJarethB@gmail.com",
+//     phone: "(+44)7 414 464 648",
+// })
 export const useLoadClients = (): Client[] => [
     {
         id: "steph",
