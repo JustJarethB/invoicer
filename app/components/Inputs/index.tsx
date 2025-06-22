@@ -35,7 +35,7 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
 )
 
 type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void };
-export const TextInput = ({ placeholder = '', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'textarea'>) => {
+export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'textarea'>) => {
     const [_value, setValue] = useState(value ?? defaultValue ?? '');
     const rex = (`${_value}`.match(new RegExp(/\n/g)) || []).length;
     const rows = rex + 1;
