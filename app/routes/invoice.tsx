@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DateInput, TextInput } from "~/components/Inputs";
-import { NULL_CLIENT, useLoadClients } from "~/data/client";
+import { getClients, NULL_CLIENT, type Client } from "~/data/client";
 import { Address } from "~/data/address";
 import { LineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { AddressPanel } from "~/components/home/AddressPanel";
@@ -12,6 +12,7 @@ import type { Route } from "./+types/invoice";
 import { type PaymentDetails } from "~/data/payment";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
+import { ManualSave } from "~/components/home/ManualSave";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -29,12 +30,11 @@ const updateClientAddress = (address: Partial<Address>) => (client: Address) => 
 export async function clientLoader() {
   const from: Address = await db.get(["from-address"]) ?? NULL_CLIENT.address;
   const payment: PaymentDetails = await db.get(["payment-details"]) ?? {}
-  console.log("from", from, "payment", payment)
-  return { from, payment: payment };
+  const clients: Client[] = await getClients();
+  return { from, payment, clients };
 }
 
-export default function Home({ loaderData: { from, payment } }: Route.ComponentProps) {
-  const clients = useLoadClients()
+export default function Home({ loaderData: { from, payment, clients } }: Route.ComponentProps) {
   const [id, setId] = useState<string>(`${(new Date()).getTime()}`.substring(0, 10));
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [purchaseOrder, setPurchaseOrder] = useState<string>('---');
@@ -77,7 +77,9 @@ export default function Home({ loaderData: { from, payment } }: Route.ComponentP
             </div>
 
             <div className={` w-full md:w-1/2 p-2`}>
-              <AddressPanel title='To:' address={to} onChange={d => setTo(updateClientAddress(d))} />
+              <ManualSave name="to-address">
+                <AddressPanel title='To:' address={to} onChange={d => setTo(updateClientAddress(d))} />
+              </ManualSave>
             </div>
           </div>
           <LineItems />

@@ -22,6 +22,7 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
             <div className="relative">
                 <button
                     type="button"
+                    disabled={options.length === 0}
                     className={`p-2 px-4 rounded-t-lg ${open || 'rounded-b-lg'} transition-all group-hover:bg-gray-600 ring-2 ring-white group-hover:ring-gray-900 bg-gray-700 text-white font-bold flex items-center`}
                     onClick={() => setOpen(!open)}
                 >
