@@ -1,3 +1,5 @@
+// TODO: terms/email/phone/info are universal
+// rest are dependent on the type of payment
 export type PaymentDetails = {
     terms: string;
     type: string;
