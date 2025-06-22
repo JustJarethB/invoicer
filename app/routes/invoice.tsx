@@ -28,7 +28,7 @@ const updateClientAddress = (address: Partial<Address>) => (client: Address) => 
 }
 export async function clientLoader() {
   const from: Address = await db.get(["from-address"]) ?? NULL_CLIENT.address;
-  const payment: PaymentDetails = await db.get(["payment-details"])
+  const payment: PaymentDetails = await db.get(["payment-details"]) ?? {}
   console.log("from", from, "payment", payment)
   return { from, payment: payment };
 }
