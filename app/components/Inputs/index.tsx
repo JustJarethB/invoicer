@@ -1,4 +1,4 @@
-import { useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
+import { useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
 import "./index.css"
 
 const Prefix = ({ children }: PropsWithChildren) => {
@@ -75,3 +75,44 @@ export const SelectInput = ({ placeholder = '', value = "", onChange, className 
     )
 
 }
+type ImageInputProps = ComponentPropsWithoutRef<'img'> & {
+    placeholder?: string;
+    value?: string;
+    defaultValue?: string;
+    onChange?: (value: string) => void;
+} & Pick<InputProps<'input'>, 'name'>;
+export const ImageInput = ({ placeholder = 'https://via.placeholder.com/150', value, defaultValue, onChange, name, className = "", ...rest }: ImageInputProps) => {
+    const [imageSrc, setImageSrc] = useState(value || defaultValue);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const hiddenInputRef = useRef<HTMLInputElement>(null);
+    console.log("ImageInput", { placeholder, value, defaultValue, imageSrc });
+    const handleImageClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return console.warn("No file selected");
+        setImageSrc(URL.createObjectURL(file));
+    }
+    return (
+        <>
+            <img
+                src={imageSrc ?? placeholder}
+                alt="Upload"
+                {...rest}
+                onClick={handleImageClick}
+                className={`${className} cursor-pointer`}
+            />
+            <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                name={name}
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+            />
+
+        </>
+    );
+};

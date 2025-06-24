@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DateInput, TextInput } from "~/components/Inputs";
+import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
 import { getClients, NULL_CLIENT, type Client } from "~/data/client";
 import { Address } from "~/data/address";
 import { LineItemProvider } from "~/components/home/LineItems/LineItemProvider";
@@ -31,17 +31,18 @@ export async function clientLoader() {
   const from: Address = await db.get(["from-address"]) ?? NULL_CLIENT.address;
   const payment: PaymentDetails = await db.get(["payment-details"]) ?? {}
   const clients: Client[] = await getClients();
-  return { from, payment, clients };
+  const logo: { url: string } = await db.get(["logo"]) ?? {};
+  return { from, payment, clients, logo };
 }
 
-export default function Home({ loaderData: { from, payment, clients } }: Route.ComponentProps) {
+export default function Home({ loaderData: { from, payment, clients, logo } }: Route.ComponentProps) {
   const [id, setId] = useState<string>(`${(new Date()).getTime()}`.substring(0, 10));
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [purchaseOrder, setPurchaseOrder] = useState<string>('---');
 
   const [to, setTo] = useState<Address>(NULL_CLIENT.address);
   // TODO: load logo from client
-  const logo = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" }
+  const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" }
 
   return <LineItemProvider>
     <div>
@@ -49,7 +50,11 @@ export default function Home({ loaderData: { from, payment, clients } }: Route.C
       <main className="flex items-center justify-center pt-16 pb-4">
         <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
           <div className="flex">
-            <div className="w-1/2 p-2"><img alt="logo" src={logo.url} style={{ maxHeight: "80px" }} /></div>
+            <div className="w-1/2 p-2">
+              <Autosave name="logo">
+                <ImageInput name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
+              </Autosave>
+            </div>
             <div className="w-1/2">
               <div className="p-2">
                 <div className="p-2 w-full ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm">
