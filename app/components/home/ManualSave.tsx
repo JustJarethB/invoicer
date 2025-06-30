@@ -38,7 +38,7 @@ export const ManualSave = <T,>({ children, name, hideIcon }: PropsWithChildren<P
         <form ref={formRef} onChange={onChange} className="relative">
             <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
                 <Tooltip title="Save these values for later" >
-                    <ArrowPathRoundedSquareIcon onClick={onSave} className={`${isStale ? "text-amber-400" : "text-blue-400 rotate-180"} transition-transform duration-300 h-5 w-5 cursor-pointer`} />
+                    <ArrowPathRoundedSquareIcon onClick={onSave} className={`${isStale ? "text-amber-400" : "text-blue-400 rotate-180 opacity-50"} transition-all duration-300 h-5 w-5 cursor-pointer`} />
                 </Tooltip>
             </span>
             {children}

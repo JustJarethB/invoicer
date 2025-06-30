@@ -56,7 +56,7 @@ export const Autosave = ({ children, name, hideIcon }: PropsWithChildren<Props>)
         <form onChange={onChange} className="relative">
             <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
                 <Tooltip title="These values are stored locally for next time" >
-                    <ArrowPathIcon className={`${isSaving ? "text-amber-400 animate-spin" : "text-blue-400"} transition-transform delay-300 h-5 w-5 cursor-help`} />
+                    <ArrowPathIcon className={`${isSaving ? "text-amber-400 animate-spin" : "text-blue-400"} opacity-50 transition-transform delay-300 h-5 w-5 cursor-help`} />
                 </Tooltip>
             </span>
             {children}
