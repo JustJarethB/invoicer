@@ -9,19 +9,11 @@ import { TextInput } from "../Inputs";
 import type { Address } from "~/data/address";
 import { Button } from "./Button";
 import { saveClient, type Client } from "~/data/client";
+import { formJson } from "../../utils/formJson";
 type Props = {
     name: string;
     hideIcon?: boolean;
 }
-const formJson = <T extends {}>(form: HTMLFormElement): T => {
-    const formData = new FormData(form);
-    const data: Record<string, string> = {};
-    formData.forEach((value, key) => {
-        data[key] = value as string;
-    });
-    return data as T
-}
-
 export const ManualSave = <T,>({ children, name, hideIcon }: PropsWithChildren<Props>) => {
     const formRef = useRef<HTMLFormElement>(null);
     const [isStale, setIsStale] = useState(false);

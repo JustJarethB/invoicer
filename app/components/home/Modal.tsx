@@ -1,5 +1,4 @@
 import type { PropsWithChildren } from "react";
-import { Button } from "./Button";
 
 type Props = {
     title: string;

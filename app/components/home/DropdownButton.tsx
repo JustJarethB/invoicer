@@ -18,7 +18,7 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
     };
 
     return (
-        <div className="p-2 group">
+        <div className="group">
             <div className="relative">
                 <button
                     type="button"
@@ -34,7 +34,7 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
                     )}
                 </button>
                 <div
-                    className={`absolute bg-gray-700 rounded-b-lg transition-all ring-2 ring-white group-hover:ring-gray-900 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    className={`absolute bg-gray-700 rounded-b-lg transition-all w-full ring-2 ring-white group-hover:ring-gray-900 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'
                         }`}
                 >
                     {options.map(({ key, value }, i) => (
