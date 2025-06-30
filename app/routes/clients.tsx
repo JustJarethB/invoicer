@@ -24,7 +24,6 @@ export default () => {
         loadClients();
     }, [db, setClients]);
     return <main className="pt-16 pb-4 container mx-auto">
-        <h1 className="w-full text-center">Clients</h1>
         <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(32%,32%))] justify-center gap-4 p-4">
             {[...clients, newClient()].filter(Boolean).map((client, index) => (
                 <ClientPanel key={index} client={client} />
