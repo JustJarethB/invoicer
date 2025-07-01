@@ -62,8 +62,8 @@ const ClientPanel = ({ client }: { client: Client }) => {
     }, [client.id])
     return <form onSubmit={onSubmit} className="group p-4 ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm shadow relative " onChange={(e) => { setIsEditing(true); }}>
         <TextInput required name="contactName" className=" text-lg font-bold focus:ring-white" placeholder="Contact Name" defaultValue={client.contactName} />
-        <TextInput name="name" placeholder="Company Name" defaultValue={address?.name} />
-        <TextInput name="streetAddress" placeholder="Address Line 1" defaultValue={address?.streetAddress} />
+        <TextInput name="name" placeholder="Name" defaultValue={address?.name} />
+        <TextInput name="streetAddress" placeholder="Street Address" defaultValue={address?.streetAddress} />
         <TextInput name="city" placeholder="City/Town" defaultValue={address?.city} />
         <TextInput name="county" placeholder="County" defaultValue={address?.county} />
         <TextInput name="postCode" placeholder="Postcode" defaultValue={address?.postCode} />
