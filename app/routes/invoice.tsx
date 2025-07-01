@@ -52,7 +52,7 @@ export default function Home({ loaderData: { from, payment, clients, logo } }: R
           <div className="flex">
             <div className="w-1/2 p-2">
               <Autosave name="logo">
-                <ImageInput name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
+                <ImageInput className="rounded" name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
               </Autosave>
             </div>
             <div className="w-1/2">
