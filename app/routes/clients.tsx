@@ -13,36 +13,34 @@ const newClient = (): Client => ({ ...NULL_CLIENT, id: `${(new Date()).getTime()
 export default () => {
     const db = useDb();
     const [clients, setClients] = useState<Client[]>([])
+    const [cacheBuster, setCacheBuster] = useState(0);
+    const refreshCache = useCallback(() => {
+        setCacheBuster((prev) => prev + 1);
+    }, []);
     useEffect(() => {
         const loadClients = async () => {
-            const keys: string[] = await db.get(['clientKeys']) ?? [];
-            const clientsData = await Promise.all(keys.map(async (key) => {
-                return await db.get(['clients', key]) as Client;
-            }));
+            const clientsData = await db.getAll(['clients']) as Client[]
             setClients(clientsData);
         }
         loadClients();
-    }, [db, setClients]);
+    }, [db, setClients, cacheBuster]);
     return <main className="pt-16 pb-4 container mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(32%,32%))] justify-center gap-4 p-4">
-            {[...clients, newClient()].filter(Boolean).map((client, index) => (
-                <ClientPanel key={index} client={client} />
+            {[...clients, newClient()].filter(Boolean).map((client) => (
+                <ClientPanel key={client.id} client={client} refreshCache={refreshCache} />
             ))}
         </div>
     </main>
 }
 
-const ClientPanel = ({ client }: { client: Client }) => {
+const ClientPanel = ({ client, refreshCache }: { client: Client, refreshCache: () => void }) => {
     const db = useDb();
     const saveDB = async (key: string, client: Client) => {
-        const data = await db.get(['clientKeys']) ?? [];
         db.save(['clients', key], client);
-        db.save(['clientKeys'], [...new Set([...data, key]).values()]);
     }
     const removeDB = async (key: string) => {
-        const data = await db.get(['clientKeys']) ?? [];
-        db.save(['clientKeys'], data.filter((item: string) => item !== key));
         db.remove(['clients', key]);
+        refreshCache();
     }
     const { address } = client;
     const [isEditing, setIsEditing] = useState(false);
@@ -76,7 +74,7 @@ const ClientPanel = ({ client }: { client: Client }) => {
             <Button icon className="opacity-0 group-hover:opacity-100" title={`Delete ${client.contactName || 'contact'}?`} size="sm" color="danger" onClick={() => setShowDeleteModal(true)}><XMarkIcon className="h-5" /></Button>
         </div>
         {showDeleteModal && <ConfirmDeleteModal onClose={() => setShowDeleteModal(false)} onConfirm={() => {
-            removeDB(client.contactName);
+            removeDB(client.id);
             setShowDeleteModal(false);
         }} />}
     </form>
