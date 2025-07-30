@@ -57,8 +57,8 @@ const ClientModal = ({ data, onClose }: { data: Address; onClose: () => void }) 
                 <Button color="primary" className="mt-4" onClick={async () => {
                     const saveData: Client = {
                         id: `${(new Date()).getTime()}`,
-                        ...formJson<Pick<Client, 'contactName'>>(formMetaRef.current as HTMLFormElement),
-                        address: formJson<Address>(formAddressRef.current as HTMLFormElement),
+                        ...(await formJson<Pick<Client, 'contactName'>>(formMetaRef.current as HTMLFormElement)),
+                        address: await formJson<Address>(formAddressRef.current as HTMLFormElement),
                         email: "",
                         phone: "",
                     }

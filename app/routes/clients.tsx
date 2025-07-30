@@ -45,9 +45,9 @@ const ClientPanel = ({ client, refreshCache }: { client: Client, refreshCache: (
     const { address } = client;
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const onSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const { contactName, phone, email, ...address } = formJson<Omit<Client, 'address' | "id"> & Client['address']>(e.currentTarget)
+        const { contactName, phone, email, ...address } = await formJson<Omit<Client, 'address' | "id"> & Client['address']>(e.currentTarget)
         const updatedClient: Client = {
             id: client.id || `${(new Date()).getTime()}`,
             contactName,
