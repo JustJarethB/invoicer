@@ -6,12 +6,14 @@ import { formJson } from "~/utils/formJson";
 type Props = {
     name: string;
     hideIcon?: boolean;
+    onChange?: ((newState: Record<string, string>) => void)
 }
 
-export const Autosave = ({ children, name, hideIcon }: PropsWithChildren<Props>) => {
+export const Autosave = ({ children, name, hideIcon, onChange: onChangeParent }: PropsWithChildren<Props>) => {
     const [isSaving, setIsSaving] = useState(false);
     const onChange = async (e: React.ChangeEvent<HTMLFormElement>) => {
         const data: Record<string, string> = await formJson(e.currentTarget);
+        onChangeParent?.(data);
         setIsSaving(true);
         await db.save([name], data)
         setIsSaving(false);

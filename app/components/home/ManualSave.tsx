@@ -1,9 +1,7 @@
 import { ArrowPathRoundedSquareIcon } from "@heroicons/react/16/solid";
 import { useRef, useState, type PropsWithChildren } from "react";
 import { Tooltip } from "../Tooltip";
-import { db } from "~/db";
 import { Modal } from "./Modal";
-import { StandardField } from "./StandardField";
 import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
 import type { Address } from "~/data/address";
@@ -13,12 +11,16 @@ import { formJson } from "../../utils/formJson";
 type Props = {
     name: string;
     hideIcon?: boolean;
+    onChange?: ((newState: Record<string, string>) => void)
 }
-export const ManualSave = <T,>({ children, name, hideIcon }: PropsWithChildren<Props>) => {
+export const ManualSave = <T,>({ children, name, hideIcon, onChange: onChangeParent }: PropsWithChildren<Props>) => {
     const formRef = useRef<HTMLFormElement>(null);
     const [isStale, setIsStale] = useState(false);
     const [saveData, setSaveData] = useState<Address | null>(null);
-    const onChange = () => setIsStale(true);
+    const onChange = async () => {
+        setIsStale(true);
+        onChangeParent?.(await formJson(formRef.current as HTMLFormElement));
+    };
     const onSave = async () => {
         if (!formRef.current) throw new Error("Form reference is not set");
         const data = formJson<Address>(formRef.current);
@@ -64,7 +66,6 @@ const ClientModal = ({ data, onClose }: { data: Address; onClose: () => void }) 
                     }
                     await saveClient(`${(new Date()).getTime()}`, saveData);
                     onClose();
-                    // setIsStale(false);
                 }}>Save</Button>
             </div>
         </Modal>
