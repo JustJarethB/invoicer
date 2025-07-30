@@ -34,5 +34,5 @@ const getSizeClassName = (icon: boolean, size: ButtonProps['size']) => {
 }
 
 export const Button = ({ children, onClick, color, icon = false, outline = false, size = 'md', className, ...rest }: ComponentPropsWithoutRef<'button'> & ButtonProps) => (
-    <button {...rest} className={`${getSizeClassName(icon, size)} ${outline && "ring !bg-transparent"} font-bold transition-all duration-200 cursor-pointer disabled:cursor-auto disabled:pointer-events-none ${getColorClassName(color)} ${className}`} onClick={onClick}>{children}</button>
+    <button {...rest} className={`${getSizeClassName(icon, size)} ${outline && "ring !bg-transparent"} font-bold transition-all duration-200 cursor-pointer disabled:cursor-auto disabled:pointer-events-none ${getColorClassName(color)} ${rest.disabled && "brightness-75 grayscale-25"} ${className}`} onClick={onClick}>{children}</button>
 );
