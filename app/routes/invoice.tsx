@@ -57,7 +57,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   }
   return <div>
     <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={handleSaveInvoice} />
-    <main className="flex items-center justify-center pt-16 pb-4">
+    <main className="flex items-center justify-center not-print:pt-16 not-print:pb-4">
       <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
         <div className="flex">
           <div className="w-1/2 p-2">
