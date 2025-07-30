@@ -1,4 +1,5 @@
-import { createContext, type ReactNode, useState, useContext } from "react";
+import { createContext, type ReactNode, useState, useContext, type PropsWithChildren } from "react";
+import { withProvider } from "../withProvider";
 
 export type LineItem = {
     date?: string;
@@ -48,3 +49,4 @@ export const useSetLineItem = (index: number) => {
         setLineItems(newLineItems);
     };
 };
+export const withLineItemProvider = withProvider(LineItemProvider);
