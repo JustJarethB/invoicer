@@ -1,7 +1,7 @@
 import { TextInput } from "~/components/Inputs";
 import type { Address } from "~/data/address";
 
-export const AddressPanel = ({ address, onChange, className = '', title }: { address: Address; onChange: (change: Partial<Address>) => void; className?: string; title: string; }) => (
+export const AddressPanel = ({ address, title }: { address: Address; title: string; }) => (
     <div className="w-full ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm p-2">
         <h2>{title}</h2>
         <TextInput name="name" defaultValue={address.name} className=" pb-4 w-full px-2 font-bold" placeholder="Name" />
