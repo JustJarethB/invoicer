@@ -21,7 +21,7 @@ const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) =>
 
 export default function Navbar() {
     return <div className="grid grid-cols-12">
-        <nav className="print:collapse col-span-1 bg-gray-100 dark:bg-gray-800 p-4 shadow-md min-h-screen">
+        <nav className="print:collapse col-span-1 bg-gray-100 dark:bg-gray-800 p-4 shadow-md h-screen sticky top-0">
             <StyledLink to="/">Invoice</StyledLink>
             <StyledLink to="/clients">Clients</StyledLink>
             <StyledLink to="/invoices">Invoices</StyledLink>
