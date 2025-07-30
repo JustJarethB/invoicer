@@ -18,7 +18,7 @@ export const LineItems = () => {
             </div>
             <div className="ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm table-row-group">
                 {/* Need to give key that doesn't change with UserInput, can't use index either */}
-                {ids.map((id) => <LineItem id={id} />)}
+                {ids.map((id) => <LineItem key={id} id={id} />)}
             </div>
         </div>
     );
