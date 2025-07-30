@@ -62,7 +62,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
         <div className="flex">
           <div className="w-1/2 p-2">
             <Autosave onChange={logo => (setLogo(logo as any))} name="logo">
-              <ImageInput className="rounded" name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
+              <ImageInput className={`rounded ${logo.url ? "" : "print:hidden"}`} name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
             </Autosave>
           </div>
           <div className="w-1/2">
