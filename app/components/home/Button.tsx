@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef } from "react";
 type ButtonProps = {
-    color?: 'primary' | 'secondary' | 'danger' | 'success' | 'default';
+    color?: 'primary' | 'secondary' | 'danger' | 'success' | 'default' | 'warning';
     icon?: boolean;
     size?: 'sm' | 'md' | 'lg';
     outline?: boolean;
@@ -8,11 +8,12 @@ type ButtonProps = {
 const getColorClassName = (type: ButtonProps['color']) => {
     switch (type) {
         case 'primary':
+        case 'warning':
             return 'bg-amber-600 dark:bg-amber-700 dark:hover:bg-amber-800 hover:bg-amber-700 text-white dark:[.ring]:text-amber-700 [.ring]:text-amber-600';
         case 'secondary':
             return 'bg-gray-600 hover:bg-gray-700 text-white';
         case 'danger':
-            return 'bg-red-600 dark:bg-red-800 hover:bg-red-700 text-white dark:[.ring]:text-red-800 [.ring]:text-red-600';
+            return 'bg-red-600 dark:bg-red-800 hover:bg-red-700 text-white dark:[.ring]:text-red-800 [.ring]:text-red-600 [.ring]:hover:text-red-700';
         case 'success':
             return 'bg-green-600 dark:bg-green-800 hover:bg-green-700 text-white dark:[.ring]:text-green-800 [.ring]:text-green-600';
         default:
