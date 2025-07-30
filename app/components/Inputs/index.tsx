@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
 import "./index.css"
 
 const Prefix = ({ children }: PropsWithChildren) => {
@@ -36,23 +36,28 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
 
 type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void };
 export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'textarea'>) => {
-    const [_value, setValue] = useState(value ?? defaultValue ?? '');
-    const rex = (`${_value}`.match(new RegExp(/\n/g)) || []).length;
-    const rows = rex + 1;
+    const ref = useRef<HTMLTextAreaElement>(null)
+    useEffect(() => {
+        updateHeight()
+    }, [value, defaultValue])
+    const updateHeight = () => {
+        if (!ref.current) return
+        ref.current.style.height = 'auto'; // Reset height to auto to calculate scrollHeight correctly
+        ref.current.style.height = ref.current.scrollHeight + 'px'; // Adjust height to fit content
+    }
     const onChangeHandler = (v: string) => {
-        setValue(v);
         onChange?.(v);
+        updateHeight()
     }
     return (
         <InputWrapper {...{ className, prefix, suffix }}>
-            <textarea disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${''}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChangeHandler(e.currentTarget.value)} rows={rows} />
+            <textarea ref={ref} disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${''}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChangeHandler(e.currentTarget.value)} rows={1} />
         </InputWrapper>
     )
 
 }
 export const DateInput = ({ placeholder = '', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'input'>) => {
     const val = value ?? defaultValue
-    const rex = (`${val}`.match(new RegExp(/\n/g)) || []).length;
     return (
         <InputWrapper {...{ className, prefix, suffix }}>
             <input type="date" disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none resize-none ${val ? '' : 'text-gray-400 print:hidden'}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChange?.(e.currentTarget.value)} />

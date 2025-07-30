@@ -8,7 +8,7 @@ export const LineItems = () => {
             <div className="pb-2 table-row">
                 <div className={defaultHeaderClasses}>Service Date</div>
                 <div className={`${defaultHeaderClasses} print:hidden`}>Type</div>
-                <div className={defaultHeaderClasses}>Ref</div>
+                <div className={defaultHeaderClasses}>Reference</div>
                 <div className={defaultHeaderClasses}>Unit</div>
                 <div className={defaultHeaderClasses}>Quantity</div>
                 <div className={defaultHeaderClasses}>Unit Price</div>
