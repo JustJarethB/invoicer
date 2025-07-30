@@ -52,7 +52,7 @@ const ClientModal = ({ data, onClose }: { data: Address; onClose: () => void }) 
                 <TextInput name="contactName" className="font-bold text-xl" placeholder="Display Name" />
             </form>
             <form ref={formAddressRef}>
-                <AddressPanel title="" onChange={() => { }} address={data} />
+                <AddressPanel title="" address={data} />
             </form>
             <div className="flex items-center justify-between">
                 <Button color="secondary" className="mt-4" onClick={onClose}>Cancel</Button>
