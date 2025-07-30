@@ -4,5 +4,6 @@ export default [
     layout("layouts/navbar.tsx", [
         index("routes/invoice.tsx"),
         route("clients", "routes/clients.tsx"),
+        route("invoices", "routes/invoices.tsx"),
     ]),
 ] satisfies RouteConfig;

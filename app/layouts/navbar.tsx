@@ -24,6 +24,7 @@ export default function Navbar() {
         <nav className="print:collapse col-span-1 bg-gray-100 dark:bg-gray-800 p-4 shadow-md min-h-screen">
             <StyledLink to="/">Invoice</StyledLink>
             <StyledLink to="/clients">Clients</StyledLink>
+            <StyledLink to="/invoices">Invoices</StyledLink>
         </nav>
         <main className="col-span-11 print:col-span-full">
             <Outlet />
