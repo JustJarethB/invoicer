@@ -13,7 +13,7 @@ const lineTypeOptions = [
 const lineUnitOptions = [
     'Hourly',
     'Daily',
-    'Consolidated Items'
+    'Items'
 ]
 export const LineItem = ({ id }: { id: number; }) => {
     const item = useLineItem(id);
