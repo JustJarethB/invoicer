@@ -53,7 +53,6 @@ export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, 
 export const DateInput = ({ placeholder = '', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'input'>) => {
     const val = value ?? defaultValue
     const rex = (`${val}`.match(new RegExp(/\n/g)) || []).length;
-    const rows = rex + 1;
     return (
         <InputWrapper {...{ className, prefix, suffix }}>
             <input type="date" disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none resize-none ${val ? '' : 'text-gray-400 print:hidden'}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChange?.(e.currentTarget.value)} />
@@ -84,8 +83,6 @@ type ImageInputProps = ComponentPropsWithoutRef<'img'> & {
 export const ImageInput = ({ placeholder = 'https://via.placeholder.com/150', value, defaultValue, onChange, name, className = "", ...rest }: ImageInputProps) => {
     const [imageSrc, setImageSrc] = useState(value || defaultValue);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const hiddenInputRef = useRef<HTMLInputElement>(null);
-    console.log("ImageInput", { placeholder, value, defaultValue, imageSrc });
     const handleImageClick = () => {
         fileInputRef.current?.click();
     };
