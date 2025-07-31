@@ -29,7 +29,7 @@ export const LineItem = ({ id }: { id: string; }) => {
     };
     // TODO: was moving to unmanaged but need to useState for total value qty*unitPrice
     return (
-        <div className={`[&>*:nth-child(odd)]dark:bg-gray-900 [&>*:nth-child(odd)]bg-gray-100 table-row print:text-xs last:print:hidden relative group`}>
+        <div className={`[&>*:nth-child(odd)]dark:bg-gray-900 [&>*:nth-child(odd)]bg-gray-100 grid grid-cols-subgrid col-span-full last:print:hidden relative group`}>
             <div className={defaultOuterCellClasses}>
                 <DateInput className={defaultInnerCellClasses} defaultValue={item.date} onChange={(v) => onChange({ date: v })} />
             </div>
