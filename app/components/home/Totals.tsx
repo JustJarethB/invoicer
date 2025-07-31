@@ -20,7 +20,7 @@ export const Totals = () => {
                 {/* <StandardField title="VAT" parentClass="text-gray-500" value={formatCurrency(vat)} /> */}
                 <hr className="py-2 dark:text-gray-800" />
                 {/* <StandardField title="Total" prefix="£" parentClass="" value={formatCurrency(serviceSubTotal + rentalSubTotal + expenseSubTotal)} /> */}
-                <StandardField inputClassName="text-right" readOnly title="Total" prefix="£" parentClass="" value={formatCurrency(subTotal)} />
+                <StandardField className="print:font-bold" inputClassName="text-right" readOnly title="Total" prefix="£" parentClass="" value={formatCurrency(subTotal)} />
             </div>
         </div>
 
