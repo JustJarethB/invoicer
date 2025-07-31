@@ -43,13 +43,13 @@ export const LineItem = ({ id }: { id: string; }) => {
                 <SelectInput options={lineUnitOptions} className={defaultInnerCellClasses} value={item.name} onChange={(v) => onChange({ name: v })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <TextInput className={defaultInnerCellClasses} value={item.qty} onChange={(v) => onChange({ qty: (v) })} />
+                <TextInput className={`${defaultInnerCellClasses}`} value={item.qty} onChange={(v) => onChange({ qty: (v) })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <TextInput className={defaultInnerCellClasses} prefix="£" value={(item.unitPrice)} onChange={(v) => onChange({ unitPrice: ensureFutureCurrency(v) })} />
+                <TextInput inputClassName="text-right" className={`${defaultInnerCellClasses}`} prefix="£" value={(item.unitPrice)} onChange={(v) => onChange({ unitPrice: ensureFutureCurrency(v) })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <TextInput readOnly className={defaultInnerCellClasses} prefix="£" value={formatCurrency(linePrice(item)) || undefined} />
+                <TextInput inputClassName="text-right" readOnly className={`${defaultInnerCellClasses}`} prefix="£" value={formatCurrency(linePrice(item)) || undefined} />
             </div>
             <div className="flex absolute group-last:hidden print:hidden top-0 bottom-0 left-0 -ml-8"><Button title="Delete Line" icon outline contentOnly size="sm" onClick={deleteLineItem} color="danger"><XMarkIcon className="h-5" /></Button></div>
         </div>

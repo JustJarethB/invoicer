@@ -14,13 +14,13 @@ export const Totals = () => {
         <div className="p-2 w-full ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm">
             <h2>Totals:</h2>
             <div className="p-2">
-                <StandardField readOnly title="Services" prefix="£" parentClass="text-gray-500" value={formatCurrency(serviceSubTotal)} />
-                <StandardField readOnly title="Rental" prefix="£" parentClass="text-gray-500" value={formatCurrency(rentalSubTotal)} />
-                <StandardField readOnly title="Expenses" prefix="£" parentClass="text-gray-500" value={formatCurrency(expenseSubTotal)} />
+                <StandardField inputClassName="text-right" readOnly title="Services" prefix="£" parentClass="text-gray-500" value={formatCurrency(serviceSubTotal)} />
+                <StandardField inputClassName="text-right" readOnly title="Rental" prefix="£" parentClass="text-gray-500" value={formatCurrency(rentalSubTotal)} />
+                <StandardField inputClassName="text-right" readOnly title="Expenses" prefix="£" parentClass="text-gray-500" value={formatCurrency(expenseSubTotal)} />
                 {/* <StandardField title="VAT" parentClass="text-gray-500" value={formatCurrency(vat)} /> */}
                 <hr className="py-2 dark:text-gray-800" />
                 {/* <StandardField title="Total" prefix="£" parentClass="" value={formatCurrency(serviceSubTotal + rentalSubTotal + expenseSubTotal)} /> */}
-                <StandardField readOnly title="Total" prefix="£" parentClass="" value={formatCurrency(subTotal)} />
+                <StandardField inputClassName="text-right" readOnly title="Total" prefix="£" parentClass="" value={formatCurrency(subTotal)} />
             </div>
         </div>
 
