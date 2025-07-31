@@ -27,11 +27,12 @@ export const LineItem = ({ id }: { id: string; }) => {
     const onChange = <K extends keyof typeof item, V extends (typeof item)[K]>(change: Partial<Record<K, V>>) => {
         setLineItem({ ...item, ...change });
     };
+    const date = item.date ?? (new Date()).toISOString().split('T')[0]
     // TODO: was moving to unmanaged but need to useState for total value qty*unitPrice
     return (
         <div className={`[&>*:nth-child(odd)]dark:bg-gray-900 [&>*:nth-child(odd)]bg-gray-100 grid grid-cols-subgrid col-span-full last:print:hidden relative group`}>
             <div className={defaultOuterCellClasses}>
-                <DateInput className={defaultInnerCellClasses} defaultValue={item.date} onChange={(v) => onChange({ date: v })} />
+                <DateInput className={defaultInnerCellClasses} defaultValue={date} onChange={(v) => onChange({ date: v })} />
             </div>
             <div className={`${defaultOuterCellClasses} print:hidden`}>
                 <SelectInput options={lineTypeOptions} className={defaultInnerCellClasses} value={item.type} onChange={(v) => onChange({ type: v as LineItemType['type'] })} />
