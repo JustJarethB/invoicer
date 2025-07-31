@@ -1,6 +1,6 @@
 import { ArrowPathRoundedSquareIcon } from "@heroicons/react/16/solid";
 import { useRef, useState, type PropsWithChildren } from "react";
-import { Tooltip } from "../Tooltip";
+import { TooltipWrapper } from "../Tooltip";
 import { Modal } from "./Modal";
 import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
@@ -31,9 +31,9 @@ export const ManualSave = <T,>({ children, name, hideIcon, onChange: onChangePar
     return (
         <form ref={formRef} onChange={onChange} className="relative">
             <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
-                <Tooltip title="Save these values for later" >
+                <TooltipWrapper tooltip="Save these values for later" >
                     <ArrowPathRoundedSquareIcon onClick={onSave} className={`${isStale ? "text-amber-400" : "text-blue-400 rotate-180 opacity-50"} transition-all duration-300 h-5 w-5 cursor-pointer`} />
-                </Tooltip>
+                </TooltipWrapper>
             </span>
             {children}
             {saveData && (

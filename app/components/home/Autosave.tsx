@@ -1,6 +1,6 @@
 import { ArrowPathIcon } from "@heroicons/react/16/solid";
 import { useState, type PropsWithChildren } from "react";
-import { Tooltip } from "../Tooltip";
+import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
 type Props = {
@@ -21,9 +21,9 @@ export const Autosave = ({ children, name, hideIcon, onChange: onChangeParent }:
     return (
         <form onChange={onChange} className="relative">
             <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
-                <Tooltip title="These values are stored locally for next time" >
+                <TooltipWrapper tooltip="These values are stored locally for next time" >
                     <ArrowPathIcon className={`${isSaving ? "text-amber-400 animate-spin" : "text-blue-400"} opacity-50 transition-transform delay-300 h-5 w-5 cursor-help`} />
-                </Tooltip>
+                </TooltipWrapper>
             </span>
             {children}
         </form>
