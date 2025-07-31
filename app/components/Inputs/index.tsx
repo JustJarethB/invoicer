@@ -34,8 +34,8 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
     </div>
 )
 
-type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void };
-export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'textarea'>) => {
+type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void, inputClassName?: string };
+export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", inputClassName, prefix, suffix, ...rest }: InputProps<'textarea'>) => {
     const ref = useRef<HTMLTextAreaElement>(null)
     useEffect(() => {
         updateHeight()
@@ -58,7 +58,7 @@ export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, 
     }
     return (
         <InputWrapper {...{ className, prefix, suffix }}>
-            <textarea ref={ref} disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${''}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChangeHandler(e.currentTarget.value)} rows={1} />
+            <textarea ref={ref} disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${inputClassName}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChangeHandler(e.currentTarget.value)} rows={1} />
         </InputWrapper>
     )
 
