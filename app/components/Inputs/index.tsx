@@ -4,7 +4,7 @@ import "./index.css"
 const Prefix = ({ children }: PropsWithChildren) => {
     if (!children) return null;
     return (
-        <div className="pl-3 flex items-center pointer-events-none">
+        <div className="pl-3 flex pointer-events-none">
             <span className="text-gray-500">{children}</span>
         </div>
     )
@@ -12,7 +12,7 @@ const Prefix = ({ children }: PropsWithChildren) => {
 const Suffix = ({ children }: PropsWithChildren) => {
     if (!children) return null;
     return (
-        <div className="pr-3 flex items-center pointer-events-none">
+        <div className="pr-3 flex pointer-events-none">
             <span className="text-gray-500">{children}</span>
         </div>
     )
@@ -26,7 +26,7 @@ type InputWrapperProps = PropsWithChildren<{
 
 const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps) => (
     <div className={`${className} ${(prefix || suffix || true) && 'relative'}`}>
-        <div className="flex rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
+        <div className="flex items-center rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
             <Prefix children={prefix} />
             {children}
             <Suffix children={suffix} />
@@ -40,6 +40,13 @@ export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, 
     useEffect(() => {
         updateHeight()
     }, [value, defaultValue])
+    // we have print media related font size changes
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('print');
+        const handleChange = () => updateHeight();
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
     const updateHeight = () => {
         if (!ref.current) return
         ref.current.style.height = 'auto'; // Reset height to auto to calculate scrollHeight correctly
