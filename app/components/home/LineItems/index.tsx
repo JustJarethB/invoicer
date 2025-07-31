@@ -7,7 +7,7 @@ export const LineItems = () => {
     return (
         <div className="p-2 grid grid-cols-[auto_5.2rem_auto_4.2rem_4rem_5.5rem_8rem] print:grid-cols-[auto_auto_4.5rem_4.5rem_5rem_auto]">
             <div className="pb-2 grid grid-cols-subgrid col-span-full">
-                <div className={`${defaultHeaderClasses}`}>Service Date</div>
+                <div className={`${defaultHeaderClasses}`}><HelpTooltip tooltip="Date this specific item or service was provided">Service Date</HelpTooltip></div>
                 <div className={`${defaultHeaderClasses} print:hidden`}>Type</div>
                 <div className={defaultHeaderClasses}>Reference</div>
                 <div className={defaultHeaderClasses}>Unit</div>
