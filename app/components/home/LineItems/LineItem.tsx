@@ -5,7 +5,7 @@ import { useDeleteLineItem, useLineItem, useSetLineItem, type LineItem as LineIt
 import { formatCurrency } from "../../../utils/formatCurrency";
 import { Button } from "../Button";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-const defaultOuterCellClasses = "p-1 table-cell"
+const defaultOuterCellClasses = "p-1"
 const defaultInnerCellClasses = "w-full not-print:font-bold"
 const lineTypeOptions = [
     { label: 'Service', value: 0 },
