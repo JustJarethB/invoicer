@@ -7,11 +7,45 @@ import { Button } from "../Button";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 const defaultOuterCellClasses = "p-1"
 const defaultInnerCellClasses = "w-full not-print:font-bold"
-const lineTypeOptions = [
-    { label: 'Service', value: 0 },
-    { label: 'Rental', value: 1 },
-    { label: 'Expense', value: 2 }
-]
+
+
+type ChargeType = {
+    id: "0" | "1" | "2" | "3",
+    label: string
+    calculation: (qty: number, unitPrice: number) => number,
+    disabledFields?: (keyof LineItemType)[]
+}
+
+export const chargeTypes = [
+    {
+        id: '0',
+        label: 'Service',
+        calculation: (qty, unitPrice) => qty * unitPrice
+    },
+    {
+        id: '1',
+        label: 'Rental',
+        calculation: (qty, unitPrice) => qty * unitPrice
+    },
+    {
+        id: '2',
+        label: 'Expense',
+        calculation: (qty, unitPrice) => qty * unitPrice
+    },
+    {
+        id: '3',
+        label: 'Discount',
+        calculation: (_qty, unitPrice) => -unitPrice,
+        disabledFields: ['qty', 'unit'] as (keyof LineItemType)[], // without keyof it throws error from disabled fields being too strict
+    }
+
+] satisfies ChargeType[]
+
+const lineTypeOptions = chargeTypes.map((type) => ({
+    label: type.label,
+    value: type.id
+}));
+
 const lineUnitOptions = [
     'Hourly',
     'Daily',
@@ -27,27 +61,28 @@ export const LineItem = ({ id }: { id: string; }) => {
     const onChange = <K extends keyof typeof item, V extends (typeof item)[K]>(change: Partial<Record<K, V>>) => {
         setLineItem({ ...item, ...change });
     };
+    const chargeType = chargeTypes.find((type) => type.id === item.type);
     const date = item.date ?? (new Date()).toISOString().split('T')[0]
     // TODO: was moving to unmanaged but need to useState for total value qty*unitPrice
     return (
         <div className={`[&>*:nth-child(odd)]dark:bg-gray-900 [&>*:nth-child(odd)]bg-gray-100 grid grid-cols-subgrid col-span-full last:print:hidden relative group`}>
             <div className={defaultOuterCellClasses}>
-                <DateInput className={defaultInnerCellClasses} defaultValue={date} onChange={(v) => onChange({ date: v })} />
+                <DateInput name="date" hidden={chargeType?.disabledFields?.includes('date')} className={defaultInnerCellClasses} defaultValue={date} onChange={(v) => onChange({ date: v })} />
             </div>
             <div className={`${defaultOuterCellClasses} print:hidden`}>
                 <SelectInput options={lineTypeOptions} className={defaultInnerCellClasses} value={item.type} onChange={(v) => onChange({ type: v as LineItemType['type'] })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <TextInput className={defaultInnerCellClasses} value={item.description} onChange={(v) => onChange({ description: v })} />
+                <TextInput name="description" hidden={chargeType?.disabledFields?.includes('description')} className={defaultInnerCellClasses} value={item.description} onChange={(v) => onChange({ description: v })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <SelectInput options={lineUnitOptions} className={defaultInnerCellClasses} value={item.name} onChange={(v) => onChange({ name: v })} />
+                <SelectInput name="unit" options={lineUnitOptions} className={`${defaultInnerCellClasses} ${chargeType?.disabledFields?.includes('unit') && "hidden"}`} value={item.name} onChange={(v) => onChange({ name: v })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <TextInput className={`${defaultInnerCellClasses}`} value={item.qty} onChange={(v) => onChange({ qty: (v) })} />
+                <TextInput name="qty" hidden={chargeType?.disabledFields?.includes('qty')} className={`${defaultInnerCellClasses}`} value={item.qty} onChange={(v) => onChange({ qty: (v) })} />
             </div>
             <div className={defaultOuterCellClasses}>
-                <TextInput inputClassName="text-right" className={`${defaultInnerCellClasses}`} prefix="£" value={(item.unitPrice)} onChange={(v) => onChange({ unitPrice: ensureFutureCurrency(v) })} />
+                <TextInput name="unitPrice" hidden={chargeType?.disabledFields?.includes('unitPrice')} inputClassName="text-right" className={`${defaultInnerCellClasses}`} prefix="£" value={(item.unitPrice)} onChange={(v) => onChange({ unitPrice: ensureFutureCurrency(v) })} />
             </div>
             <div className={defaultOuterCellClasses}>
                 <TextInput inputClassName="text-right" readOnly className={`${defaultInnerCellClasses}`} prefix="£" value={formatCurrency(linePrice(item)) || undefined} />

@@ -1,16 +1,18 @@
 import { createContext, type ReactNode, useState, useContext, type PropsWithChildren } from "react";
 import { withProvider } from "../withProvider";
 import { randomUUID } from "~/utils/uuid";
+import type { chargeTypes } from "./LineItem";
 
 export type LineItem = {
     uuid: string;
     date?: string;
     name?: string;
     description?: string;
+    unit?: string;
     qty?: string;
     unitPrice?: string;
     vatRate?: string;
-    type?: "-1" | "0" | "1" | "2";
+    type?: "-1" | typeof chargeTypes[number]["id"];
 };
 type LineItemContextType = {
     lineItems: LineItem[];
