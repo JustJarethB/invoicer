@@ -1,4 +1,4 @@
-import { InformationCircleIcon } from "@heroicons/react/24/solid";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { useMemo, type PropsWithChildren } from "react";
 
 export const Tooltip = ({ children }: PropsWithChildren) => {
@@ -38,7 +38,7 @@ export const HelpTooltip = ({ children, tooltip }: WrapperProps) => {
                         {Content}
                     </span>
                 </span>
-                <InformationCircleIcon className="h-3" />
+                <InformationCircleIcon className="h-3.5" />
             </span>
             {children}
         </span>

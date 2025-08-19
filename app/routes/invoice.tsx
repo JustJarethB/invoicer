@@ -15,6 +15,7 @@ import { db } from "~/db";
 import { ManualSave } from "~/components/home/ManualSave";
 import { Container } from "~/components/Container";
 import { TutorialWizard } from "~/components/TutorialWizard";
+import { HelpTooltip } from "~/components/Tooltip";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -76,11 +77,11 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                   <TextInput name="invoiceRef" className="w-full" value={id} onChange={setId} />
                 </div>
                 <div className="flex items-center">
-                  <p className="font-bold px-2 whitespace-nowrap">Tax Date</p>
+                  <p className="font-bold px-2 whitespace-nowrap"><HelpTooltip tooltip="The legal date of this invoice being served">Tax Date</HelpTooltip></p>
                   <DateInput name="taxDate" className="w-full" value={date} onChange={setDate} />
                 </div>
                 <div className="flex items-center">
-                  <p className="font-bold px-2 whitespace-nowrap">PO / Reference</p>
+                  <p className="font-bold px-2 whitespace-nowrap"><HelpTooltip tooltip="If you weren't given a purchase order, leave this blank">PO / Reference</HelpTooltip></p>
                   <TextInput name="purchaseOrder" className="w-full" value={purchaseOrder} onChange={setPurchaseOrder} />
                 </div>
               </Container>
