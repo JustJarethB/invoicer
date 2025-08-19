@@ -12,7 +12,7 @@ export const Totals = () => {
     return (
         <Container className="flex flex-col h-full w-full">
             <h2>Totals:</h2>
-            <div className="p-2 flex self-stretch flex-col justify-between">
+            <div className="p-2 h-full flex flex-col justify-between">
                 <div>
                     {
                         chargeTypes.map(({ id, label }) => {

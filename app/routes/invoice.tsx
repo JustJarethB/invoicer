@@ -60,14 +60,14 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={handleSaveInvoice} />
     <main className="flex items-center justify-center not-print:pt-16 not-print:pb-4">
       <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
-        <div className="flex">
-          <div className="w-1/2 p-2">
+        <div className="grid grid-cols-6 gap-4 p-2">
+          <div className="col-span-6 md:col-span-3 print:col-span-3">
             <Autosave onChange={logo => (setLogo(logo as any))} name="logo">
               <ImageInput className={`rounded ${logo.url ? "" : "print:hidden"}`} name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
             </Autosave>
           </div>
-          <div className="w-1/2">
-            <div className="p-2">
+          <div className="col-span-6 md:col-span-3 print:col-span-3">
+            <div className="">
               <Container>
                 <div className="flex items-center">
                   <p className="font-bold px-2 whitespace-nowrap">Invoice Ref</p>
@@ -84,44 +84,38 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
               </Container>
             </div>
           </div>
-        </div>
-        <div className="flex justify-between">
-          <div className={` w-full md:w-1/2 p-2`}>
+          <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
             <Autosave onChange={from => setFrom(from as any)} name="from-address">
               <AddressPanel title='From:' address={from} />
             </Autosave>
           </div>
 
-          <div className={` w-full md:w-1/2 p-2`}>
+          <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
             <ManualSave onChange={to => setTo(to as any)} name="to-address">
               <AddressPanel title='To:' address={to} />
             </ManualSave>
           </div>
-        </div>
-        <LineItems />
-        <div className="w-full flex">
-          <div className="w-2/3">
-            <div className="p-2">
-              <Autosave onChange={payment => setPayment(payment as any)} name="payment-details">
-                <Container>
-                  <h2>Payment:</h2>
-                  <div className="p-2">
-                    <StandardField name="terms" title="Payment Terms" defaultValue={payment.terms} />
-                    <StandardField name="sortCode" title="Sort Code" defaultValue={payment.sortCode} />
-                    <StandardField name="number" title="Acc. Number" defaultValue={payment.number} />
-                    <StandardField name="bankName" title="Bank Name" defaultValue={payment.bankName} />
-                    <StandardField name="emailAddress" title="Contact Email" defaultValue={payment.emailAddress} />
-                    <StandardField name="phoneNumber" title="Contact Number" defaultValue={payment.phoneNumber} />
-                    <StandardField name="info" title="Additional Information" defaultValue={payment.info} />
-                  </div>
-                </Container>
-              </Autosave>
-            </div>
+          <div className="col-span-6">
+            <LineItems />
           </div>
-          <div className="w-1/3">
-            <div className="p-2">
-              <Totals />
-            </div>
+          <div className="col-span-6 md:col-span-4 print:col-span-4">
+            <Autosave onChange={payment => setPayment(payment as any)} name="payment-details">
+              <Container>
+                <h2>Payment:</h2>
+                <div className="p-2">
+                  <StandardField name="terms" title="Payment Terms" defaultValue={payment.terms} />
+                  <StandardField name="sortCode" title="Sort Code" defaultValue={payment.sortCode} />
+                  <StandardField name="number" title="Acc. Number" defaultValue={payment.number} />
+                  <StandardField name="bankName" title="Bank Name" defaultValue={payment.bankName} />
+                  <StandardField name="emailAddress" title="Contact Email" defaultValue={payment.emailAddress} />
+                  <StandardField name="phoneNumber" title="Contact Number" defaultValue={payment.phoneNumber} />
+                  <StandardField name="info" title="Additional Information" defaultValue={payment.info} />
+                </div>
+              </Container>
+            </Autosave>
+          </div>
+          <div className="col-span-6 md:col-span-2 print:col-span-2">
+            <Totals />
           </div>
         </div>
       </div>
