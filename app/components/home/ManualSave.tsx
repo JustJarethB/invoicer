@@ -1,7 +1,7 @@
 import { ArrowPathRoundedSquareIcon } from "@heroicons/react/16/solid";
 import { useRef, useState, type PropsWithChildren } from "react";
 import { TooltipWrapper } from "../Tooltip";
-import { Modal } from "./Modal";
+import { Modal } from "../Modal";
 import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
 import type { Address } from "~/data/address";

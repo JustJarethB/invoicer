@@ -1,7 +1,7 @@
 import { XMarkIcon } from "@heroicons/react/16/solid";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
-import { Modal } from "~/components/home/Modal";
+import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { Address } from "~/data/address";
 import { NULL_CLIENT, type Client } from "~/data/client";
