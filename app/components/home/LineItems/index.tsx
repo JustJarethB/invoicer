@@ -1,6 +1,7 @@
 import { HelpTooltip } from "~/components/Tooltip";
 import { LineItem } from "./LineItem";
 import { useLineItemIds } from "./LineItemProvider";
+import { Container } from "~/components/Container";
 const defaultHeaderClasses = "p-2 font-bold"
 export const LineItems = () => {
     const ids = useLineItemIds();
@@ -17,10 +18,10 @@ export const LineItems = () => {
                       <div className={defaultHeaderClasses}>VAT</div> */}
                 <div className={`text-right ${defaultHeaderClasses}`}>Total</div>
             </div>
-            <div className="ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm grid grid-cols-subgrid col-span-full">
+            <Container className="grid grid-cols-subgrid col-span-full">
                 {/* Need to give key that doesn't change with UserInput, can't use index either */}
                 {ids.map((id) => <LineItem key={id} id={id} />)}
-            </div>
+            </Container>
         </div>
     );
 };

@@ -13,6 +13,7 @@ import { type PaymentDetails } from "~/data/payment";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
 import { ManualSave } from "~/components/home/ManualSave";
+import { Container } from "~/components/Container";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -67,7 +68,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
           </div>
           <div className="w-1/2">
             <div className="p-2">
-              <div className="p-2 w-full ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm">
+              <Container>
                 <div className="flex items-center">
                   <p className="font-bold px-2 whitespace-nowrap">Invoice Ref</p>
                   <TextInput name="invoiceRef" className="w-full" value={id} onChange={setId} />
@@ -80,7 +81,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                   <p className="font-bold px-2 whitespace-nowrap">PO / Reference</p>
                   <TextInput name="purchaseOrder" className="w-full" value={purchaseOrder} onChange={setPurchaseOrder} />
                 </div>
-              </div>
+              </Container>
             </div>
           </div>
         </div>
@@ -102,7 +103,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
           <div className="w-2/3">
             <div className="p-2">
               <Autosave onChange={payment => setPayment(payment as any)} name="payment-details">
-                <div className="p-2 w-full ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm">
+                <Container>
                   <h2>Payment:</h2>
                   <div className="p-2">
                     <StandardField name="terms" title="Payment Terms" defaultValue={payment.terms} />
@@ -113,7 +114,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                     <StandardField name="phoneNumber" title="Contact Number" defaultValue={payment.phoneNumber} />
                     <StandardField name="info" title="Additional Information" defaultValue={payment.info} />
                   </div>
-                </div>
+                </Container>
               </Autosave>
             </div>
           </div>
