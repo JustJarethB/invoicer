@@ -1,6 +1,7 @@
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
-import type { PropsWithChildren } from "react";
+import { type PropsWithChildren } from "react";
 import { Outlet, NavLink, type NavLinkProps } from "react-router";
+import { ThemeSelector } from "~/components/ThemeSelector";
 
 const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) => {
     return (
@@ -20,11 +21,14 @@ const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) =>
 }
 
 export default function Navbar() {
-    return <div className="grid grid-cols-12">
-        <nav className="print:collapse col-span-3 lg:col-span-2 xl:col-span-1 bg-gray-100 dark:bg-gray-800 p-4 shadow-md h-screen sticky top-0">
-            <StyledLink to="/">Invoice</StyledLink>
-            <StyledLink to="/clients">Clients</StyledLink>
-            <StyledLink to="/invoices">Invoices</StyledLink>
+    return <div className="grid grid-cols-12 dark:text-white">
+        <nav className="print:collapse col-span-3 lg:col-span-2 xl:col-span-1 bg-gray-100 dark:bg-gray-800 p-4 shadow-md h-screen sticky top-0 flex flex-col justify-between">
+            <div>
+                <StyledLink to="/">Invoice</StyledLink>
+                <StyledLink to="/clients">Clients</StyledLink>
+                <StyledLink to="/invoices">Invoices</StyledLink>
+            </div>
+            <ThemeSelector />
         </nav>
         <main className="col-span-9 lg:col-span-10 xl:col-span-11 print:col-span-full">
             <Outlet />
