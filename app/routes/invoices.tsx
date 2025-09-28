@@ -9,6 +9,11 @@ import type { Address } from "~/data/address";
 import { db } from "~/db";
 import { linePrice } from "~/utils/linePrice";
 
+export function meta() {
+    return [
+        { title: "Invoices" },
+    ];
+}
 
 type Payment = { amount: number, date: string, method?: string, reference?: string }
 type Invoice = {
