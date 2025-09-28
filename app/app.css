@@ -2,7 +2,7 @@
 
 @custom-variant dark {
   @media screen {
-    &:where([data-theme="dark"], [data-theme="dark"] *) {
+    &:where([data-theme="dark"], *:not([data-theme="light"] *)) {
       @slot;
     }
   }
