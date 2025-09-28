@@ -8,6 +8,12 @@ import { NULL_CLIENT, type Client } from "~/data/client";
 import { useDb, db } from "~/db";
 import { formJson } from "~/utils/formJson";
 
+export function meta() {
+    return [
+        { title: "Clients" },
+    ];
+}
+
 
 const newClient = (): Client => ({ ...NULL_CLIENT, id: `${(new Date()).getTime()}` });
 export default () => {

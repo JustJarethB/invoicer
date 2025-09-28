@@ -58,6 +58,12 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     await db.save(['invoice', id], invoice)
     alert("Invoice Saved") // TODO: show proper toast/notif
   }
+
+  useEffect(() => {
+    const title = `Invoice ${id}` + (to?.name ? ` - ${to.name}` : '') + (purchaseOrder && purchaseOrder !== '---' ? ` (PO: ${purchaseOrder})` : '')
+    document.title = title
+  }, [id, to, purchaseOrder])
+
   return <div>
     <TutorialWizard />
     <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={handleSaveInvoice} />
