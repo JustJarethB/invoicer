@@ -2,7 +2,7 @@ import { SunIcon, ComputerDesktopIcon, MoonIcon } from "@heroicons/react/24/outl
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type MouseEventHandler, type PropsWithChildren } from "react";
 
 const Option = ({ children, active, onClick }: PropsWithChildren<{ active?: boolean, onClick: MouseEventHandler<HTMLDivElement> }>) => (
-    <div onClick={onClick} className={"transition-colors duration-300 p-1 flex justify-center items-center" + (active ? " bg-gray-300 dark:bg-gray-600" : " cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700")}>
+    <div onClick={onClick} className={"transition-colors duration-100 p-1 flex justify-center items-center" + (active ? " bg-gray-300 dark:bg-gray-600" : " cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700")}>
         <div className="h-6 w-6 inline-block">
             {children}
         </div>
