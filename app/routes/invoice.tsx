@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEventHandler, type PropsWithChildren } from "react";
 import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
 import { getClients, NULL_CLIENT, type Client } from "~/data/client";
 import { Address } from "~/data/address";
@@ -16,6 +16,8 @@ import { ManualSave } from "~/components/home/ManualSave";
 import { Container } from "~/components/Container";
 import { TutorialWizard } from "~/components/TutorialWizard";
 import { HelpTooltip } from "~/components/Tooltip";
+import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
+import { useThemeValue } from "~/components/ThemeSelector";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -63,11 +65,20 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     const title = `Invoice ${id}` + (to?.name ? ` - ${to.name}` : '') + (purchaseOrder && purchaseOrder !== '---' ? ` (PO: ${purchaseOrder})` : '')
     document.title = title
   }, [id, to, purchaseOrder])
-
+  const [paper, setPaper] = useState(false)
+  const theme = useThemeValue()
   return <div>
     <TutorialWizard />
     <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={handleSaveInvoice} />
-    <main data-theme="light" className="scheme-light flex items-center justify-center not-print:pt-16 not-print:pb-4">
+
+    {
+      theme == 'dark' && (
+        <div className="print:hidden fixed bottom-4 right-4 z-50 flex items-center bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full shadow-lg overflow-hidden">
+          <Option active={paper} onClick={() => setPaper(true)}><DocumentIcon /></Option>
+          <Option active={!paper} onClick={() => setPaper(false)}><TvIcon /></Option>
+        </div>
+      )
+    }<main data-theme={paper ? "light" : undefined} className="flex items-center justify-center not-print:pt-16 not-print:pb-4">
       <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 text-gray-800 dark:text-white p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
         <div className="grid grid-cols-6 gap-4 p-2">
           <div className="col-span-6 md:col-span-3 print:col-span-3">
@@ -131,3 +142,10 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     </main>
   </div>
 })
+const Option = ({ children, active, onClick }: PropsWithChildren<{ active?: boolean, onClick: MouseEventHandler<HTMLDivElement> }>) => (
+  <div onClick={onClick} className={"transition-colors duration-100 py-2 px-4 flex justify-center items-center" + (active ? " bg-gray-300 dark:bg-gray-600" : " cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700")}>
+    <div className="h-6 w-6 inline-block">
+      {children}
+    </div>
+  </div>
+);
