@@ -65,20 +65,17 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     const title = `Invoice ${id}` + (to?.name ? ` - ${to.name}` : '') + (purchaseOrder && purchaseOrder !== '---' ? ` (PO: ${purchaseOrder})` : '')
     document.title = title
   }, [id, to, purchaseOrder])
-  const [paper, setPaper] = useState(false)
+  const [paper, setPaper] = useState(true)
   const theme = useThemeValue()
-  return <div>
+  return <div className="relative"> {/* Need a relative class for 'preview' text*/}
     <TutorialWizard />
     <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={handleSaveInvoice} />
 
     {
       theme == 'dark' && (
-        <div className="print:hidden fixed bottom-4 right-4 z-50 flex items-center bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full shadow-lg overflow-hidden">
-          <Option active={paper} onClick={() => setPaper(true)}><DocumentIcon /></Option>
-          <Option active={!paper} onClick={() => setPaper(false)}><TvIcon /></Option>
-        </div>
+        <PreviewOptions paper={paper} setPaper={setPaper}/>
       )
-    }<main data-theme={paper ? "light" : undefined} className="flex items-center justify-center not-print:pt-16 not-print:pb-4">
+    }<main data-theme={paper ? "light" : undefined} className="flex items-center justify-center not-print:pt-16 not-print:pb-4"> {/** want this to be display:relative so that the 'preview text' can be absolute to this. Atm it's a mess */}
       <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 text-gray-800 dark:text-white p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
         <div className="grid grid-cols-6 gap-4 p-2">
           <div className="col-span-6 md:col-span-3 print:col-span-3">
@@ -139,6 +136,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
           </div>
         </div>
       </div>
+      {paper && <p className="text-gray-500 position absolute top-24 left-128 text-sm">Print Preview</p>} {/** this absolute positioning is a mess. See line 78 */}
     </main>
   </div>
 })
@@ -149,3 +147,19 @@ const Option = ({ children, active, onClick }: PropsWithChildren<{ active?: bool
     </div>
   </div>
 );
+
+const PreviewIcon = ({ icon }: { icon: React.ForwardRefExoticComponent<React.PropsWithoutRef<React.SVGProps<SVGSVGElement>>> }) => {
+  const Icon = icon;
+  return <Icon className="size-10 py-2 z-50" />
+}
+
+const PreviewOptions = ({ paper, setPaper }: { paper: boolean, setPaper: React.Dispatch<React.SetStateAction<boolean>> }) => (
+  <button
+  className={"print:hidden fixed bottom-4 right-4 z-50 flex items-center px-2 gap-2 bg-gray-200 dark:bg-gray-800 border " + 
+   "before:h-8 before:w-12 before:bg-gray-600 before:absolute before:rounded-full before:transition-transform before:duration-200 before:left-1 before:ease-out " + (paper ? "before:translate-x-0" : "before:translate-x-12") +
+   " dark:border-gray-700 border-gray-300 rounded-full shadow-lg overflow-hidden cursor-pointer "}
+  onClick={() => setPaper(prev => !prev)}>
+    <PreviewIcon icon={DocumentIcon} />
+    <PreviewIcon icon={TvIcon} />
+  </button>
+)
