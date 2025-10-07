@@ -27,11 +27,11 @@ const getSizeClassName = (icon: boolean, size: ButtonProps['size']) => {
 
     switch (size) {
         case 'sm':
-            return `rounded-md p-0.5 ${!icon && "px-2"}`
+            return `text-sm rounded-md py-0.5 ${!icon && "px-2"}`
         case 'md':
-            return `rounded-lg p-2 ${!icon && 'px-4'}`
+            return `text-sm rounded-lg py-2 ${!icon && 'px-5'}`
         case `lg`:
-            return `rounded-lg p-3 ${!icon && 'px-6'}`
+            return `text-sm rounded-lg py-3 ${!icon && 'px-6'}`
     }
 }
 

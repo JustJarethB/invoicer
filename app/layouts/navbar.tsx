@@ -23,10 +23,9 @@ const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) =>
 }
 
 export default function Navbar() {
-    const WIDTH = 180;
     const [open, setOpen] = useState(true);
     return <div className="dark:text-white w-full flex">
-        <nav className={`print:collapse transition-all ${!open ? "w-0 p-0 m-0" : `w-[${WIDTH}px] p-4`} bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen sticky top-0 flex flex-col justify-between overflow-hidden`}>
+        <nav className={`print:collapse transition-all ${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen sticky top-0 flex flex-col justify-between overflow-hidden`}>
             <menu className="space-y-2 relative">
                 <StyledLink to="/">Invoice</StyledLink>
                 <StyledLink to="/clients">Clients</StyledLink>
