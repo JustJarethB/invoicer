@@ -91,27 +91,24 @@ const withInvoiceProvider = withProvider(InvoiceProvider)
 export default withInvoiceProvider(function Invoices() {
     const invoices = useInvoiceIds()
     return (
-        <main className="pt-16 pb-4 container mx-auto">
-            <table className="mx-auto">
-                <thead>
-                    <tr className="grid gap-4 grid-cols-[1fr_1fr_1fr_2.5fr_2fr_1fr_1fr_1fr] col-span-full font-bold py-4 border-b border-gray-700">
-                        <th></th>
-                        <th className="text-left">Invoice Ref</th>
-                        <th className="text-left">Tax Date</th>
-                        <th className="text-left">PO / Reference</th>
-                        <th className="text-left">To</th>
-                        <th className="text-left">Total</th>
-                        <th className="text-left">Due</th>
-                        <th className="text-left"></th>
-                    </tr>
-                </thead>
-                <tbody className="grid gap-4 grid-cols-[1fr_1fr_1fr_2.5fr_2fr_1fr_1fr_1fr]">
-                    {invoices.map((id) => (
-                        <InvoiceRow key={id} id={id} />
-                    ))}
-                </tbody>
-            </table>
-        </main>
+        <table className="mt-16 mb-4 container mx-auto max-w-5xl w-4/5 grid gap-4 grid-cols-[0.75fr_1fr_1fr_2fr_2fr_0.5fr_0.5fr_0.75fr]">
+            <thead className="grid grid-cols-subgrid col-span-full">
+                <tr className="grid grid-cols-subgrid col-span-full font-bold py-4 border-b border-gray-700">
+                    <th className="text-left col-start-2">Invoice Ref</th>
+                    <th className="text-left">Tax Date</th>
+                    <th className="text-left">PO / Reference</th>
+                    <th className="text-left">To</th>
+                    <th className="text-left">Total</th>
+                    <th className="text-left">Due</th>
+                    <th className="text-left"></th>
+                </tr>
+            </thead>
+            <tbody className="grid gap-4 grid-cols-subgrid col-span-full">
+                {invoices.map((id) => (
+                    <InvoiceRow key={id} id={id} />
+                ))}
+            </tbody>
+        </table>
     );
 })
 
