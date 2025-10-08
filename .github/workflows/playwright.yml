@@ -25,18 +25,23 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm install -g pnpm && pnpm install
-    - name: Configure cache
-      id: cache
+    - name: Configure Snapshot cache
+      id: cache-snapshots
       uses: actions/cache@v4
       with:
-        key: cache/${{github.repository}}/refs/heads/master
-        # key: cache/${{github.repository}}/${{github.ref}} ## steps.cache.outputs.cache-hit is false when restore-keys match
-        # restore-keys: cache/${{github.repository}}/refs/heads/master
+        key: playwright-snapshots/${{github.ref}}
+        restore-keys: playwright-snapshots/refs/heads/master
         path: e2e/snapshots/**
+    - name: Playwright Browsers cache
+      id: cache-browsers
+      uses: actions/cache@v4
+      with:
+        key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
+        path: ~/.cache/ms-playwright
     - name: Install Playwright Browsers
-      run: pnpm exec playwright install --with-deps
+      run: pnpm exec playwright install --with-deps --only-shell
     - name: Overwrite snapshots
-      if: ${{steps.cache.outputs.cache-hit != 'true' || inputs.update-snapshots == 'true'}}
+      if: ${{inputs.update-snapshots == 'true'}}
       run: pnpm exec playwright test --update-snapshots
     - name: Run Playwright tests
       run: pnpm exec playwright test
