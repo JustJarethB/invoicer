@@ -30,14 +30,11 @@ jobs:
       uses: actions/cache@v4
       with:
         key: cache/${{github.repository}}/refs/heads/master
-        restore-keys: cache/${{github.repository}}/refs/heads/master
+        # key: cache/${{github.repository}}/${{github.ref}} ## steps.cache.outputs.cache-hit is false when restore-keys match
+        # restore-keys: cache/${{github.repository}}/refs/heads/master
         path: e2e/snapshots/**
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps
-    - name: Debug snapshots
-      run: |
-        echo 'Cache hit: ${{steps.cache.outputs.cache-hit}}'
-        echo 'Update snapshots: ${{inputs.update-snapshots}}'
     - name: Overwrite snapshots
       if: ${{steps.cache.outputs.cache-hit != 'true' || inputs.update-snapshots == 'true'}}
       run: pnpm exec playwright test --update-snapshots
