@@ -39,7 +39,7 @@ jobs:
         key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
         path: ~/.cache/ms-playwright
     - name: Install Playwright Browsers
-      run: pnpm exec playwright install --with-deps
+      run: pnpm exec playwright install --with-deps --only-shell
     - name: Overwrite snapshots
       if: ${{inputs.update-snapshots == 'true'}}
       run: pnpm exec playwright test --update-snapshots
