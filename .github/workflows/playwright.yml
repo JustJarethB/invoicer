@@ -38,8 +38,6 @@ jobs:
       with:
         key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
         path: ~/.cache/ms-playwright
-    - name: Show browser cache contents
-      run: ls -lR ~/.cache/ms-playwright || echo "No browsers cache found"
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps --only-shell
     - name: Overwrite snapshots
