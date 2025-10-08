@@ -34,6 +34,10 @@ jobs:
         path: e2e/snapshots/**
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps
+    - name: Debug snapshots
+      run: |
+        echo 'Cache hit: ${{steps.cache.outputs.cache-hit}}'
+        echo 'Update snapshots: ${{inputs.update-snapshots}}'
     - name: Overwrite snapshots
       if: ${{steps.cache.outputs.cache-hit != 'true' || inputs.update-snapshots == 'true'}}
       run: pnpm exec playwright test --update-snapshots
