@@ -25,14 +25,28 @@ jobs:
         node-version: lts/*
     - name: Install dependencies
       run: npm install -g pnpm && pnpm install
+    - name: Check if master cache exists
+      id: check-master-cache
+      run: |
+        if gh cache list --limit 1 --key "playwright-snapshots/refs/heads/master" | grep -q "playwright-snapshots/refs/heads/master"; then
+          echo "found=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "found=false" >> "$GITHUB_OUTPUT"
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
     - name: Configure Snapshot cache
       id: cache-snapshots
       uses: actions/cache@v4
       with:
-        key: playwright-snapshots/refs/heads/master
-        # key: cache/${{github.repository}}/${{github.ref}} ## steps.cache.outputs.cache-hit is false when restore-keys match
-        # restore-keys: cache/${{github.repository}}/refs/heads/master
+        key: playwright-snapshots/${{github.ref}}
+        restore-key: playwright-snapshots/refs/heads/master
         path: e2e/snapshots/**
+    - name: Display cache status
+      run: |
+        echo "cache-hit: ${{ steps.cache-snapshots.outputs.cache-hit }}"
+        echo "cache-matched-key: ${{ steps.cache-snapshots.outputs.cache-matched-key }}"
+        echo "master-cache-exists: ${{ steps.check-master-cache.outputs.found }}"
     - name: Playwright Browsers cache
       id: cache-browsers
       uses: actions/cache@v4
