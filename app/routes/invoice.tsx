@@ -84,7 +84,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                 </div>
                 <div className="flex items-center">
                   <p className="font-bold px-2 whitespace-nowrap"><HelpTooltip tooltip="The legal date of this invoice being served">Tax Date</HelpTooltip></p>
-                  <DateInput name="taxDate" className="w-full" value={date} onChange={setDate} />
+                  <DateInput data-testid="tax-date" name="taxDate" className="w-full" value={date} onChange={setDate} />
                 </div>
                 <div className="flex items-center">
                   <p className="font-bold px-2 whitespace-nowrap"><HelpTooltip tooltip="If you weren't given a purchase order, leave this blank">PO / Reference</HelpTooltip></p>
