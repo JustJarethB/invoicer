@@ -6,9 +6,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
         })
         test(`Invoice page snapshot`, async ({ page, }) => {
             await page.goto('/');
-            await page.waitForTimeout(500)
+            await page.waitForLoadState('networkidle')
             const invoiceInput = page.getByTestId('invoice-ref')
             await invoiceInput.fill('TEST-001');
+            const taxDateInput = page.getByTestId('tax-date')
+            await taxDateInput.fill('2001-12-31');
             const screenshot = await page.screenshot({ fullPage: true });
             expect(screenshot).toMatchSnapshot(`homepage-${colorScheme}.png`);
         });
@@ -34,6 +36,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
             await page.waitForLoadState('networkidle')
             const invoiceInput = page.getByTestId('invoice-ref')
             await invoiceInput.fill('TEST-001');
+            const taxDateInput = page.getByTestId('tax-date')
+            await taxDateInput.fill('2001-12-31');
             const screenshot = await page.screenshot({ fullPage: true });
             expect(screenshot).toMatchSnapshot(`print-homepage-${colorScheme}.png`);
         });
