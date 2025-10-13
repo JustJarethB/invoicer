@@ -51,7 +51,7 @@ export default function Navbar() {
     }, [mobile]);
 
     return <div className="dark:text-white w-full flex">
-        <nav className={`${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} ${mobile ? 'fixed' : 'sticky'} print:collapse z-100 transition-all bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen top-0 flex flex-col justify-between overflow-hidden`}
+        <nav className={`${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} ${mobile ? 'fixed' : 'sticky'} print:hidden z-100 transition-all bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen top-0 flex flex-col justify-between overflow-hidden`}
         >
             <menu className="space-y-2 relative">
                 <StyledLink to="/" onClick={() => mobile && setOpen(false)}>Invoice</StyledLink>
@@ -63,7 +63,7 @@ export default function Navbar() {
         <Button icon size="sm" className={`print:collapse fixed left-4 top-4 bg-transparent z-100 ${open ? "translate-x-[180px]" : "translate-x-0"}`} onClick={() => setOpen(o => !o)}>
             <SidebarIcon size={20} />
         </Button>
-        <main className={`print:col-span-full w-full flex-auto min-h-screen ${(mobile && open) ? 'opacity-50' : ''}`} onClick={() => mobile && setOpen(false)}>
+        <main className={`w-full flex-auto min-h-screen ${(mobile && open) ? 'opacity-50' : ''}`} onClick={() => mobile && setOpen(false)}>
             <Outlet/>
         </main>
     </div>
