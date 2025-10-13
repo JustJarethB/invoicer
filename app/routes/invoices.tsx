@@ -29,11 +29,15 @@ type Invoice = {
 type InvoiceContext = {
     invoices: Invoice[]
     makePayment: (invoiceId: Invoice['id'], amount: number) => void;
+    deleteInvoice: (invoiceID: Invoice['id']) => void;
 }
 const InvoiceContext = createContext<InvoiceContext>({
     invoices: [],
     makePayment: function (invoiceId: string, amount: number): void {
         throw new Error("Function not implemented.");
+    },
+    deleteInvoice: function (invoiceId: Invoice['id']): void {
+        throw new Error("Function not implemented")
     }
 })
 
@@ -55,6 +59,11 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
         db.save(["invoice", invoiceId], newInvoice);
         setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? newInvoice : inv)));
     }
+
+    const deleteInvoice = (invoiceId: string) => {
+        db.remove(["invoice", invoiceId])
+        setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+    }
     useEffect(() => {
         const fetchInvoices = async () => {
             const fetchedInvoices = await db.getAll(["invoice"]) as Invoice[]
@@ -64,7 +73,8 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     }, [])
     const value = {
         invoices,
-        makePayment
+        makePayment,
+        deleteInvoice
     } satisfies InvoiceContext
     return <InvoiceContext.Provider value={value}>{children}</InvoiceContext.Provider>
 }
@@ -116,12 +126,17 @@ export default withInvoiceProvider(function Invoices() {
 
 const InvoiceRow = ({ id }: { id: string }) => {
     const invoice = useInvoice(id)
+    const deleteInvoice = useContext(InvoiceContext).deleteInvoice
     const { totalDue, due, paymentStatus } = useInvoicePaymentStatus(id)
     const [open, setOpen] = useState(false);
+    const handleDelete = () => {
+        // todo: add confirmation modal
+        deleteInvoice(id);
+    }
     return (
         <tr className={`grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"}`}>
             <td className="flex justify-end gap-2 grid-cols-1">
-                <Button icon outline color="danger" disabled size="sm">
+                <Button icon outline color="danger" size="sm" onClick={() => handleDelete()}>
                     <TrashIcon className="size-5"/>
                 </Button>
                 <Button icon outline size="sm" onClick={() => {setOpen(o => !o)}}>
@@ -138,15 +153,16 @@ const InvoiceRow = ({ id }: { id: string }) => {
                 <PaidStatus id={id} />
             </td>
             {open && (
-                <div className="col-start-2 col-span-full pt-4">
-                    <span>Line items:</span>
+                <td className="col-start-2 col-span-full pt-4">
+                    <p className="text-lg mb-2">Line items:</p>
                     {invoice.lineItems.map(((item) => (
-                        <div key={item.uuid}>
-                            <span className="text-sm">{item.description}</span>
-                            <span className="text-sm">{item.unitPrice}</span>
+                        <div key={item.uuid} className="space-x-4 mt-2">
+                            <span className="text-md">{item.description}</span>
+                            {item.unitPrice && <span className="text-sm">£{item.unitPrice}</span>}
+                            {item.type == "2" &&<span className="text-sm">qty: {item.qty}</span>}
                         </div>
                     )))}
-                </div>
+                </td>
             )}
         </tr>
     )
