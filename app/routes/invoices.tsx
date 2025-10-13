@@ -7,6 +7,7 @@ import { Status } from "~/components/home/Status";
 import { withProvider } from "~/components/home/withProvider";
 import type { Address } from "~/data/address";
 import { db } from "~/db";
+import { useMobile } from "~/layouts/navbar";
 import { linePrice } from "~/utils/linePrice";
 
 export function meta() {
@@ -129,19 +130,20 @@ const InvoiceRow = ({ id }: { id: string }) => {
     const deleteInvoice = useContext(InvoiceContext).deleteInvoice
     const { totalDue, due, paymentStatus } = useInvoicePaymentStatus(id)
     const [open, setOpen] = useState(false);
+    const mobile = useMobile();
     const handleDelete = () => {
         // todo: add confirmation modal
         deleteInvoice(id);
     }
     return (
-        <tr className={`grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"}`}>
+        <tr className={`px-2 grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"} ${mobile && 'cursor-pointer'}`} onClick={() => mobile && setOpen(o => !o)}>
             <td className="flex justify-end gap-2 grid-cols-1">
                 <Button icon outline color="danger" size="sm" onClick={() => handleDelete()}>
                     <TrashIcon className="size-5"/>
                 </Button>
-                <Button icon outline size="sm" onClick={() => {setOpen(o => !o)}}>
+                {!mobile && <Button icon outline size="sm" onClick={() => {setOpen(o => !o)}}>
                     <outline.EyeIcon className="size-5" />
-                </Button>
+                </Button>}
             </td>
             <td className="text-sm">{invoice.id}</td>
             <td className="text-sm">{invoice.date}</td>
@@ -149,12 +151,16 @@ const InvoiceRow = ({ id }: { id: string }) => {
             <td className="text-sm">{invoice.to.name}</td>
             <td className="text-sm">£ {totalDue}</td>
             <td className={`text-sm ${paymentStatus == "overpaid" ? "text-amber-700" : ""}`}>£ {due}</td>
-            <td className="">
+            <td className="text-center">
                 <PaidStatus id={id} />
             </td>
             {open && (
-                <td className="col-start-2 col-span-full pt-4">
-                    <p className="text-lg mb-2">Line items:</p>
+                <td className="col-start-2 col-span-full pt-4 space-y-2">
+                    {mobile && (<>
+                        <p className="text-sm"><strong>PO / Reference:</strong> {invoice.purchaseOrder}</p>
+                        <p className="text-sm"><strong>Total Due:</strong> £{totalDue}</p>
+                    </>)}
+                    <p className="text-sm mb-2"><strong>Line items:</strong></p>
                     {invoice.lineItems.map(((item) => (
                         <div key={item.uuid} className="space-x-4 mt-2">
                             <span className="text-md">{item.description}</span>

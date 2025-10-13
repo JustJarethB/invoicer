@@ -1,9 +1,29 @@
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
-import { type PropsWithChildren, useState } from "react";
+import { type PropsWithChildren, useEffect, useState } from "react";
 import { Outlet, NavLink, type NavLinkProps } from "react-router";
 import { ThemeSelector } from "~/components/ThemeSelector";
 import SidebarIcon from "~/components/SidebarIcon"
 import { Button } from "~/components/home/Button";
+
+const MOBILE_BREAKPOINT = 768;
+
+export function useMobile() {
+  const [isMobile, setIsMobile] = useState<boolean | undefined>(
+    undefined
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
+    mql.addEventListener('change', onChange);
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  return !!isMobile;
+}
 
 const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) => {
     return (
@@ -23,20 +43,27 @@ const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) =>
 }
 
 export default function Navbar() {
-    const [open, setOpen] = useState(true);
+    const mobile = useMobile();
+    const [open, setOpen] = useState(!mobile);
+
+    useEffect(() => {
+        setOpen(!mobile);
+    }, [mobile]);
+
     return <div className="dark:text-white w-full flex">
-        <nav className={`print:collapse transition-all ${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen sticky top-0 flex flex-col justify-between overflow-hidden`}>
+        <nav className={`${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} ${mobile ? 'fixed' : 'sticky'} print:collapse z-100 transition-all bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen top-0 flex flex-col justify-between overflow-hidden`}
+        >
             <menu className="space-y-2 relative">
-                <StyledLink to="/">Invoice</StyledLink>
-                <StyledLink to="/clients">Clients</StyledLink>
-                <StyledLink to="/invoices">Invoices</StyledLink>
+                <StyledLink to="/" onClick={() => mobile && setOpen(false)}>Invoice</StyledLink>
+                <StyledLink to="/clients" onClick={() => mobile && setOpen(false)}>Clients</StyledLink>
+                <StyledLink to="/invoices" onClick={() => mobile && setOpen(false)}>Invoices</StyledLink>
             </menu>
             <ThemeSelector />
         </nav>
-        <Button icon size="sm" className={`absolute left-4 top-4 bg-transparent z-100 ${open ? "translate-x-[180px]" : "translate-x-0"}`} onClick={() => setOpen(o => !o)}>
+        <Button icon size="sm" className={`print:collapse fixed left-4 top-4 bg-transparent z-100 ${open ? "translate-x-[180px]" : "translate-x-0"}`} onClick={() => setOpen(o => !o)}>
             <SidebarIcon size={20} />
         </Button>
-        <main className={`print:col-span-full flex-auto`}>
+        <main className={`print:col-span-full w-full flex-auto min-h-screen ${(mobile && open) ? 'opacity-50' : ''}`} onClick={() => mobile && setOpen(false)}>
             <Outlet/>
         </main>
     </div>
