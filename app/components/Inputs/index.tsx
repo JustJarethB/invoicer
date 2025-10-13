@@ -34,7 +34,7 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
     </div>
 )
 
-type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void, inputClassName?: string };
+type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void | string, inputClassName?: string };
 export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", inputClassName, prefix, suffix, ...rest }: InputProps<'textarea'>) => {
     const ref = useRef<HTMLTextAreaElement>(null)
     useEffect(() => {
@@ -52,42 +52,10 @@ export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, 
         ref.current.style.height = 'auto'; // Reset height to auto to calculate scrollHeight correctly
         ref.current.style.height = ref.current.scrollHeight + 'px'; // Adjust height to fit content
     }
-    const onChangeHandler = (v: string) => {
-        onChange?.(v);
-        updateHeight()
-    }
-    return (
-        <InputWrapper {...{ className, prefix, suffix }}>
-            <textarea ref={ref} disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${inputClassName}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChangeHandler(e.currentTarget.value)} rows={1} />
-        </InputWrapper>
-    )
-
-}
-
-// Number input: for field normalisation (e.g. XX XX XX for sort code) 
-// Currently a repeat of text input, but inserting normalisation logic. Could probably refactor if you wanted
-type NumberInputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => string, inputClassName?: string };
-export const NumberInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", inputClassName, prefix, suffix, ...rest }: NumberInputProps<'textarea'>) => {
-    const ref = useRef<HTMLTextAreaElement>(null)
-    useEffect(() => {
-        updateHeight()
-    }, [value, defaultValue])
-    // we have print media related font size changes
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('print');
-        const handleChange = () => updateHeight();
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, []);
-    const updateHeight = () => {
-        if (!ref.current) return
-        ref.current.style.height = 'auto'; // Reset height to auto to calculate scrollHeight correctly
-        ref.current.style.height = ref.current.scrollHeight + 'px'; // Adjust height to fit content
-    }
     const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const {value} = e.currentTarget as HTMLTextAreaElement; 
-        const formattedValue = onChange?.(value);
-        e.target.value = formattedValue ?? "";
+        const v = e.currentTarget.value;
+        const formattedValue = onChange?.(v); // if the onChange event returns a string, this is a formatted value. Update the ui with formatted value.
+        if (typeof(formattedValue) == "string") e.target.value = formattedValue;
         updateHeight()
     }
     return (
@@ -97,6 +65,7 @@ export const NumberInput = ({ placeholder = '---', value, defaultValue, onChange
     )
 
 }
+
 export const DateInput = ({ placeholder = '', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'input'>) => {
     const val = value ?? defaultValue
     return (
