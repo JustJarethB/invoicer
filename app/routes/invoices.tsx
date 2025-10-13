@@ -79,12 +79,14 @@ const useInvoice = (invoiceId: string) => {
     return maybeInvoice;
 }
 const useInvoiceTotal = (invoiceId: string) => useInvoice(invoiceId).lineItems.map(linePrice).reduce((p, c) => p + c, 0);
+type PaymentStatus = "overpaid" | "paid" | "partial" | "unpaid";
 const useInvoicePaymentStatus = (invoiceId: string) => {
     const { payments } = useInvoice(invoiceId)
     const totalDue = useInvoiceTotal(invoiceId)
     // TODO: remove null check once done properly
     const totalPaid = (payments ?? []).map((p) => p.amount).reduce((p, c) => p + c, 0);
-    return { totalDue, totalPaid, overpaid: totalPaid > totalDue, paid: totalPaid >= totalDue, partial: totalPaid > 0 && totalPaid < totalDue, due: totalDue - totalPaid }
+    const paymentStatus: PaymentStatus = totalPaid > totalDue ? "overpaid" : (totalPaid > 0 && totalPaid < totalDue) ? "partial" : totalPaid == totalDue ? "paid" : "unpaid"
+    return { totalDue, totalPaid, paymentStatus, due: totalDue - totalPaid }
 }
 const withInvoiceProvider = withProvider(InvoiceProvider)
 
@@ -114,7 +116,7 @@ export default withInvoiceProvider(function Invoices() {
 
 const InvoiceRow = ({ id }: { id: string }) => {
     const invoice = useInvoice(id)
-    const { totalDue, due, overpaid } = useInvoicePaymentStatus(id)
+    const { totalDue, due, paymentStatus } = useInvoicePaymentStatus(id)
     const [open, setOpen] = useState(false);
     return (
         <tr className={`grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"}`}>
@@ -131,7 +133,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
             <td className="text-sm">{invoice.purchaseOrder}</td>
             <td className="text-sm">{invoice.to.name}</td>
             <td className="text-sm">£ {totalDue}</td>
-            <td className={`text-sm ${overpaid ? "text-amber-700" : ""}`}>£ {due}</td>
+            <td className={`text-sm ${paymentStatus == "overpaid" ? "text-amber-700" : ""}`}>£ {due}</td>
             <td className="">
                 <PaidStatus id={id} />
             </td>
@@ -151,12 +153,10 @@ const InvoiceRow = ({ id }: { id: string }) => {
 }
 const PaidStatus = ({ id }: { id: string }) => {
     const makePayment = useMakePayment()
-    const { paid, partial, overpaid } = useInvoicePaymentStatus(id)
-    if (overpaid)
-        return <Status color="warning" size="sm" onClick={() => makePayment(id, parseFloat(prompt("Amount") ?? "0"))}>Overpaid</Status>
-    if (paid)
-        return <Status color="success" size="sm">Paid</Status>
-    if (partial)
-        return <Status color="warning" size="sm" onClick={() => makePayment(id, parseFloat(prompt("Amount") ?? "0"))}>Partial</Status>
-    return <Status color="danger" size="sm" onClick={() => makePayment(id, parseFloat(prompt("Amount") ?? "0"))}>Unpaid</Status>
+    const { paymentStatus } = useInvoicePaymentStatus(id)
+    const color = (paymentStatus == "paid") ? "success" : (paymentStatus == "unpaid") ? "danger" : "warning"
+    const handleOnClick = () => {
+        if (paymentStatus != "paid") makePayment(id, parseFloat(prompt("Amount") ?? "0"))
+    }
+    return <Status size="sm" onClick={handleOnClick} color={color}>{paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}</Status>
 }
