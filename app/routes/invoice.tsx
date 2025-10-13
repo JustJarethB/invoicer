@@ -123,10 +123,8 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                 <h2>Payment:</h2>
                 <div className="p-2">
                   <StandardField name="terms" title="Payment Terms" defaultValue={payment.terms} />
-                  {/* <StandardField name="sortCode" title="Sort Code" defaultValue={payment.sortCode} /> */}
-                  {/* <StandardField name="number" title="Acc. Number" defaultValue={payment.number} /> */}
-                  <BankField     name="sortCode" title="Sort Code" defaultValue={payment.sortCode} type="sort" />
-                  <BankField     name="number" title="Acc. Number" defaultValue={payment.number} type="account" />
+                  <BankField     name="sortCode" title="Sort Code" defaultValue={payment.sortCode} type="sort"/>
+                  <BankField     name="number" title="Acc. Number" defaultValue={payment.number} type="account"/>
                   <StandardField name="bankName" title="Bank Name" defaultValue={payment.bankName} />
                   <StandardField name="emailAddress" title="Contact Email" defaultValue={payment.emailAddress} />
                   <StandardField name="phoneNumber" title="Contact Number" defaultValue={payment.phoneNumber} />
