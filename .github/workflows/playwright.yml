@@ -41,9 +41,9 @@ jobs:
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps --only-shell
     - name: Overwrite snapshots
-      if: >-
-        ${{ (inputs.update-snapshots == true) ||
-             (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == '[CI] update snapshots') }}
+      if: |
+        (inputs.update-snapshots == true) ||
+        (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == '[CI] update snapshots')
       run: pnpm exec playwright test --update-snapshots
     - name: Remove update snapshots label
       if: ${{ github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == '[CI] update snapshots' }}
