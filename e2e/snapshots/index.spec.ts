@@ -1,4 +1,8 @@
 import { test, expect } from '@playwright/test';
+
+const TEST_ID = 'TEST-001'
+const TEST_DATE = '2001-12-31'
+
 for (const colorScheme of ['light', 'dark'] as const) {
     test.describe(`[${colorScheme}] Visual Regression Tests`, () => {
         test.beforeEach(async ({ page }) => {
@@ -8,9 +12,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
             await page.goto('/');
             await page.waitForLoadState('networkidle')
             const invoiceInput = page.getByTestId('invoice-ref')
-            await invoiceInput.fill('TEST-001');
+            await invoiceInput.fill(TEST_ID);
             const taxDateInput = page.getByTestId('tax-date')
-            await taxDateInput.fill('2001-12-31');
+            await taxDateInput.fill(TEST_DATE);
+            const lineItemDate = page.getByTestId('line-items').locator('input').first();
+            lineItemDate
+            await page.evaluate(() => {
+                (document.querySelector('[data-testid="line-items"] input[type="date"]') as HTMLInputElement).value = '2001-12-31';
+            })
             const screenshot = await page.screenshot({ fullPage: true });
             expect(screenshot).toMatchSnapshot(`homepage-${colorScheme}.png`);
         });
@@ -35,9 +44,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
             await page.goto('/');
             await page.waitForLoadState('networkidle')
             const invoiceInput = page.getByTestId('invoice-ref')
-            await invoiceInput.fill('TEST-001');
+            await invoiceInput.fill(TEST_ID);
             const taxDateInput = page.getByTestId('tax-date')
-            await taxDateInput.fill('2001-12-31');
+            await taxDateInput.fill(TEST_DATE);
             const screenshot = await page.screenshot({ fullPage: true });
             expect(screenshot).toMatchSnapshot(`print-homepage-${colorScheme}.png`);
         });
