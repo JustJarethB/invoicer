@@ -1,4 +1,4 @@
-import { BanknotesIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import * as outline from "@heroicons/react/24/outline";
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
 import { Button } from "~/components/home/Button";
@@ -7,7 +7,7 @@ import { Status } from "~/components/home/Status";
 import { withProvider } from "~/components/home/withProvider";
 import type { Address } from "~/data/address";
 import { db } from "~/db";
-import { useMobile } from "~/layouts/navbar";
+import { useMobile } from "~/hooks";
 import { linePrice } from "~/utils/linePrice";
 
 export function meta() {
