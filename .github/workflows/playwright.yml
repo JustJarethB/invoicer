@@ -1,4 +1,9 @@
 name: Playwright Tests
+
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   push:
     branches: [ main ]
@@ -23,6 +28,8 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+    - name: "DEBUG"
+      run: printenv
     - name: Install dependencies
       run: npm install -g pnpm && pnpm install
     - name: Configure Snapshot cache
@@ -41,8 +48,16 @@ jobs:
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps --only-shell
     - name: Overwrite snapshots
-      if: ${{inputs.update-snapshots == 'true'}}
+      if: |
+        (inputs.update-snapshots == true) ||
+        contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
       run: pnpm exec playwright test --update-snapshots
+    - name: Remove update snapshots label
+      if: contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
+      uses: actions-ecosystem/action-remove-labels@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        labels: "[CI] update snapshots"
     - name: Run Playwright tests
       run: pnpm exec playwright test
     - uses: actions/upload-artifact@v4
