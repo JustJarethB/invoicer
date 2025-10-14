@@ -136,14 +136,14 @@ const InvoiceRow = ({ id }: { id: string }) => {
         deleteInvoice(id);
     }
     return (
-        <tr className={`px-2 grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"} ${mobile && 'cursor-pointer'}`} onClick={() => mobile && setOpen(o => !o)}>
+        <tr className={`px-2 grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"} ${'cursor-pointer md:pointer-events-none'}`} onClick={() => mobile && setOpen(o => !o)}>
             <td className="flex justify-end gap-2 grid-cols-1">
                 <Button icon outline color="danger" size="sm" onClick={() => handleDelete()}>
-                    <TrashIcon className="size-5"/>
+                    <TrashIcon className="size-5" />
                 </Button>
-                {!mobile && <Button icon outline size="sm" onClick={() => {setOpen(o => !o)}}>
+                <Button className="hidden md:block" icon outline size="sm" onClick={() => { setOpen(o => !o) }}>
                     <outline.EyeIcon className="size-5" />
-                </Button>}
+                </Button>
             </td>
             <td className="text-sm">{invoice.id}</td>
             <td className="text-sm">{invoice.date}</td>
@@ -156,16 +156,16 @@ const InvoiceRow = ({ id }: { id: string }) => {
             </td>
             {open && (
                 <td className="col-start-2 col-span-full pt-4 space-y-2">
-                    {mobile && (<>
+                    <span className="visible md:hidden">
                         <p className="text-sm"><strong>PO / Reference:</strong> {invoice.purchaseOrder}</p>
                         <p className="text-sm"><strong>Total Due:</strong> £{totalDue}</p>
-                    </>)}
+                    </span>
                     <p className="text-sm mb-2"><strong>Line items:</strong></p>
                     {invoice.lineItems.map(((item) => (
                         <div key={item.uuid} className="space-x-4 mt-2">
                             <span className="text-md">{item.description}</span>
                             {item.unitPrice && <span className="text-sm">£{item.unitPrice}</span>}
-                            {item.type == "2" &&<span className="text-sm">qty: {item.qty}</span>}
+                            {item.type == "2" && <span className="text-sm">qty: {item.qty}</span>}
                         </div>
                     )))}
                 </td>
