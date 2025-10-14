@@ -43,10 +43,10 @@ jobs:
     - name: Overwrite snapshots
       if: |
         (inputs.update-snapshots == true) ||
-        (github.event.label.name == '[CI] update snapshots')
+        contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
       run: pnpm exec playwright test --update-snapshots
     - name: Remove update snapshots label
-      if: github.event.label.name == '[CI] update snapshots'
+      if: contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
       uses: actions-ecosystem/action-remove-labels@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
