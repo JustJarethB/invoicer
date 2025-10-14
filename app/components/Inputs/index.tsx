@@ -34,8 +34,15 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
     </div>
 )
 
-type InputProps<T extends 'textarea' | 'input'> = Omit<ComponentPropsWithoutRef<T>, 'onChange'> & Pick<InputWrapperProps, 'prefix' | "suffix"> & { onChange?: (value: string) => void | string, inputClassName?: string };
-export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", inputClassName, prefix, suffix, ...rest }: InputProps<'textarea'>) => {
+type InputProps<T extends 'textarea' | 'input'> =
+    Omit<ComponentPropsWithoutRef<T>, 'onChange'> &
+    Pick<InputWrapperProps, 'prefix' | "suffix"> &
+    {
+        onChange?: (value: string) => void,
+        formatOnChange?: (value: string) => string, // This is called before `onChange`
+        inputClassName?: string
+    };
+export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", inputClassName, prefix, suffix, formatOnChange, ...rest }: InputProps<'textarea'>) => {
     const ref = useRef<HTMLTextAreaElement>(null)
     useEffect(() => {
         updateHeight()
@@ -54,8 +61,9 @@ export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, 
     }
     const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const v = e.currentTarget.value;
-        const formattedValue = onChange?.(v); // if the onChange event returns a string, this is a formatted value. Update the ui with formatted value.
-        if (typeof(formattedValue) == "string") e.target.value = formattedValue;
+        const formattedValue = formatOnChange?.(v)
+        onChange?.(formattedValue ?? v);
+        if (typeof (formattedValue) == "string") e.target.value = formattedValue;
         updateHeight()
     }
     return (
