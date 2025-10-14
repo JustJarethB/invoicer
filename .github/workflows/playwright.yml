@@ -51,8 +51,7 @@ jobs:
       uses: actions-ecosystem/action-remove-labels@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        labels: 
-          - "[CI] update snapshots"
+        labels: "[CI] update snapshots"
     - name: Run Playwright tests
       run: pnpm exec playwright test
     - uses: actions/upload-artifact@v4
