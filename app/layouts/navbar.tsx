@@ -1,5 +1,5 @@
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
-import { type PropsWithChildren, useEffect, useState } from "react";
+import { type MouseEventHandler, type PropsWithChildren, useEffect, useState } from "react";
 import { Outlet, NavLink, type NavLinkProps } from "react-router";
 import { ThemeSelector } from "~/components/ThemeSelector";
 import SidebarIcon from "~/components/SidebarIcon"
@@ -49,10 +49,12 @@ export default function Navbar() {
         setOpen(!mobile);
     }, [mobile]);
 
+    const handleMenuItemClick: MouseEventHandler<HTMLElement> = (e) => { e.target !== e.currentTarget && mobile && setOpen(false) }
+
     return <div className="dark:text-white w-full flex">
         <nav className={`${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} fixed md:sticky print:hidden z-100 transition-all bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen top-0 flex flex-col justify-between overflow-hidden`}
         >
-            <menu className="space-y-2 relative">
+            <menu className="space-y-2 relative" onClick={handleMenuItemClick}>
                 <StyledLink to="/">Invoice</StyledLink>
                 <StyledLink to="/clients">Clients</StyledLink>
                 <StyledLink to="/invoices">Invoices</StyledLink>
