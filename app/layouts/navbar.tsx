@@ -4,25 +4,7 @@ import { Outlet, NavLink, type NavLinkProps } from "react-router";
 import { ThemeSelector } from "~/components/ThemeSelector";
 import SidebarIcon from "~/components/SidebarIcon"
 import { Button } from "~/components/home/Button";
-import { MOBILE_BREAKPOINT } from "~/utils/constants";
-
-export function useMobile() {
-    const [isMobile, setIsMobile] = useState<boolean | undefined>(
-        undefined
-    );
-
-    useEffect(() => {
-        const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-        const onChange = () => {
-            setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        };
-        mql.addEventListener('change', onChange);
-        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        return () => mql.removeEventListener('change', onChange);
-    }, []);
-
-    return !!isMobile;
-}
+import { useMobile } from "~/hooks";
 
 const StyledLink = (props: PropsWithChildren<Omit<NavLinkProps, 'children'>>) => {
     return (
