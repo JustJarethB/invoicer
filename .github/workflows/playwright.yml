@@ -78,7 +78,7 @@ jobs:
           const { execSync } = require('child_process');
 
           // Get all diff files using shell glob
-          const output = execSync('ls **/*-diff.png 2>/dev/null || true').toString().trim();
+          const output = execSync('bash -O globstar -c "ls **/*-diff.png 2>/dev/null || true"').toString().trim();
           const diffFiles = output ? output.split('\n') : [];
           console.log('Diff files:', diffFiles);
           if (diffFiles.length === 0) return;
