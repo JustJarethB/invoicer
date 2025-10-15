@@ -18,6 +18,25 @@ const Suffix = ({ children }: PropsWithChildren) => {
     )
 }
 
+export type Formatter = Pick<ComponentPropsWithoutRef<typeof TextInput>, 'maxLength' | 'formatOnChange'>
+
+export const formatterOf = ({ grouping, maxChars, spacer }: { maxChars: number, grouping: number, spacer: string }): Formatter => {
+    const maxLength = maxChars + Math.floor((maxChars - 1) / grouping)
+    const formatOnChange = (input: string) => {
+        const regex = new RegExp(`.{1,${grouping}}`, "g");
+        return input
+            .replace(new RegExp(`\\${spacer}`, 'g'), "")
+            .replace(/\s+/g, "")
+            .match(regex)
+            ?.join(spacer)
+            ?? input
+    }
+    return { maxLength: maxLength, formatOnChange }
+}
+
+
+
+
 type InputWrapperProps = PropsWithChildren<{
     className: string;
     prefix?: string;
