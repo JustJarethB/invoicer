@@ -69,23 +69,23 @@ jobs:
         path: playwright-report/
         retention-days: 30
     - name: Comment with snapshot diffs
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const glob = require('glob');
-            const diffFiles = glob.sync('**/*-diff.png');
-            if (diffFiles.length === 0) return;
-            let body = '**Playwright snapshot diffs found:**\n\n';
-            for (const file of diffFiles.slice(0, 5)) { // limit to 5 previews
-              const img = fs.readFileSync(file).toString('base64');
-              body += `<details><summary>${file}</summary><img src="data:image/png;base64,${img}" width="400"/></details>\n`;
-            }
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
+      if: always()
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const glob = require('glob');
+          const diffFiles = glob.sync('**/*-diff.png');
+          if (diffFiles.length === 0) return;
+          let body = '**Playwright snapshot diffs found:**\n\n';
+          for (const file of diffFiles.slice(0, 5)) { // limit to 5 previews
+            const img = fs.readFileSync(file).toString('base64');
+            body += `<details><summary>${file}</summary><img src="data:image/png;base64,${img}" width="400"/></details>\n`;
+          }
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body
+          });
