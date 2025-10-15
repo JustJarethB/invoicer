@@ -50,6 +50,7 @@ jobs:
       run: pnpm exec playwright install --with-deps --only-shell
     - name: Overwrite snapshots
       if: |
+        github.event_name == 'push' ||
         (inputs.update-snapshots == true) ||
         contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
       run: pnpm exec playwright test --update-snapshots
