@@ -75,7 +75,6 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
-          const glob = require('glob');
           const diffFiles = glob.sync('**/*-diff.png');
           if (diffFiles.length === 0) return;
           let body = '**Playwright snapshot diffs found:**\n\n';
