@@ -75,8 +75,8 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
-          console.log('Logging current directory:', process.cwd());
-          const diffFiles = await glob('**/*-diff.png');
+          const { sync } = require('glob');
+          const diffFiles = sync('**/*-diff.png');
           console.log('Diff files:', diffFiles);
           if (diffFiles.length === 0) return;
           let body = '**Playwright snapshot diffs found:**\n\n';
