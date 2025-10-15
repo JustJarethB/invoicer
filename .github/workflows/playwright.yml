@@ -47,7 +47,7 @@ jobs:
         key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
         path: ~/.cache/ms-playwright
     - name: Install Playwright Browsers
-      run: pnpm exec playwright install --with-deps --only-shell
+      run: pnpm exec playwright install chromium
     - name: Overwrite snapshots
       if: |
         github.event_name == 'push' ||
@@ -76,6 +76,8 @@ jobs:
         script: |
           const fs = require('fs');
           const { execSync } = require('child_process');
+          // shrink all diffs to smaller preview versions
+          execSync('bash -O globstar -c "for f in **/*-diff.png; do [ -f \"$f\" ] && convert \"$f\" -resize 200x preview-$f; done" || true');
 
           // Get all diff files using shell glob
           const output = execSync('bash -O globstar -c "ls **/*-diff.png 2>/dev/null || true"').toString().trim();
