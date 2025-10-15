@@ -82,14 +82,12 @@ jobs:
           const diffFiles = output ? output.split('\n') : [];
           console.log('Diff files:', diffFiles);
           if (diffFiles.length === 0) return;
-          let body = `**${diffFiles.length} Playwright snapshot diffs found:**\n\n`; + 
+          let body = `**${diffFiles.length} Playwright snapshot diffs found:**\n\n` + 
                      `Uploaded as [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\n`;
-          /** exceed comment size limits
-          for (const file of diffFiles.slice(0, 5)) { // limit to 5 previews
-            const img = fs.readFileSync(file).toString('base64');
-            body += `<details><summary>${file}</summary><img src="data:image/png;base64,${img}" width="400"/></details>\n`;
+          for (const file of diffFiles) {
+            // const img = fs.readFileSync(file).toString('base64');
+            body += `${file}\n`;
           }
-          */
           await github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
