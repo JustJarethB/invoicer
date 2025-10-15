@@ -46,10 +46,10 @@ export default function Navbar() {
         {open &&
             <span className="bg-black/50 md:hidden inset-0 absolute z-99" onClick={() => setOpen(false)} />
         }
-        <Button icon size="sm" className={`print:collapse fixed left-4 top-4 bg-transparent z-100 ${open ? "translate-x-[180px]" : "translate-x-0"}`} onClick={() => setOpen(o => !o)}>
+        <Button icon size="sm" className={`print:collapse fixed left-2 top-4 bg-transparent z-100 ${open ? "translate-x-[180px]" : "translate-x-0"}`} onClick={() => setOpen(o => !o)}>
             <SidebarIcon size={20} />
         </Button>
-        <main className={`w-full flex-auto min-h-screen`}>
+        <main className={`w-full flex-1 min-h-screen`}>
             <Outlet />
         </main>
     </div>
