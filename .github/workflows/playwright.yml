@@ -75,7 +75,9 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
-          const diffFiles = glob.sync('**/*-diff.png');
+          console.log('Logging current directory:', process.cwd());
+          const diffFiles = await glob('**/*-diff.png');
+          console.log('Diff files:', diffFiles);
           if (diffFiles.length === 0) return;
           let body = '**Playwright snapshot diffs found:**\n\n';
           for (const file of diffFiles.slice(0, 5)) { // limit to 5 previews
