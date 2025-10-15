@@ -17,6 +17,6 @@ export const fieldFormattingOf = (type: FieldType): Formatter => {
             return formatterOf({ maxChars: 6, grouping: 2, spacer: "-" })
         case "accountNumber":
             return formatterOf({ maxChars: 8, grouping: 4, spacer: " " })
-        default: return { maxLength: undefined, formatOnChange: undefined }
+        default: throw new Error(`No formatting for field type ${type}`)
     }
 }
