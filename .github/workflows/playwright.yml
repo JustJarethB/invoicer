@@ -38,7 +38,7 @@ jobs:
       uses: actions/cache@v4
       with:
         key: playwright-snapshots/${{github.ref}}
-        restore-keys: playwright-snapshots/refs/heads/master
+        restore-keys: playwright-snapshots/refs/heads/main
         path: e2e/snapshots/**
     - name: Playwright Browsers cache
       id: cache-browsers
