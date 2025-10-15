@@ -68,9 +68,6 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
-    - name: Install ImageMagick
-      if: failure()
-      run: sudo apt-get update && sudo apt-get install -y imagemagick
     - name: Comment with snapshot diffs
       if: failure()
       uses: actions/github-script@v7
