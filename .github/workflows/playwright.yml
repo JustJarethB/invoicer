@@ -84,10 +84,12 @@ jobs:
           if (diffFiles.length === 0) return;
           let body = `**${diffFiles.length} Playwright snapshot diffs found:**\n\n` + 
                      `Uploaded as [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\n`;
+          body += '```\n';
           for (const file of diffFiles) {
             // const img = fs.readFileSync(file).toString('base64');
             body += `${file}\n`;
           }
+          body += '```';
           await github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
