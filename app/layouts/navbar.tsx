@@ -44,7 +44,7 @@ export default function Navbar() {
             <ThemeSelector />
         </nav>
         {open &&
-            <span className="bg-black/50 md:hidden inset-0 absolute z-99" onClick={() => setOpen(false)} />
+            <span className="bg-black/50 md:hidden inset-0 absolute z-99 print:hidden" onClick={() => setOpen(false)} />
         }
         <Button icon size="sm" className={`print:collapse fixed left-2 top-4 bg-transparent z-100 ${open ? "translate-x-[180px]" : "translate-x-0"}`} onClick={() => setOpen(o => !o)}>
             <SidebarIcon size={20} />
