@@ -1,11 +1,11 @@
-import { useEffect, useState, type MouseEventHandler, type PropsWithChildren } from "react";
+import { useEffect, useState } from "react";
 import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
 import { getClients, NULL_CLIENT, type Client } from "~/data/client";
 import { Address } from "~/data/address";
 import { useLineItems, withLineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { AddressPanel } from "~/components/home/AddressPanel";
 import { Controls } from "~/components/home/Controls";
-import { BankField, StandardField } from "~/components/home/StandardField";
+import { fieldFormattingOf, StandardField } from "~/components/home/StandardField";
 import { Totals } from "~/components/home/Totals";
 import { LineItems } from "~/components/home/LineItems";
 import type { Route } from "./+types/invoice";
@@ -123,8 +123,8 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                 <h2>Payment:</h2>
                 <div className="p-2">
                   <StandardField name="terms" title="Payment Terms" defaultValue={payment.terms} />
-                  <BankField     name="sortCode" title="Sort Code" defaultValue={payment.sortCode} type="sort"/>
-                  <BankField     name="number" title="Acc. Number" defaultValue={payment.number} type="account"/>
+                  <StandardField name="sortCode" title="Sort Code" defaultValue={payment.sortCode} {...fieldFormattingOf('sortCode')} />
+                  <StandardField name="number" title="Acc. Number" defaultValue={payment.number} {...fieldFormattingOf('accountNumber')} />
                   <StandardField name="bankName" title="Bank Name" defaultValue={payment.bankName} />
                   <StandardField name="emailAddress" title="Contact Email" defaultValue={payment.emailAddress} />
                   <StandardField name="phoneNumber" title="Contact Number" defaultValue={payment.phoneNumber} />
