@@ -12,4 +12,4 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
-/e2e/snapshots/**/*/.png
+/e2e/snapshots/**/*.png
