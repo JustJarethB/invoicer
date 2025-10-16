@@ -47,7 +47,7 @@ jobs:
         key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
         path: ~/.cache/ms-playwright
     - name: Install Playwright Browsers
-      run: pnpm exec playwright install --with-deps --only-shell
+      run: pnpm exec playwright install chromium
     - name: Overwrite snapshots
       if: |
         github.event_name == 'push' ||
@@ -68,3 +68,31 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+    - name: Comment with snapshot diffs
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          // Get all diff files using shell glob
+          const output = execSync('bash -O globstar -c "ls test-results/**/*-diff.png 2>/dev/null || true"').toString().trim();
+          const diffFiles = output ? output.split('\n') : [];
+          console.log('Diff files:', diffFiles);
+          if (diffFiles.length === 0) return;
+          let body = `**${diffFiles.length} Playwright snapshot diffs found:**\n\n` + 
+                     `Uploaded as [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\n`;
+          body += '```\n';
+          for (const file of diffFiles) {
+            // const img = fs.readFileSync(file).toString('base64');
+            body += `${file}\n`;
+          }
+          body += '```';
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body
+          });
