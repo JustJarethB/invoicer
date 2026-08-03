@@ -136,7 +136,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
         deleteInvoice(id);
     }
     return (
-        <tr className={`px-2 grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"} ${'cursor-pointer md:pointer-events-none'}`} onClick={() => mobile && setOpen(o => !o)}>
+        <tr className={`px-2 grid grid-cols-subgrid py-4 col-span-full group transition-colors items-center rounded-md ${open ? "bg-white/5 hover:bg-white/6" : "hover:bg-white/5"} ${'cursor-pointer md:cursor-default'}`} onClick={() => mobile && setOpen(o => !o)}>
             <td className="flex justify-end gap-2 grid-cols-1">
                 <Button icon outline color="danger" size="sm" onClick={() => handleDelete()}>
                     <TrashIcon className="size-5" />
