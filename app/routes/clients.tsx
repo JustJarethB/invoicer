@@ -3,9 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
-import { Address } from "~/data/address";
-import { NULL_CLIENT, type Client } from "~/data/client";
-import { useDb, db } from "~/db";
+import { NULL_CLIENT, saveClient, deleteClient, type Client } from "~/data/client";
+import { useDb } from "~/db";
 import { formJson } from "~/utils/formJson";
 
 export function meta() {
@@ -40,12 +39,11 @@ export default () => {
 }
 
 const ClientPanel = ({ client, refreshCache }: { client: Client, refreshCache: () => void }) => {
-    const db = useDb();
     const saveDB = async (key: string, client: Client) => {
-        db.save(['clients', key], client);
+        await saveClient(key, client);
     }
     const removeDB = async (key: string) => {
-        db.remove(['clients', key]);
+        await deleteClient(key);
         refreshCache();
     }
     const { address } = client;
