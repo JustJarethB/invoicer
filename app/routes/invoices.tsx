@@ -9,6 +9,7 @@ import type { Address } from "~/data/address";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
 import { linePrice } from "~/utils/linePrice";
+import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
 
 export function meta() {
     return [
@@ -34,10 +35,10 @@ type InvoiceContext = {
 }
 const InvoiceContext = createContext<InvoiceContext>({
     invoices: [],
-    makePayment: function (invoiceId: string, amount: number): void {
+    makePayment: function (): void {
         throw new Error("Function not implemented.");
     },
-    deleteInvoice: function (invoiceId: Invoice['id']): void {
+    deleteInvoice: function (): void {
         throw new Error("Function not implemented")
     }
 })
@@ -45,6 +46,10 @@ const InvoiceContext = createContext<InvoiceContext>({
 const InvoiceProvider = ({ children }: PropsWithChildren) => {
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const makePayment = (invoiceId: string, amount: number) => {
+        if (!isValidPaymentAmount(amount)) {
+            throw new Error(`Payment rejected: invalid amount ${amount} for invoice ${invoiceId}`);
+        }
+        
         const newPayment: Payment = {
             amount,
             date: new Date().toISOString(),
@@ -55,7 +60,6 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
         if (!invoice) {
             throw new Error(`Invoice with id ${invoiceId} not found`);
         }
-        // TODO: remove null check once done properly
         const newInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] }
         db.save(["invoice", invoiceId], newInvoice);
         setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? newInvoice : inv)));
