@@ -49,8 +49,8 @@ export const NULL_CLIENT: Client = {
 
 export const saveClient = async (key: string, client: Client) => {
     const data = await db.get(['clientKeys']) ?? [];
-    db.save(['clients', key], client);
-    db.save(['clientKeys'], [...data, key]);
+    await db.save(['clients', key], client);
+    await db.save(['clientKeys'], Array.from(new Set([...data, key])));
 }
 export const deleteClient = async (key: string) => {
     const data = await db.get(['clientKeys']) ?? [];
