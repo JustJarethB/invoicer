@@ -21,7 +21,36 @@ on:
         description: 'Update Snapshots'
         type: boolean
 jobs:
-  test:
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm install -g pnpm && pnpm install
+      - name: Typecheck
+        run: pnpm run typecheck
+  unit-integration:
+    name: Unit and integration tests
+    needs: static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm install -g pnpm && pnpm install
+      - name: Unit tests
+        run: pnpm run test:unit
+      - name: Integration tests
+        run: pnpm run test:integration
+  e2e:
+    name: Playwright tests
+    needs: [static, unit-integration]
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
