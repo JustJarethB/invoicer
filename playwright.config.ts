@@ -1,4 +1,42 @@
 import { defineConfig, devices } from '@playwright/test';
+import { execSync } from 'node:child_process';
+
+/**
+ * Playwright 1.55+ bundles Chromium 140, which is built for macOS 12+ and
+ * crashes on macOS 11 Big Sur with a dyld CATapDescription error.
+ *
+ * On those machines we fall back to the locally installed Google Chrome channel
+ * (if available). CI runs ubuntu-latest so it keeps using the bundled Chromium.
+ */
+function needsChromeChannel(): boolean {
+  if (process.platform !== 'darwin') return false;
+  try {
+    const version = execSync('sw_vers -productVersion', { encoding: 'utf8' }).trim();
+    const major = Number(version.split('.')[0]);
+    return major === 11;
+  } catch {
+    return false;
+  }
+}
+
+function chromeChannel() {
+  if (!needsChromeChannel()) return undefined;
+
+  try {
+    const chromePath =
+      process.env.PLAYWRIGHT_CHROME_PATH ||
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    execSync(`"${chromePath}" --version`, { stdio: 'ignore' });
+    return { channel: 'chrome' as const, launchOptions: { executablePath: chromePath } };
+  } catch {
+    throw new Error(
+      'macOS 11 detected: Playwright’s bundled Chromium requires macOS 12+. ' +
+        'Please install Google Chrome, or set PLAYWRIGHT_CHROME_PATH to a compatible Chromium executable.'
+    );
+  }
+}
+
+const chrome = chromeChannel();
 
 /**
  * Read environment variables from file.
@@ -29,6 +67,9 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    /* Use the installed Chrome channel on macOS 11 Big Sur. */
+    channel: chrome?.channel,
+    launchOptions: chrome?.launchOptions,
   },
 
   /* Configure projects for major browsers */
@@ -36,6 +77,13 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/e2e/flows/**/*.spec.ts'],
+    },
+
+    {
+      name: 'visual-regression',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/e2e/snapshots/**/*.spec.ts'],
     },
 
     // {
