@@ -7,7 +7,7 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "test": "pnpm run typecheck && pnpm run test:unit && pnpm run test:integration",
+    "test": "pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run test:e2e && pnpm run test:snapshots",
     "test:unit": "vitest --run app/utils app/data",
     "test:integration": "vitest --run app/components app/routes",
     "test:e2e": "playwright test e2e/flows",
