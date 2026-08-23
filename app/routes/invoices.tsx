@@ -100,7 +100,7 @@ const useInvoicePaymentStatus = (invoiceId: string) => {
     const totalDue = useInvoiceTotal(invoiceId)
     // TODO: remove null check once done properly
     const totalPaid = (payments ?? []).map((p) => p.amount).reduce((p, c) => p + c, 0);
-    const paymentStatus: PaymentStatus = totalPaid > totalDue ? "overpaid" : (totalPaid > 0 && totalPaid < totalDue) ? "partial" : totalPaid == totalDue ? "paid" : "unpaid"
+    const paymentStatus: PaymentStatus = totalPaid > totalDue ? "overpaid" : (totalPaid > 0 && totalPaid < totalDue) ? "partial" : totalPaid === totalDue ? "paid" : "unpaid"
     return { totalDue, totalPaid, paymentStatus, due: totalDue - totalPaid }
 }
 const withInvoiceProvider = withProvider(InvoiceProvider)
@@ -154,7 +154,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
             <td className="text-sm">{invoice.purchaseOrder}</td>
             <td className="text-sm">{invoice.to.name}</td>
             <td className="text-sm">£ {totalDue}</td>
-            <td className={`text-sm ${paymentStatus == "overpaid" ? "text-amber-700" : ""}`}>£ {due}</td>
+            <td className={`text-sm ${paymentStatus === "overpaid" ? "text-amber-700" : ""}`}>£ {due}</td>
             <td className="text-center">
                 <PaidStatus id={id} />
             </td>
@@ -169,7 +169,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
                         <div key={item.uuid} className="space-x-4 mt-2">
                             <span className="text-md">{item.description}</span>
                             {item.unitPrice && <span className="text-sm">£{item.unitPrice}</span>}
-                            {item.type == "2" && <span className="text-sm">qty: {item.qty}</span>}
+                            {item.type === "2" && <span className="text-sm">qty: {item.qty}</span>}
                         </div>
                     )))}
                 </td>
@@ -180,9 +180,9 @@ const InvoiceRow = ({ id }: { id: string }) => {
 const PaidStatus = ({ id }: { id: string }) => {
     const makePayment = useMakePayment()
     const { paymentStatus } = useInvoicePaymentStatus(id)
-    const color = (paymentStatus == "paid") ? "success" : (paymentStatus == "unpaid") ? "danger" : "warning"
+    const color = (paymentStatus === "paid") ? "success" : (paymentStatus === "unpaid") ? "danger" : "warning"
     const handleOnClick = () => {
-        if (paymentStatus != "paid") makePayment(id, parseFloat(prompt("Amount") ?? "0"))
+        if (paymentStatus !== "paid") makePayment(id, parseFloat(prompt("Amount") ?? "0"))
     }
     return <Status size="sm" onClick={handleOnClick} color={color}>{paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}</Status>
 }
