@@ -182,7 +182,10 @@ const PaidStatus = ({ id }: { id: string }) => {
     const { paymentStatus } = useInvoicePaymentStatus(id)
     const color = (paymentStatus == "paid") ? "success" : (paymentStatus == "unpaid") ? "danger" : "warning"
     const handleOnClick = () => {
-        if (paymentStatus != "paid") makePayment(id, parseFloat(prompt("Amount") ?? "0"))
+        if (paymentStatus != "paid") {
+            // eslint-disable-next-line no-alert
+            makePayment(id, parseFloat(prompt("Amount") ?? "0"))
+        }
     }
     return <Status size="sm" onClick={handleOnClick} color={color}>{paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}</Status>
 }

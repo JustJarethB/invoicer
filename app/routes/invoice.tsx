@@ -58,6 +58,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
 
     }
     await db.save(['invoice', id], invoice)
+    // eslint-disable-next-line no-alert
     alert("Invoice Saved") // TODO: show proper toast/notif
   }
 

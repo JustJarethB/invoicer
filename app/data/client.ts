@@ -63,6 +63,5 @@ export const getClients = async (): Promise<Client[]> => {
     const clients = await Promise.all(keys.map(async (key: string) => {
         return await db.get(['clients', key]) as Client ?? NULL_CLIENT;
     }))
-    console.log('Loaded clients:', clients);
     return clients
 }

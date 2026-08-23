@@ -6,8 +6,7 @@ const matchPartialKeys = (keys: string[]) => {
         try {
             const parsedKey = JSON.parse(key);
             return keys.every(k => parsedKey.includes(k));
-        } catch (e) {
-            console.error("Failed to parse localStorage key:", key, e);
+        } catch {
             return false;
         }
     })

@@ -25,7 +25,6 @@ export const ManualSave = <T,>({ children, name, hideIcon, onChange: onChangePar
         if (!formRef.current) throw new Error("Form reference is not set");
         const data = formJson<Address>(formRef.current);
         setSaveData(data as unknown as Address);
-        console.log("Saving data", data);
         // await db.save([name], data)
     }
     return (
