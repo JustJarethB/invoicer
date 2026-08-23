@@ -28,7 +28,7 @@ describe('db', () => {
     await db.save(['invoice', 'b'], { id: 'b' });
     await db.save(['client', 'c'], { id: 'c' });
 
-    const invoices = await db.getAll(['invoice']);
+    const invoices = await db.getAll<{ id: string }>(['invoice']);
     expect(invoices).toHaveLength(2);
     expect(invoices.map((i) => i.id).sort()).toEqual(['a', 'b']);
   });
@@ -38,7 +38,7 @@ describe('db', () => {
     await db.save(['invoice', 'z'], { id: 'z' });
     await db.save(['invoice', 'a'], { id: 'a' });
 
-    const invoices = await db.getAll(['invoice']);
+    const invoices = await db.getAll<{ id: string }>(['invoice']);
     expect(invoices.map((i) => i.id)).toEqual(['a', 'z']);
   });
 });

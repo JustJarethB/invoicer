@@ -12,20 +12,20 @@ const matchPartialKeys = (keys: string[]) => {
         }
     })
 }
-const save = async (keys: string[], data: any) => {
+const save = async <T,>(keys: string[], data: T) => {
     if (typeof localStorage === 'undefined') return false;
     localStorage.setItem(JSON.stringify(keys), JSON.stringify(data));
     await new Promise(resolve => setTimeout(resolve, 100)); // Simulate async operation
     return true
 }
-const get = async (keys: string[]) => {
+const get = async <T,>(keys: string[]): Promise<T | null> => {
     if (typeof localStorage === 'undefined') return null;
     const data = localStorage.getItem(JSON.stringify(keys));
     return data ? JSON.parse(data) : null;
 }
-const getAll = async (keys: string[] = []) => {
+const getAll = async <T,>(keys: string[] = []): Promise<T[]> => {
     if (typeof localStorage === 'undefined') return [];
-    return Promise.all(matchPartialKeys(keys).sort().map(keyStr => get(JSON.parse(keyStr))))
+    return (await Promise.all(matchPartialKeys(keys).sort().map(keyStr => get<T>(JSON.parse(keyStr))))).filter((item) => item !== null) as T[]
 }
 const remove = async (keys: string[]) => {
     if (typeof localStorage === 'undefined') return false;

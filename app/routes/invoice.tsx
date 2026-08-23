@@ -27,10 +27,10 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export async function clientLoader() {
-  const from: Address = await db.get(["from-address"]) ?? NULL_CLIENT.address;
-  const payment: PaymentDetails = await db.get(["payment-details"]) ?? {}
+  const from: Address = await db.get<Address>(["from-address"]) ?? NULL_CLIENT.address;
+  const payment: PaymentDetails = await db.get<PaymentDetails>(["payment-details"]) ?? { terms: "", type: "", bankName: "", sortCode: "", number: "", emailAddress: "", phoneNumber: "", info: "" }
   const clients: Client[] = await getClients();
-  const logo: { url: string } = await db.get(["logo"]) ?? {};
+  const logo: { url: string } = await db.get<{ url: string }>(["logo"]) ?? { url: "" };
   return { from, payment, clients, logo };
 }
 
@@ -81,7 +81,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 text-gray-800 dark:text-white p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
         <div className="grid grid-cols-6 gap-4 p-2">
           <div className="col-span-6 md:col-span-3 print:col-span-3">
-            <Autosave onChange={logo => (setLogo(logo as any))} name="logo">
+            <Autosave onChange={logo => (setLogo(logo as unknown as { url: string }))} name="logo">
               <ImageInput className={`rounded ${logo.url ? "" : "print:hidden"}`} name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
             </Autosave>
           </div>
@@ -104,13 +104,13 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
             </div>
           </div>
           <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-            <Autosave onChange={from => setFrom(from as any)} name="from-address">
+            <Autosave onChange={from => setFrom(from as unknown as Address)} name="from-address">
               <AddressPanel title='From:' address={from} />
             </Autosave>
           </div>
 
           <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-            <ManualSave onChange={to => setTo(to as any)} name="to-address">
+            <ManualSave onChange={to => setTo(to as unknown as Address)} name="to-address">
               <AddressPanel title='To:' address={to} />
             </ManualSave>
           </div>
@@ -118,7 +118,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
             <LineItems />
           </div>
           <div className="col-span-6 md:col-span-4 print:col-span-4">
-            <Autosave onChange={payment => setPayment(payment as any)} name="payment-details">
+            <Autosave onChange={payment => setPayment(payment as unknown as PaymentDetails)} name="payment-details">
               <Container>
                 <h2>Payment:</h2>
                 <div className="p-2">
