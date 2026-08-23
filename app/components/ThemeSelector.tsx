@@ -52,7 +52,7 @@ export const ThemeProvider = ({ children }: PropsWithChildren) => {
         if (!ref.current) return;
         ref.current.ownerDocument.body.parentElement?.setAttribute('data-theme', themeValue);
     }, [themeValue])
-    return <ThemeContext.Provider value={{ theme, setTheme, themeValue }}><div ref={ref} className={themeValue == 'dark' ? 'scheme-light-dark' : 'scheme-light'}>{children}</div></ThemeContext.Provider>;
+    return <ThemeContext.Provider value={{ theme, setTheme, themeValue }}><div ref={ref} className={themeValue === 'dark' ? 'scheme-light-dark' : 'scheme-light'}>{children}</div></ThemeContext.Provider>;
 }
 export const useTheme = () => useContext(ThemeContext).theme;
 export const useSetTheme = () => useContext(ThemeContext).setTheme;
