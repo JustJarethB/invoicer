@@ -82,9 +82,8 @@ const SeededProvider = ({
     initialLineItems.length === 0
       ? [{ uuid: 'seeded-line' }]
       : initialLineItems;
-  const [lineItems, setLineItems] = useState(seed);
   return (
-    <LineItemProvider value={{ lineItems, setLineItems }}>
+    <LineItemProvider initialLineItems={seed}>
       {children}
     </LineItemProvider>
   );

@@ -36,8 +36,8 @@ const newLineItem = (): LineItem => ({
     type: undefined,
 });
 
-export const LineItemProvider = ({ children }: { children: ReactNode; }) => {
-    const [lineItems, setLineItems] = useState<LineItem[]>([newLineItem()]);
+export const LineItemProvider = ({ children, initialLineItems }: { children: ReactNode; initialLineItems?: LineItem[] }) => {
+    const [lineItems, setLineItems] = useState<LineItem[]>(() => initialLineItems?.length ? initialLineItems : [newLineItem()]);
     return <LineItemContext.Provider value={{ lineItems, setLineItems }}>{children}</LineItemContext.Provider>;
 };
 export const useLineItems = () => useContext(LineItemContext).lineItems;
