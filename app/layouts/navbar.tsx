@@ -31,7 +31,7 @@ export default function Navbar() {
         setOpen(!mobile);
     }, [mobile]);
 
-    const handleMenuItemClick: MouseEventHandler<HTMLElement> = (e) => { e.target !== e.currentTarget && mobile && setOpen(false) }
+    const handleMenuItemClick: MouseEventHandler<HTMLElement> = (e) => { if(e.target !== e.currentTarget && mobile) setOpen(false) }
 
     return <div className="dark:text-white w-full flex">
         <nav className={`${!open ? "w-0 p-0 m-0" : `w-[180px] p-4`} fixed md:sticky print:hidden z-100 transition-all bg-gray-100 dark:bg-gray-800 py-4 shadow-md h-screen top-0 flex flex-col justify-between overflow-hidden`}
