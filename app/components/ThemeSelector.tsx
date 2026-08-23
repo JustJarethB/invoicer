@@ -54,6 +54,9 @@ export const ThemeProvider = ({ children }: PropsWithChildren) => {
     }, [themeValue])
     return <ThemeContext.Provider value={{ theme, setTheme, themeValue }}><div ref={ref} className={themeValue == 'dark' ? 'scheme-light-dark' : 'scheme-light'}>{children}</div></ThemeContext.Provider>;
 }
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => useContext(ThemeContext).theme;
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSetTheme = () => useContext(ThemeContext).setTheme;
+// eslint-disable-next-line react-refresh/only-export-components
 export const useThemeValue = () => useContext(ThemeContext).themeValue;

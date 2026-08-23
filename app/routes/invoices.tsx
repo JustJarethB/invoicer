@@ -43,6 +43,7 @@ const InvoiceContext = createContext<InvoiceContext>({
     }
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 const InvoiceProvider = ({ children }: PropsWithChildren) => {
     const [invoices, setInvoices] = useState<Invoice[]>([])
     const makePayment = (invoiceId: string, amount: number) => {
@@ -105,7 +106,8 @@ const useInvoicePaymentStatus = (invoiceId: string) => {
 }
 const withInvoiceProvider = withProvider(InvoiceProvider)
 
-export default withInvoiceProvider(function Invoices() {
+// eslint-disable-next-line react-refresh/only-export-components
+export default withInvoiceProvider(function InvoicesRoute() {
     const invoices = useInvoiceIds()
     return (
         <table className="mt-16 mb-4 container mx-auto max-w-5xl w-4/5 grid gap-4 grid-cols-[0.75fr_1fr_1fr_2fr_2fr_0.5fr_0.5fr_0.75fr]">
@@ -129,6 +131,7 @@ export default withInvoiceProvider(function Invoices() {
     );
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 const InvoiceRow = ({ id }: { id: string }) => {
     const invoice = useInvoice(id)
     const deleteInvoice = useContext(InvoiceContext).deleteInvoice
@@ -177,6 +180,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
         </tr>
     )
 }
+// eslint-disable-next-line react-refresh/only-export-components
 const PaidStatus = ({ id }: { id: string }) => {
     const makePayment = useMakePayment()
     const { paymentStatus } = useInvoicePaymentStatus(id)

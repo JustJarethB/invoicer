@@ -11,6 +11,7 @@ export const StandardField = ({ title, className, parentClass, ...rest }: Compon
 
 type FieldType = 'sortCode' | 'accountNumber'
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const fieldFormattingOf = (type: FieldType): Formatter => {
     switch (type) {
         case "sortCode":

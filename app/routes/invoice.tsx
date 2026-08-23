@@ -34,7 +34,8 @@ export async function clientLoader() {
   return { from, payment, clients, logo };
 }
 
-export default withLineItemProvider(function Home({ loaderData: { clients, ...loaderData } }: Route.ComponentProps) {
+// eslint-disable-next-line react-refresh/only-export-components
+export default withLineItemProvider(function InvoiceRoute({ loaderData: { clients, ...loaderData } }: Route.ComponentProps) {
   const [id, setId] = useState<string>(`${(new Date()).getTime()}`.substring(0, 10));
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [purchaseOrder, setPurchaseOrder] = useState<string>('---');
@@ -142,11 +143,13 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   </div>
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 const PreviewIcon = ({ icon }: { icon: React.ForwardRefExoticComponent<React.PropsWithoutRef<React.SVGProps<SVGSVGElement>>> }) => {
   const Icon = icon;
   return <Icon className="size-10 py-2 z-50" />
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 const PreviewOptions = ({ paper, setPaper }: { paper: boolean, setPaper: React.Dispatch<React.SetStateAction<boolean>> }) => (
   <button
     className={"print:hidden fixed bottom-4 right-4 z-50 flex items-center px-2 gap-2 bg-gray-200 dark:bg-gray-800 border " +

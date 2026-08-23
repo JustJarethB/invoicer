@@ -16,6 +16,7 @@ type ChargeType = {
     disabledFields?: (keyof LineItemType)[]
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const chargeTypes = [
     {
         id: '0',

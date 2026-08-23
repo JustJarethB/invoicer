@@ -20,6 +20,7 @@ const Suffix = ({ children }: PropsWithChildren) => {
 
 export type Formatter = Pick<ComponentPropsWithoutRef<typeof TextInput>, 'maxLength' | 'formatOnChange'>
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const formatterOf = ({ grouping, maxChars, spacer }: { maxChars: number, grouping: number, spacer: string }): Formatter => {
     const maxLength = maxChars + Math.floor((maxChars - 1) / grouping)
     const formatOnChange = (input: string) => {

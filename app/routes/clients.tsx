@@ -7,6 +7,7 @@ import { NULL_CLIENT, saveClient, deleteClient, type Client } from "~/data/clien
 import { useDb } from "~/db";
 import { formJson } from "~/utils/formJson";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function meta() {
     return [
         { title: "Clients" },
@@ -15,7 +16,7 @@ export function meta() {
 
 
 const newClient = (): Client => ({ ...NULL_CLIENT, id: `${(new Date()).getTime()}` });
-export default () => {
+export default function ClientsRoute() {
     const db = useDb();
     const [clients, setClients] = useState<Client[]>([])
     const [cacheBuster, setCacheBuster] = useState(0);

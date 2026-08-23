@@ -40,9 +40,13 @@ export const LineItemProvider = ({ children, initialLineItems }: { children: Rea
     const [lineItems, setLineItems] = useState<LineItem[]>(() => initialLineItems?.length ? initialLineItems : [newLineItem()]);
     return <LineItemContext.Provider value={{ lineItems, setLineItems }}>{children}</LineItemContext.Provider>;
 };
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLineItems = () => useContext(LineItemContext).lineItems;
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLineItemIds = () => useLineItems().map((item) => item.uuid);
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLineItem = (id: string) => useLineItems().find((item) => item.uuid === id)
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSetLineItem = (id: string) => {
     const { lineItems, setLineItems } = useContext(LineItemContext);
     return (item: LineItem) => {
@@ -55,6 +59,7 @@ export const useSetLineItem = (id: string) => {
         setLineItems(newLineItems);
     };
 };
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDeleteLineItem = (id: string) => {
     const { lineItems, setLineItems } = useContext(LineItemContext);
     return () => {
@@ -62,4 +67,5 @@ export const useDeleteLineItem = (id: string) => {
         setLineItems(newLineItems);
     };
 }
+// eslint-disable-next-line react-refresh/only-export-components
 export const withLineItemProvider = withProvider(LineItemProvider);
