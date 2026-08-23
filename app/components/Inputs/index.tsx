@@ -132,7 +132,7 @@ export const ImageInput = ({ placeholder = 'https://via.placeholder.com/150', va
 
     const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
         const file = e.target.files?.[0];
-        if (!file) return console.warn("No file selected");
+        if (!file) return;
         setImageSrc(URL.createObjectURL(file));
     }
     return (
