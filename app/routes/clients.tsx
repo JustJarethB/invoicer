@@ -62,7 +62,7 @@ const ClientPanel = ({ client, refreshCache }: { client: Client, refreshCache: (
         saveDB(client.id, updatedClient);
         setIsEditing(false);
     }, [client.id])
-    return <form onSubmit={onSubmit} className="group p-4 ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm shadow relative " onChange={(e) => { setIsEditing(true); }}>
+    return <form onSubmit={onSubmit} className="group p-4 ring-4 dark:ring-gray-800 ring-gray-300 rounded-sm shadow relative " onChange={(_e) => { setIsEditing(true); }}>
         <TextInput required name="contactName" className=" text-lg font-bold focus:ring-white" placeholder="Contact Name" defaultValue={client.contactName} />
         <TextInput name="name" placeholder="Name" defaultValue={address?.name} />
         <TextInput name="streetAddress" placeholder="Street Address" defaultValue={address?.streetAddress} />
