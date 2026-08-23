@@ -308,13 +308,11 @@ export default defineConfig({
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "lint": "eslint .",
-    "test": "playwright test",
+    "test": "pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run test:e2e && pnpm run test:snapshots",
     "test:unit": "vitest --run app/utils app/data",
     "test:integration": "vitest --run app/components app/routes",
     "test:e2e": "playwright test e2e/flows",
-    "test:snapshots": "playwright test e2e/snapshots",
-    "test:all": "pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run test:integration && pnpm run test:e2e && pnpm run test:snapshots"
+    "test:snapshots": "playwright test e2e/snapshots"
   }
 }
 ```

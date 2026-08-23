@@ -55,12 +55,13 @@ describe('formJson', () => {
       }))
     );
 
-    const data = await formJson<{ note: string; attachment: string }>(form);
-
-    vi.stubGlobal('FileReader', originalFileReader);
-
-    expect(data.note).toBe('note text');
-    expect(data.attachment).toBe('data:text/plain;base64,aGVsbG8=');
+    try {
+      const data = await formJson<{ note: string; attachment: string }>(form);
+      expect(data.note).toBe('note text');
+      expect(data.attachment).toBe('data:text/plain;base64,aGVsbG8=');
+    } finally {
+      vi.stubGlobal('FileReader', originalFileReader);
+    }
   });
 
   it('keeps string values unchanged when no processor matches', async () => {
