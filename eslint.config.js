@@ -43,7 +43,7 @@ export default tseslint.config(
       "no-empty-pattern": ["error", { allowObjectPatternsAsParameters: true }],
       "no-var": "error",
       "prefer-const": "warn",
-      eqeqeq: ["warn", "always", { null: "ignore" }],
+      eqeqeq: ["error", "always", { null: "ignore" }],
       curly: ["warn", "multi-line"],
 
       "@typescript-eslint/no-explicit-any": "warn",
