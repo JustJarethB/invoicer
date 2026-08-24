@@ -14,18 +14,10 @@ jobs:
     name: Approve PR by repo owner
     runs-on: ubuntu-latest
     steps:
-      - name: Generate app token
-        id: token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APPROVER_APP_ID }}
-          private-key: ${{ secrets.APPROVER_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
       - name: Approve if PR author is the repository owner
         uses: actions/github-script@v7
         with:
-          github-token: ${{ steps.token.outputs.token }}
+          github-token: ${{ secrets.APPROVER_PAT }}
           script: |
             const owner = context.repo.owner;
             const prAuthor = context.payload.pull_request.user.login;

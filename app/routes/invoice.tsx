@@ -73,7 +73,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     <Controls clients={clients} loadClientAddress={(i) => { setTo(clients[i].address) }} saveInvoice={handleSaveInvoice} />
 
     {
-      theme == 'dark' && (
+      theme === 'dark' && (
         <PreviewOptions paper={paper} setPaper={setPaper} />
       )
     }<main data-theme={paper ? "light" : undefined} className="flex items-center justify-center not-print:pt-16 not-print:pb-4 not-print:relative">

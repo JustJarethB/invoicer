@@ -84,7 +84,7 @@ export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, 
         const v = e.currentTarget.value;
         const formattedValue = formatOnChange?.(v)
         onChange?.(formattedValue ?? v);
-        if (typeof (formattedValue) == "string") e.target.value = formattedValue;
+        if (typeof (formattedValue) === "string") e.target.value = formattedValue;
         updateHeight()
     }
     return (
