@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useState, useContext, type PropsWithChildren } from "react";
+import { createContext, type ReactNode, useState, useContext } from "react";
 import { withProvider } from "../withProvider";
 import { randomUUID } from "~/utils/uuid";
 import type { chargeTypes } from "./LineItem";
