@@ -18,6 +18,7 @@ import { TutorialWizard } from "~/components/TutorialWizard";
 import { HelpTooltip } from "~/components/Tooltip";
 import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
 import { useThemeValue } from "~/components/ThemeSelector";
+import { logger } from "~/utils/logger";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -58,8 +59,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
 
     }
     await db.save(['invoice', id], invoice)
-    // eslint-disable-next-line no-alert
-    alert("Invoice Saved") // TODO: show proper toast/notif
+    logger.success("Invoice Saved") // TODO: toast this
   }
 
   useEffect(() => {
