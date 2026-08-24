@@ -1,0 +1,36 @@
+name: Auto-approve owner PRs
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize]
+
+jobs:
+  auto-approve:
+    name: Approve PR by repo owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve if PR author is the repository owner
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.APPROVER_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const prAuthor = context.payload.pull_request.user.login;
+
+            if (prAuthor !== owner) {
+              core.info(`PR author ${prAuthor} is not the repository owner ${owner}. Skipping approval.`);
+              return;
+            }
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              event: 'APPROVE',
+              body: 'Approved automatically: PR author is the repository owner.'
+            });
