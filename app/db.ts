@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 
+import { logger } from "~/utils/logger";
+
 const matchPartialKeys = (keys: string[]) => {
     return Array(localStorage.length).fill(0).map((_, i) => localStorage.key(i)).filter((key): key is NonNullable<typeof key> => {
         if (!key) return false;
@@ -7,7 +9,7 @@ const matchPartialKeys = (keys: string[]) => {
             const parsedKey = JSON.parse(key);
             return keys.every(k => parsedKey.includes(k));
         } catch (e) {
-            console.error("Failed to parse localStorage key:", key, e);
+            logger.error("Failed to parse localStorage key:", key, e);
             return false;
         }
     })

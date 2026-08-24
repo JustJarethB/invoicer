@@ -8,6 +8,7 @@ import type { Address } from "~/data/address";
 import { Button } from "./Button";
 import { saveClient, type Client } from "~/data/client";
 import { formJson } from "../../utils/formJson";
+import { logger } from "~/utils/logger";
 type Props = {
     name: string;
     hideIcon?: boolean;
@@ -25,7 +26,7 @@ export const ManualSave = <T,>({ children, name, hideIcon, onChange: onChangePar
         if (!formRef.current) throw new Error("Form reference is not set");
         const data = formJson<Address>(formRef.current);
         setSaveData(data as unknown as Address);
-        console.log("Saving data", data);
+        logger.debug("Saving data", data);
         // await db.save([name], data)
     }
     return (

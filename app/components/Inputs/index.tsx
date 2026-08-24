@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
 import "./index.css"
+import { logger } from "~/utils/logger";
 
 const Prefix = ({ children }: PropsWithChildren) => {
     if (!children) return null;
@@ -132,7 +133,7 @@ export const ImageInput = ({ placeholder = 'https://via.placeholder.com/150', va
 
     const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
         const file = e.target.files?.[0];
-        if (!file) return console.warn("No file selected");
+        if (!file) return logger.warn("No file selected");
         setImageSrc(URL.createObjectURL(file));
     }
     return (
