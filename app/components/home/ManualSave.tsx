@@ -14,6 +14,7 @@ type Props = {
     hideIcon?: boolean;
     onChange?: ((newState: Record<string, string>) => void)
 }
+// TODO: currently ManualSave is only used for saving clients, but it should be generalized to save any form data.
 export const ManualSave = ({ children, hideIcon, onChange: onChangeParent }: PropsWithChildren<Props>) => {
     const formRef = useRef<HTMLFormElement>(null);
     const [isStale, setIsStale] = useState(false);
