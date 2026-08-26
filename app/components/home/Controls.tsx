@@ -3,19 +3,24 @@ import { DropdownButton } from "./DropdownButton";
 import { Button } from "./Button";
 
 export type ControlsProps = {
-    clients: Client[];
-    loadClientAddress: (i: number) => void;
-    saveInvoice: () => void;
-}
+  clients: Client[];
+  loadClientAddress: (i: number) => void;
+  saveInvoice: () => void;
+};
 
 export const Controls = ({ clients, loadClientAddress, saveInvoice }: ControlsProps) => (
-    <div className="print:hidden sticky top-0 dark:bg-gray-900 bg-gray-50 shadow-sm z-10">
-        <div className="container mx-auto">
-            <div className="w-full flex gap-2 py-2 justify-end">
-                <DropdownButton options={clients.map(c => ({ ...c, key: c.contactName, value: c.contactName }))} onClick={(v, i) => loadClientAddress(i)}>Clients</DropdownButton>
-                <Button onClick={() => window.print()}>Print</Button>
-                <Button onClick={saveInvoice}>Save</Button>
-            </div>
-        </div>
+  <div className="print:hidden sticky top-0 dark:bg-gray-900 bg-gray-50 shadow-sm z-10">
+    <div className="container mx-auto">
+      <div className="w-full flex gap-2 py-2 justify-end">
+        <DropdownButton
+          options={clients.map((c) => ({ ...c, key: c.contactName, value: c.contactName }))}
+          onClick={(v, i) => loadClientAddress(i)}
+        >
+          Clients
+        </DropdownButton>
+        <Button onClick={() => window.print()}>Print</Button>
+        <Button onClick={saveInvoice}>Save</Button>
+      </div>
     </div>
+  </div>
 );
