@@ -30,7 +30,7 @@ export async function clientLoader() {
   const from: Address = await db.get<Address>(["from-address"]) ?? NULL_CLIENT.address;
   const payment: PaymentDetails = await db.get<PaymentDetails>(["payment-details"]) ?? { terms: "", type: "", bankName: "", sortCode: "", number: "", emailAddress: "", phoneNumber: "", info: "" }
   const clients: Client[] = await getClients();
-  const logo: { url: string } = await db.get<{ url: string }>(["logo"]) ?? { url: "" };
+  const logo: { url: string } | null = await db.get<{ url: string }>(["logo"]) ;
   return { from, payment, clients, logo };
 }
 
@@ -82,7 +82,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
         <div className="grid grid-cols-6 gap-4 p-2">
           <div className="col-span-6 md:col-span-3 print:col-span-3">
             <Autosave onChange={logo => (setLogo(logo as unknown as { url: string }))} name="logo">
-              <ImageInput className={`rounded ${logo.url ? "" : "print:hidden"}`} name="url" alt="logo" defaultValue={logo.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
+              <ImageInput className={`rounded ${logo?.url ? "" : "print:hidden"}`} name="url" alt="logo" defaultValue={logo?.url} placeholder={placeholder.url} style={{ maxHeight: "80px" }} />
             </Autosave>
           </div>
           <div className="col-span-6 md:col-span-3 print:col-span-3">
