@@ -54,8 +54,8 @@ export const saveClient = async (key: string, client: Client) => {
 }
 export const deleteClient = async (key: string) => {
     const data = await db.get<string[]>(['clientKeys']) ?? [];
-    db.save(['clientKeys'], data.filter((item: string) => item !== key));
-    db.remove(['clients', key]);
+    await db.save(['clientKeys'], data.filter((item: string) => item !== key));
+    await db.remove(['clients', key]);
 }
 
 export const getClients = async (): Promise<Client[]> => {

@@ -25,7 +25,7 @@ const get = async <T,>(keys: string[]): Promise<T | null> => {
 }
 const getAll = async <T,>(keys: string[] = []): Promise<T[]> => {
     if (typeof localStorage === 'undefined') return [];
-    return (await Promise.all(matchPartialKeys(keys).sort().map(keyStr => get<T>(JSON.parse(keyStr))))).filter((item) => item !== null) as T[]
+    return (await Promise.all(matchPartialKeys(keys).sort().map(keyStr => get<T>(JSON.parse(keyStr))))).filter((item) => item !== null)
 }
 const remove = async (keys: string[]) => {
     if (typeof localStorage === 'undefined') return false;
