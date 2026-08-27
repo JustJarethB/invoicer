@@ -15,5 +15,4 @@ public/
 .eslintcache
 
 # legacy markdown/docs we won't reformat in this pass
-.github/workflows/tests.yml
 TESTING_STRATEGY.md
