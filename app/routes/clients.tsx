@@ -41,6 +41,7 @@ export default () => {
 const ClientPanel = ({ client, refreshCache }: { client: Client, refreshCache: () => void }) => {
     const saveDB = async (key: string, client: Client) => {
         await saveClient(key, client);
+        refreshCache();
     }
     const removeDB = async (key: string) => {
         await deleteClient(key);
