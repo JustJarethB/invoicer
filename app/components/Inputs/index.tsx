@@ -1,235 +1,159 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ComponentPropsWithoutRef,
-  type PropsWithChildren,
-} from "react";
-import "./index.css";
+import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
+import "./index.css"
 import { logger } from "~/utils/logger";
 
 const Prefix = ({ children }: PropsWithChildren) => {
-  if (!children) return null;
-  return (
-    <div className="pl-3 flex pointer-events-none">
-      <span className="text-gray-500">{children}</span>
-    </div>
-  );
-};
-const Suffix = ({ children }: PropsWithChildren) => {
-  if (!children) return null;
-  return (
-    <div className="pr-3 flex pointer-events-none">
-      <span className="text-gray-500">{children}</span>
-    </div>
-  );
-};
-
-export type Formatter = Pick<
-  ComponentPropsWithoutRef<typeof TextInput>,
-  "maxLength" | "formatOnChange"
->;
-
-export const formatterOf = ({
-  grouping,
-  maxChars,
-  spacer,
-}: {
-  maxChars: number;
-  grouping: number;
-  spacer: string;
-}): Formatter => {
-  const maxLength = maxChars + Math.floor((maxChars - 1) / grouping);
-  const formatOnChange = (input: string) => {
-    const regex = new RegExp(`.{1,${grouping}}`, "g");
+    if (!children) return null;
     return (
-      input
-        .replace(new RegExp(`\\${spacer}`, "g"), "")
-        .replace(/\s+/g, "")
-        .match(regex)
-        ?.join(spacer) ?? input
-    );
-  };
-  return { maxLength: maxLength, formatOnChange };
-};
+        <div className="pl-3 flex pointer-events-none">
+            <span className="text-gray-500">{children}</span>
+        </div>
+    )
+}
+const Suffix = ({ children }: PropsWithChildren) => {
+    if (!children) return null;
+    return (
+        <div className="pr-3 flex pointer-events-none">
+            <span className="text-gray-500">{children}</span>
+        </div>
+    )
+}
+
+export type Formatter = Pick<ComponentPropsWithoutRef<typeof TextInput>, 'maxLength' | 'formatOnChange'>
+
+export const formatterOf = ({ grouping, maxChars, spacer }: { maxChars: number, grouping: number, spacer: string }): Formatter => {
+    const maxLength = maxChars + Math.floor((maxChars - 1) / grouping)
+    const formatOnChange = (input: string) => {
+        const regex = new RegExp(`.{1,${grouping}}`, "g");
+        return input
+            .replace(new RegExp(`\\${spacer}`, 'g'), "")
+            .replace(/\s+/g, "")
+            .match(regex)
+            ?.join(spacer)
+            ?? input
+    }
+    return { maxLength: maxLength, formatOnChange }
+}
+
+
+
 
 type InputWrapperProps = PropsWithChildren<{
-  className: string;
-  prefix?: string;
-  suffix?: string;
+    className: string;
+    prefix?: string;
+    suffix?: string;
 }>;
 
 const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps) => (
-  // relative class used to check `prefix || suffix`
-  <div className={`${className} 'relative'}`}>
-    <div className="flex items-center rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
-      <Prefix children={prefix} />
-      {children}
-      <Suffix children={suffix} />
+    // relative class used to check `prefix || suffix`
+    <div className={`${className} 'relative'}`}>
+        <div className="flex items-center rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
+            <Prefix children={prefix} />
+            {children}
+            <Suffix children={suffix} />
+        </div>
     </div>
-  </div>
-);
+)
 
-type InputProps<T extends "textarea" | "input"> = Omit<ComponentPropsWithoutRef<T>, "onChange"> &
-  Pick<InputWrapperProps, "prefix" | "suffix"> & {
+type InputProps<T extends 'textarea' | 'input'> =
+    Omit<ComponentPropsWithoutRef<T>, 'onChange'> &
+    Pick<InputWrapperProps, 'prefix' | "suffix"> &
+    {
+        onChange?: (value: string) => void,
+        formatOnChange?: (value: string) => string, // This is called before `onChange`
+        inputClassName?: string
+    };
+export const TextInput = ({ placeholder = '---', value, defaultValue, onChange, className = "", inputClassName, prefix, suffix, formatOnChange, ...rest }: InputProps<'textarea'>) => {
+    const ref = useRef<HTMLTextAreaElement>(null)
+    useEffect(() => {
+        updateHeight()
+    }, [value, defaultValue])
+    // we have print media related font size changes
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('print');
+        const handleChange = () => updateHeight();
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
+    const updateHeight = () => {
+        if (!ref.current) return
+        ref.current.style.height = 'auto'; // Reset height to auto to calculate scrollHeight correctly
+        ref.current.style.height = ref.current.scrollHeight + 'px'; // Adjust height to fit content
+    }
+    const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const v = e.currentTarget.value;
+        const formattedValue = formatOnChange?.(v)
+        onChange?.(formattedValue ?? v);
+        if (typeof (formattedValue) === "string") e.target.value = formattedValue;
+        updateHeight()
+    }
+    return (
+        <InputWrapper {...{ className, prefix, suffix }}>
+            <textarea ref={ref} disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${inputClassName}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChangeHandler(e)} rows={1} />
+        </InputWrapper>
+    )
+
+}
+
+export const DateInput = ({ placeholder = '', value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<'input'>) => {
+    const val = value ?? defaultValue
+    return (
+        <InputWrapper {...{ className, prefix, suffix }}>
+            <input type="date" disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none resize-none ${val ? '' : 'text-gray-400 print:hidden'}`} {...{ value, defaultValue, placeholder, ...rest }} onChange={e => onChange?.(e.currentTarget.value)} />
+        </InputWrapper>
+    )
+
+}
+export const SelectInput = ({ placeholder = '', value = "", onChange, className = "", prefix, suffix, options = [], ...rest }: InputProps<'input'> & { options: string[] | { label: string, value: string | number | undefined, disabled?: boolean }[] }) => {
+    const optionsToUse = options.map(v => typeof v !== 'string' ? v : ({ label: v, value: v }));
+    if (!value) {
+        optionsToUse.unshift({ label: "---", value: "", disabled: true });
+    }
+    return (
+        <InputWrapper {...{ className, prefix, suffix }}>
+            <select disabled={rest.disabled ?? rest.readOnly} tabIndex={0} style={{ fontWeight: 'inherit' }} className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none appearance-none ${value ? '' : 'text-gray-400 print:hidden'}`} {...{ value, placeholder }} onChange={e => onChange?.(e.currentTarget.value)}>
+                {optionsToUse.map(({ label, value: v, disabled = false }) => <option key={v} disabled={disabled} value={v}>{label}</option>)}
+            </select>
+        </InputWrapper>
+    )
+
+}
+type ImageInputProps = ComponentPropsWithoutRef<'img'> & {
+    placeholder?: string;
+    value?: string;
+    defaultValue?: string;
     onChange?: (value: string) => void;
-    formatOnChange?: (value: string) => string; // This is called before `onChange`
-    inputClassName?: string;
-  };
-export const TextInput = ({
-  placeholder = "---",
-  value,
-  defaultValue,
-  onChange,
-  className = "",
-  inputClassName,
-  prefix,
-  suffix,
-  formatOnChange,
-  ...rest
-}: InputProps<"textarea">) => {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    updateHeight();
-  }, [value, defaultValue]);
-  // we have print media related font size changes
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("print");
-    const handleChange = () => updateHeight();
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
-  const updateHeight = () => {
-    if (!ref.current) return;
-    ref.current.style.height = "auto"; // Reset height to auto to calculate scrollHeight correctly
-    ref.current.style.height = ref.current.scrollHeight + "px"; // Adjust height to fit content
-  };
-  const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const v = e.currentTarget.value;
-    const formattedValue = formatOnChange?.(v);
-    onChange?.(formattedValue ?? v);
-    if (typeof formattedValue === "string") e.target.value = formattedValue;
-    updateHeight();
-  };
-  return (
-    <InputWrapper {...{ className, prefix, suffix }}>
-      <textarea
-        ref={ref}
-        disabled={rest.disabled ?? rest.readOnly}
-        tabIndex={0}
-        style={{ fontWeight: "inherit" }}
-        className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none print:placeholder-transparent resize-none ${inputClassName}`}
-        {...{ value, defaultValue, placeholder, ...rest }}
-        onChange={(e) => onChangeHandler(e)}
-        rows={1}
-      />
-    </InputWrapper>
-  );
-};
+} & Pick<InputProps<'input'>, 'name'>;
+export const ImageInput = ({ placeholder = 'https://via.placeholder.com/150', value, defaultValue, onChange, name, className = "", ...rest }: ImageInputProps) => {
+    const [imageSrc, setImageSrc] = useState(value || defaultValue);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const handleImageClick = () => {
+        fileInputRef.current?.click();
+    };
 
-export const DateInput = ({
-  placeholder = "",
-  value,
-  defaultValue,
-  onChange,
-  className = "",
-  prefix,
-  suffix,
-  ...rest
-}: InputProps<"input">) => {
-  const val = value ?? defaultValue;
-  return (
-    <InputWrapper {...{ className, prefix, suffix }}>
-      <input
-        type="date"
-        disabled={rest.disabled ?? rest.readOnly}
-        tabIndex={0}
-        style={{ fontWeight: "inherit" }}
-        className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none resize-none ${val ? "" : "text-gray-400 print:hidden"}`}
-        {...{ value, defaultValue, placeholder, ...rest }}
-        onChange={(e) => onChange?.(e.currentTarget.value)}
-      />
-    </InputWrapper>
-  );
-};
-export const SelectInput = ({
-  placeholder = "",
-  value = "",
-  onChange,
-  className = "",
-  prefix,
-  suffix,
-  options = [],
-  ...rest
-}: InputProps<"input"> & {
-  options: string[] | { label: string; value: string | number | undefined; disabled?: boolean }[];
-}) => {
-  const optionsToUse = options.map((v) => (typeof v !== "string" ? v : { label: v, value: v }));
-  if (!value) {
-    optionsToUse.unshift({ label: "---", value: "", disabled: true });
-  }
-  return (
-    <InputWrapper {...{ className, prefix, suffix }}>
-      <select
-        disabled={rest.disabled ?? rest.readOnly}
-        tabIndex={0}
-        style={{ fontWeight: "inherit" }}
-        className={`p-1 placeholder:opacity-60 w-full block bg-transparent outline-none appearance-none ${value ? "" : "text-gray-400 print:hidden"}`}
-        {...{ value, placeholder }}
-        onChange={(e) => onChange?.(e.currentTarget.value)}
-      >
-        {optionsToUse.map(({ label, value: v, disabled = false }) => (
-          <option key={v} disabled={disabled} value={v}>
-            {label}
-          </option>
-        ))}
-      </select>
-    </InputWrapper>
-  );
-};
-type ImageInputProps = ComponentPropsWithoutRef<"img"> & {
-  placeholder?: string;
-  value?: string;
-  defaultValue?: string;
-  onChange?: (value: string) => void;
-} & Pick<InputProps<"input">, "name">;
-export const ImageInput = ({
-  placeholder = "https://via.placeholder.com/150",
-  value,
-  defaultValue,
-  onChange,
-  name,
-  className = "",
-  ...rest
-}: ImageInputProps) => {
-  const [imageSrc, setImageSrc] = useState(value || defaultValue);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const handleImageClick = () => {
-    fileInputRef.current?.click();
-  };
+    const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return logger.warn("No file selected");
+        setImageSrc(URL.createObjectURL(file));
+    }
+    return (
+        <>
+            <img
+                src={imageSrc ?? placeholder}
+                alt="Upload"
+                {...rest}
+                onClick={handleImageClick}
+                className={`${className} cursor-pointer`}
+            />
+            <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                name={name}
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+            />
 
-  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return logger.warn("No file selected");
-    setImageSrc(URL.createObjectURL(file));
-  };
-  return (
-    <>
-      <img
-        src={imageSrc ?? placeholder}
-        alt="Upload"
-        {...rest}
-        onClick={handleImageClick}
-        className={`${className} cursor-pointer`}
-      />
-      <input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        name={name}
-        style={{ display: "none" }}
-        onChange={handleFileChange}
-      />
-    </>
-  );
+        </>
+    );
 };
