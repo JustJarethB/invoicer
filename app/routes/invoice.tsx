@@ -99,7 +99,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
                   name="url"
                   alt="logo"
                   defaultValue={logo?.url}
-                  // placeholder={placeholder.url}
+                  placeholder={placeholder.url}
                   style={{ maxHeight: "80px" }}
                 />
               </Autosave>
