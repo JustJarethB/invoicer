@@ -75,6 +75,9 @@ importers:
       eslint-plugin-react-refresh:
         specifier: ^0.4.18
         version: 0.4.26(eslint@9.39.5(jiti@2.4.2))
+      eslint-plugin-sort:
+        specifier: ^4.0.0
+        version: 4.0.0(eslint@9.39.5(jiti@2.4.2))(typescript@5.8.3)
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -1881,6 +1884,11 @@ packages:
     peerDependencies:
       eslint: '>=8.40'
 
+  eslint-plugin-sort@4.0.0:
+    resolution: {integrity: sha512-hmYRklp3SLDjhqcFWf7J9K+yGIVfzgnWpi0EqT7HTQJMGW9LIBXw1dshSoERf8PfelVz5ecpxiN/SJjWlCQtGA==}
+    peerDependencies:
+      eslint: '>=8.56.0'
+
   eslint-scope@8.4.0:
     resolution: {integrity: sha512-sNXOfKCn74rt8RICKMvJS7XKV/Xk9kA7DyJr8mJik3S7Cwgy3qlkkmyS2uQB3jiJg6VNdZd/pDBJu0nvG2NlTg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -2200,6 +2208,9 @@ packages:
 
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+
+  isomorphic-resolve@1.0.0:
+    resolution: {integrity: sha512-FWn6176keSYAapzv5P6ZzLdbCXj5uaG49h1y+EXRNqZm2RBztzBOYqCMmSe4Dmo+bIvk7sX/SN4pI/3QmfH3aw==}
 
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
@@ -5105,6 +5116,16 @@ snapshots:
     dependencies:
       eslint: 9.39.5(jiti@2.4.2)
 
+  eslint-plugin-sort@4.0.0(eslint@9.39.5(jiti@2.4.2))(typescript@5.8.3):
+    dependencies:
+      '@typescript-eslint/utils': 8.67.0(eslint@9.39.5(jiti@2.4.2))(typescript@5.8.3)
+      eslint: 9.39.5(jiti@2.4.2)
+      isomorphic-resolve: 1.0.0
+      natural-compare: 1.4.0
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
   eslint-scope@8.4.0:
     dependencies:
       esrecurse: 4.3.0
@@ -5452,6 +5473,8 @@ snapshots:
   isbot@5.1.25: {}
 
   isexe@2.0.0: {}
+
+  isomorphic-resolve@1.0.0: {}
 
   jackspeak@3.4.3:
     dependencies:
