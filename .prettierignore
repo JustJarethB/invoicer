@@ -1,0 +1,18 @@
+# build / generated
+build/
+.react-router/
+node_modules/
+playwright-report/
+test-results/
+logs/
+
+# lockfiles and manifests handled by their own tools
+pnpm-lock.yaml
+
+# assets
+public/
+*.config.*.timestamp-*
+.eslintcache
+
+# legacy markdown/docs we won't reformat in this pass
+TESTING_STRATEGY.md

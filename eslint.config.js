@@ -1,4 +1,6 @@
 import js from "@eslint/js";
+import prettier from "eslint-config-prettier";
+import pluginPrettier from "eslint-plugin-prettier";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
@@ -6,16 +8,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [
-      ".react-router/",
-      "build/",
-      "node_modules/",
-      "playwright-report/",
-      "test-results/",
-      "logs/",
-      "*.config.*.timestamp-*",
-      ".eslintcache",
-    ],
+    ignores: [".react-router/", "build/", "node_modules/", "playwright-report/", "test-results/", "logs/", "*.config.*.timestamp-*", ".eslintcache"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -32,6 +25,7 @@ export default tseslint.config(
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      prettier: pluginPrettier,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -57,6 +51,9 @@ export default tseslint.config(
         },
       ],
       "@typescript-eslint/no-empty-object-type": "off",
+
+      "prettier/prettier": "warn",
     },
-  }
+  },
+  prettier
 );
