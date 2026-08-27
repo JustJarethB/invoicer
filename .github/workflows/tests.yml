@@ -37,6 +37,7 @@ jobs:
         run: pnpm run format:check
       - name: Lint
         run: pnpm run lint
+
   unit-integration:
     name: Unit and integration tests
     needs: static
@@ -62,31 +63,48 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      - name: "DEBUG"
-        run: printenv
+      - name: Determine whether to update snapshots
+        id: update
+        run: |
+          UPDATE_FLAG='${{ github.event_name == 'push' || inputs.update-snapshots == true || contains(toJson(github.event.pull_request.labels), '[CI] update snapshots') }}'
+          if [[ "$UPDATE_FLAG" == 'true' ]]; then
+            echo 'snapshots=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'snapshots=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Install dependencies
         run: npm install -g pnpm && pnpm install
-      - name: Configure Snapshot cache
-        id: cache-snapshots
-        uses: actions/cache@v4
+      - name: Restore snapshot baselines
+        id: cache-snapshots-restore
+        uses: actions/cache/restore@v4
         with:
-          key: playwright-snapshots/${{github.ref}}
+          key: playwright-snapshots/${{ github.ref }}
           restore-keys: playwright-snapshots/refs/heads/main
           path: e2e/snapshots/**
+          fail-on-cache-miss: true
       - name: Playwright Browsers cache
         id: cache-browsers
         uses: actions/cache@v4
         with:
           key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-browsers/
           path: ~/.cache/ms-playwright
       - name: Install Playwright Browsers
         run: pnpm exec playwright install chromium
-      - name: Overwrite snapshots
-        if: |
-          github.event_name == 'push' ||
-          (inputs.update-snapshots == true) ||
-          contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
-        run: pnpm exec playwright test --update-snapshots
+      - name: Run E2E flow tests
+        run: pnpm run test:e2e
+      - name: Update snapshots
+        if: steps.update.outputs.snapshots == 'true'
+        run: pnpm run test:snapshots --update-snapshots
+      - name: Run snapshot tests
+        if: steps.update.outputs.snapshots == 'false'
+        run: pnpm run test:snapshots
+      - name: Save snapshot baselines
+        if: steps.update.outputs.snapshots == 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: playwright-snapshots/${{ github.ref }}
+          path: e2e/snapshots/**
       - name: Remove update snapshots label
         if: contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
         uses: actions-ecosystem/action-remove-labels@v1

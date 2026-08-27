@@ -49,7 +49,7 @@ const chrome = chromeChannel();
  */
 export default defineConfig({
   testDir: "./e2e",
-  snapshotPathTemplate: "{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}",
+  snapshotPathTemplate: "{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}-chromium-{platform}{ext}",
   /* Run tests serially within files so snapshots and shared localStorage stay deterministic. */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
