@@ -6,19 +6,19 @@ permissions:
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
-    types: [ opened, edited, synchronize, reopened, labeled ]
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, labeled]
   workflow_call:
     inputs:
       update-snapshots:
-        description: 'Update Snapshots'
+        description: "Update Snapshots"
         type: boolean
   workflow_dispatch:
     inputs:
       update-snapshots:
-        description: 'Update Snapshots'
+        description: "Update Snapshots"
         type: boolean
 jobs:
   static:
@@ -33,6 +33,10 @@ jobs:
         run: npm install -g pnpm && pnpm install
       - name: Typecheck
         run: pnpm run typecheck
+      - name: Format check
+        run: pnpm run format:check
+      - name: Lint
+        run: pnpm run lint
   unit-integration:
     name: Unit and integration tests
     needs: static
@@ -54,72 +58,72 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-    - name: "DEBUG"
-      run: printenv
-    - name: Install dependencies
-      run: npm install -g pnpm && pnpm install
-    - name: Configure Snapshot cache
-      id: cache-snapshots
-      uses: actions/cache@v4
-      with:
-        key: playwright-snapshots/${{github.ref}}
-        restore-keys: playwright-snapshots/refs/heads/main
-        path: e2e/snapshots/**
-    - name: Playwright Browsers cache
-      id: cache-browsers
-      uses: actions/cache@v4
-      with:
-        key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
-        path: ~/.cache/ms-playwright
-    - name: Install Playwright Browsers
-      run: pnpm exec playwright install chromium
-    - name: Overwrite snapshots
-      if: |
-        github.event_name == 'push' ||
-        (inputs.update-snapshots == true) ||
-        contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
-      run: pnpm exec playwright test --update-snapshots
-    - name: Remove update snapshots label
-      if: contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
-      uses: actions-ecosystem/action-remove-labels@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        labels: "[CI] update snapshots"
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
-    - name: Comment with snapshot diffs
-      if: failure()
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs');
-          const { execSync } = require('child_process');
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: "DEBUG"
+        run: printenv
+      - name: Install dependencies
+        run: npm install -g pnpm && pnpm install
+      - name: Configure Snapshot cache
+        id: cache-snapshots
+        uses: actions/cache@v4
+        with:
+          key: playwright-snapshots/${{github.ref}}
+          restore-keys: playwright-snapshots/refs/heads/main
+          path: e2e/snapshots/**
+      - name: Playwright Browsers cache
+        id: cache-browsers
+        uses: actions/cache@v4
+        with:
+          key: playwright-browsers/${{ hashFiles('pnpm-lock.yaml') }}
+          path: ~/.cache/ms-playwright
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install chromium
+      - name: Overwrite snapshots
+        if: |
+          github.event_name == 'push' ||
+          (inputs.update-snapshots == true) ||
+          contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
+        run: pnpm exec playwright test --update-snapshots
+      - name: Remove update snapshots label
+        if: contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: "[CI] update snapshots"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+      - name: Comment with snapshot diffs
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
 
-          // Get all diff files using shell glob
-          const output = execSync('bash -O globstar -c "ls test-results/**/*-diff.png 2>/dev/null || true"').toString().trim();
-          const diffFiles = output ? output.split('\n') : [];
-          console.log('Diff files:', diffFiles);
-          if (diffFiles.length === 0) return;
-          let body = `**${diffFiles.length} Playwright snapshot diffs found:**\n\n` + 
-                     `Uploaded as [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\n`;
-          body += '```\n';
-          for (const file of diffFiles) {
-            // const img = fs.readFileSync(file).toString('base64');
-            body += `${file}\n`;
-          }
-          body += '```';
-          await github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body
-          });
+            // Get all diff files using shell glob
+            const output = execSync('bash -O globstar -c "ls test-results/**/*-diff.png 2>/dev/null || true"').toString().trim();
+            const diffFiles = output ? output.split('\n') : [];
+            console.log('Diff files:', diffFiles);
+            if (diffFiles.length === 0) return;
+            let body = `**${diffFiles.length} Playwright snapshot diffs found:**\n\n` +
+                       `Uploaded as [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\n`;
+            body += '```\n';
+            for (const file of diffFiles) {
+              // const img = fs.readFileSync(file).toString('base64');
+              body += `${file}\n`;
+            }
+            body += '```';
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
