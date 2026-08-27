@@ -94,7 +94,7 @@ jobs:
         run: pnpm run test:e2e
       - name: Update snapshots
         if: steps.update.outputs.snapshots == 'true'
-        run: pnpm run test:snapshots -- --update-snapshots
+        run: pnpm run test:snapshots --update-snapshots
       - name: Run snapshot tests
         if: steps.update.outputs.snapshots == 'false'
         run: pnpm run test:snapshots
