@@ -1,5 +1,5 @@
-import { Button } from "./Button"
+import { Button } from "./Button";
 
-export const Status = (props: Omit<Parameters<typeof Button>[0], 'classname' | "outline">) => {
-    return <Button {...props} outline />
-}
+export const Status = (props: Omit<Parameters<typeof Button>[0], "classname" | "outline">) => {
+  return <Button {...props} outline />;
+};
