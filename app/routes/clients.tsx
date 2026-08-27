@@ -3,8 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
-import { NULL_CLIENT, saveClient, deleteClient, type Client } from "~/data/client";
-import { useDb } from "~/db";
+import { NULL_CLIENT, saveClient, deleteClient, type Client, getClients } from "~/data/client";
 import { formJson } from "~/utils/formJson";
 
 export function meta() {
@@ -16,7 +15,6 @@ export function meta() {
 
 const newClient = (): Client => ({ ...NULL_CLIENT, id: `${(new Date()).getTime()}` });
 export default () => {
-    const db = useDb();
     const [clients, setClients] = useState<Client[]>([])
     const [cacheBuster, setCacheBuster] = useState(0);
     const refreshCache = useCallback(() => {
@@ -24,11 +22,11 @@ export default () => {
     }, []);
     useEffect(() => {
         const loadClients = async () => {
-            const clientsData = await db.getAll(['clients']) as Client[]
+            const clientsData = await getClients();
             setClients(clientsData);
         }
         loadClients();
-    }, [db, setClients, cacheBuster]);
+    }, [setClients, cacheBuster]);
     return <main className="pt-16 pb-4 container mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(32%,32%))] justify-center gap-4 p-4">
             {[...clients, newClient()].filter(Boolean).map((client) => (
@@ -41,6 +39,7 @@ export default () => {
 const ClientPanel = ({ client, refreshCache }: { client: Client, refreshCache: () => void }) => {
     const saveDB = async (key: string, client: Client) => {
         await saveClient(key, client);
+        refreshCache();
     }
     const removeDB = async (key: string) => {
         await deleteClient(key);
