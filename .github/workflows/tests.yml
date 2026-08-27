@@ -74,13 +74,14 @@ jobs:
           fi
       - name: Install dependencies
         run: npm install -g pnpm && pnpm install
-      - name: Restore snapshot baselines from main
+      - name: Restore snapshot baselines
         id: cache-snapshots-restore
         uses: actions/cache/restore@v4
         with:
-          key: playwright-snapshots/refs/heads/main
+          key: playwright-snapshots/${{ github.ref }}
+          restore-keys: playwright-snapshots/refs/heads/main
           path: e2e/snapshots/**
-          fail-on-cache-miss: false
+          fail-on-cache-miss: true
       - name: Playwright Browsers cache
         id: cache-browsers
         uses: actions/cache@v4
@@ -98,11 +99,11 @@ jobs:
       - name: Run snapshot tests
         if: steps.update.outputs.snapshots == 'false'
         run: pnpm run test:snapshots
-      - name: Save updated snapshot baselines
+      - name: Save snapshot baselines
         if: steps.update.outputs.snapshots == 'true'
         uses: actions/cache/save@v4
         with:
-          key: playwright-snapshots/refs/heads/main
+          key: playwright-snapshots/${{ github.ref }}
           path: e2e/snapshots/**
       - name: Remove update snapshots label
         if: contains(toJson(github.event.pull_request.labels), '[CI] update snapshots')
