@@ -176,14 +176,31 @@ export const ImageInput = ({
 }: ImageInputProps) => {
   const [imageSrc, setImageSrc] = useState(value || defaultValue);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
   const handleImageClick = () => {
     fileInputRef.current?.click();
   };
 
+  // Free the live object URL (if any). Guarded for jsdom, which doesn't
+  // implement URL.revokeObjectURL. Centralised so the replace and unmount
+  // paths release identically.
+  const releasePreviewImage = () => {
+    if (!objectUrlRef.current) return;
+    if (typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = null;
+  };
+
+  // On unmount, release any object URL so the component doesn't leak the blob.
+  useEffect(() => releasePreviewImage, []);
+
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
     if (!file) return logger.warn("No file selected");
-    setImageSrc(URL.createObjectURL(file));
+    releasePreviewImage();
+    const objectUrl = URL.createObjectURL(file);
+    objectUrlRef.current = objectUrl;
+    setImageSrc(objectUrl);
   };
   return (
     <>
