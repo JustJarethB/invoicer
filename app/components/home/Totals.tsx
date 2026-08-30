@@ -21,7 +21,15 @@ export const Totals = () => {
               .reduce((p, c) => p + c, 0);
             if (subTotal === 0) return null; // Skip if no items of this type
             return (
-              <StandardField inputClassName="text-right" readOnly title={`${label}s`} prefix="£" parentClass="text-gray-500" value={formatCurrency(subTotal)} />
+              <StandardField
+                key={id}
+                inputClassName="text-right"
+                readOnly
+                title={`${label}s`}
+                prefix="£"
+                parentClass="text-gray-500"
+                value={formatCurrency(subTotal)}
+              />
             );
           })}
         </div>

@@ -176,14 +176,26 @@ export const ImageInput = ({
 }: ImageInputProps) => {
   const [imageSrc, setImageSrc] = useState(value || defaultValue);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const handleImageClick = () => {
     fileInputRef.current?.click();
   };
 
+  // Revoke the current blob URL when it is replaced or the component unmounts,
+  // so each file selection does not leak an object URL.
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
+
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
     if (!file) return logger.warn("No file selected");
-    setImageSrc(URL.createObjectURL(file));
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const objectUrl = URL.createObjectURL(file);
+    objectUrlRef.current = objectUrl;
+    setImageSrc(objectUrl);
   };
   return (
     <>
