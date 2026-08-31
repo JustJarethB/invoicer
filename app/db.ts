@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { logger } from "~/utils/logger";
 
 const matchPartialKeys = (keys: string[]) => {
@@ -49,4 +47,3 @@ export const db = {
   getAll,
   remove,
 };
-export const useDb = () => useMemo(() => db, []);

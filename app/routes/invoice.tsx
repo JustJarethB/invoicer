@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
 import { getClients, NULL_CLIENT, type Client } from "~/data/client";
-import { Address } from "~/data/address";
+import type { Address } from "~/data/address";
 import { useLineItems, withLineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { AddressPanel } from "~/components/home/AddressPanel";
 import { Controls } from "~/components/home/Controls";
@@ -9,7 +9,8 @@ import { fieldFormattingOf, StandardField } from "~/components/home/StandardFiel
 import { Totals } from "~/components/home/Totals";
 import { LineItems } from "~/components/home/LineItems";
 import type { Route } from "./+types/invoice";
-import { type PaymentDetails } from "~/data/payment";
+import { paymentDetailsFromRecord, type PaymentDetails } from "~/data/payment";
+import type { Invoice } from "~/data/invoice";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
 import { ManualSave } from "~/components/home/ManualSave";
@@ -19,6 +20,11 @@ import { HelpTooltip } from "~/components/Tooltip";
 import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
 import { useThemeValue } from "~/components/ThemeSelector";
 import { logger } from "~/utils/logger";
+import { addressFromRecord } from "~/data/address";
+import { randomUUID } from "~/utils/uuid";
+
+/** Read the logo url from a form record. */
+export const logoFromRecord = (record: Record<string, string>): { url: string } => ({ url: record.url ?? "" });
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -45,10 +51,10 @@ export async function clientLoader() {
 }
 
 export default withLineItemProvider(function Home({ loaderData: { clients, ...loaderData } }: Route.ComponentProps) {
-  const [id, setId] = useState<string>(`${new Date().getTime()}`.substring(0, 10));
+  const [id, setId] = useState<string>(() => randomUUID());
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [purchaseOrder, setPurchaseOrder] = useState<string>("---");
-  const [logo, setLogo] = useState(loaderData.logo);
+  const [logo, setLogo] = useState<{ url: string } | null>(loaderData.logo);
   const [from, setFrom] = useState(loaderData.from);
   const [payment, setPayment] = useState(loaderData.payment);
   const [to, setTo] = useState<Address>(NULL_CLIENT.address);
@@ -56,11 +62,12 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   // TODO: load logo from client
   const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" };
   const handleSaveInvoice = async () => {
-    const invoice = {
+    const invoice: Invoice = {
+      payments: [],
       id,
       date,
       purchaseOrder,
-      logo: { url: logo },
+      logo: logo ?? { url: "" },
       from,
       to,
       lineItems,
@@ -93,7 +100,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
         <div className="not-print:max-w-[8.3in] not-print:container mx-auto shadow-xl min-h-screen dark:bg-gray-950 bg-gray-50 text-gray-800 dark:text-white p-8 print:text-xs print:absolute print:z-50 print:top-0 print:w-full">
           <div className="grid grid-cols-6 gap-4 p-2">
             <div className="col-span-6 md:col-span-3 print:col-span-3">
-              <Autosave onChange={(logo) => setLogo(logo as unknown as { url: string })} name="logo">
+              <Autosave onChange={(record) => setLogo(logoFromRecord(record))} name="logo">
                 <ImageInput
                   className={`rounded ${logo?.url ? "" : "print:hidden"}`}
                   name="url"
@@ -127,13 +134,13 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
               </div>
             </div>
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-              <Autosave onChange={(from) => setFrom(from as unknown as Address)} name="from-address">
+              <Autosave onChange={(record) => setFrom(addressFromRecord(record))} name="from-address">
                 <AddressPanel title="From:" address={from} />
               </Autosave>
             </div>
 
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-              <ManualSave onChange={(to) => setTo(to as unknown as Address)} name="to-address">
+              <ManualSave onChange={setTo}>
                 <AddressPanel title="To:" address={to} />
               </ManualSave>
             </div>
@@ -141,7 +148,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
               <LineItems />
             </div>
             <div className="col-span-6 md:col-span-4 print:col-span-4">
-              <Autosave onChange={(payment) => setPayment(payment as unknown as PaymentDetails)} name="payment-details">
+              <Autosave onChange={(record) => setPayment(paymentDetailsFromRecord(record))} name="payment-details">
                 <Container>
                   <h2>Payment:</h2>
                   <div className="p-2">

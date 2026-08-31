@@ -4,15 +4,15 @@ import { TooltipWrapper } from "../Tooltip";
 import { Modal } from "../Modal";
 import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
-import type { Address } from "~/data/address";
+import { addressFromRecord, formJsonAddress, type Address } from "~/data/address";
 import { Button } from "./Button";
 import { saveClient, type Client } from "~/data/client";
 import { formJson } from "../../utils/formJson";
-import { logger } from "~/utils/logger";
+import { randomUUID } from "~/utils/uuid";
+
 type Props = {
-  name: string;
   hideIcon?: boolean;
-  onChange?: (newState: Record<string, string>) => void;
+  onChange?: (address: Address) => void;
 };
 // TODO: currently ManualSave is only used for saving clients, but it should be generalized to save any form data.
 export const ManualSave = ({ children, hideIcon, onChange: onChangeParent }: PropsWithChildren<Props>) => {
@@ -21,14 +21,13 @@ export const ManualSave = ({ children, hideIcon, onChange: onChangeParent }: Pro
   const [saveData, setSaveData] = useState<Address | null>(null);
   const onChange = async () => {
     setIsStale(true);
-    onChangeParent?.(await formJson(formRef.current as HTMLFormElement));
+    if (!formRef.current) return;
+    // AddressPanel renders these five inputs, so the record is address-shaped.
+    onChangeParent?.(addressFromRecord(await formJson(formRef.current)));
   };
   const onSave = async () => {
     if (!formRef.current) throw new Error("Form reference is not set");
-    const data = formJson<Address>(formRef.current);
-    setSaveData(data as unknown as Address);
-    logger.debug("Saving data", data);
-    // await db.save([name], data)
+    setSaveData(addressFromRecord(await formJson(formRef.current)));
   };
   return (
     <form ref={formRef} onChange={onChange} className="relative">
@@ -65,14 +64,15 @@ const ClientModal = ({ data, onClose }: { data: Address; onClose: () => void }) 
           color="primary"
           className="mt-4"
           onClick={async () => {
+            const id = randomUUID();
             const saveData: Client = {
-              id: `${new Date().getTime()}`,
+              id,
               ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current as HTMLFormElement)),
-              address: await formJson<Address>(formAddressRef.current as HTMLFormElement),
+              address: formJsonAddress(formAddressRef.current as HTMLFormElement),
               email: "",
               phone: "",
             };
-            await saveClient(`${new Date().getTime()}`, saveData);
+            await saveClient(id, saveData);
             onClose();
           }}
         >

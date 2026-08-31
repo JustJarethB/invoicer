@@ -14,8 +14,8 @@ const TestHarness = () => {
           setLineItem({
             uuid: "seeded-line",
             name: "Hourly",
-            qty: "2",
-            unitPrice: "150",
+            qty: 2,
+            unitPrice: 150,
             type: "0",
           })
         }
@@ -27,8 +27,8 @@ const TestHarness = () => {
           setLineItem({
             uuid: "seeded-line",
             name: "Daily",
-            qty: "1",
-            unitPrice: "0",
+            qty: 1,
+            unitPrice: 0,
             type: "1",
           })
         }
@@ -40,8 +40,8 @@ const TestHarness = () => {
           setLineItem({
             uuid: "seeded-line",
             name: "Items",
-            qty: "1",
-            unitPrice: "50",
+            qty: 1,
+            unitPrice: 50,
             type: "2",
           })
         }
@@ -53,8 +53,8 @@ const TestHarness = () => {
           setLineItem({
             uuid: "seeded-line",
             name: "Items",
-            qty: "1",
-            unitPrice: "25",
+            qty: 1,
+            unitPrice: 25,
             type: "3",
           })
         }
@@ -154,22 +154,22 @@ describe("Totals", () => {
           {
             uuid: "service-line",
             name: "Hourly",
-            qty: "2",
-            unitPrice: "150",
+            qty: 2,
+            unitPrice: 150,
             type: "0",
           },
           {
             uuid: "expense-line",
             name: "Items",
-            qty: "1",
-            unitPrice: "50",
+            qty: 1,
+            unitPrice: 50,
             type: "2",
           },
           {
             uuid: "discount-line",
             name: "Items",
-            qty: "1",
-            unitPrice: "25",
+            qty: 1,
+            unitPrice: 25,
             type: "3",
           },
         ]}

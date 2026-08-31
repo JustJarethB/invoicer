@@ -1,43 +1,12 @@
 import { DateInput, SelectInput, TextInput } from "~/components/Inputs";
-import { ensureFutureCurrency } from "../../../utils/ensureFutureCurrency";
-import { linePrice } from "../../../utils/linePrice";
-import { useDeleteLineItem, useLineItem, useSetLineItem, type LineItem as LineItemType } from "./LineItemProvider";
-import { formatCurrency } from "../../../utils/formatCurrency";
+import { parseCurrency } from "~/utils/parseCurrency";
+import { chargeTypes, linePrice, type LineItem as LineItemType } from "~/data/invoice";
+import { useDeleteLineItem, useLineItem, useSetLineItem } from "./LineItemProvider";
+import { formatCurrency } from "~/utils/formatCurrency";
 import { Button } from "../Button";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 const defaultOuterCellClasses = "p-1";
 const defaultInnerCellClasses = "w-full not-print:font-bold";
-
-type ChargeType = {
-  id: "0" | "1" | "2" | "3";
-  label: string;
-  calculation: (qty: number, unitPrice: number) => number;
-  disabledFields?: (keyof LineItemType)[];
-};
-
-export const chargeTypes = [
-  {
-    id: "0",
-    label: "Service",
-    calculation: (qty, unitPrice) => qty * unitPrice,
-  },
-  {
-    id: "1",
-    label: "Rental",
-    calculation: (qty, unitPrice) => qty * unitPrice,
-  },
-  {
-    id: "2",
-    label: "Expense",
-    calculation: (qty, unitPrice) => qty * unitPrice,
-  },
-  {
-    id: "3",
-    label: "Discount",
-    calculation: (_qty, unitPrice) => -unitPrice,
-    disabledFields: ["qty", "unit"] as (keyof LineItemType)[], // without keyof it throws error from disabled fields being too strict
-  },
-] satisfies ChargeType[];
 
 const lineTypeOptions = chargeTypes.map((type) => ({
   label: type.label,
@@ -57,7 +26,6 @@ export const LineItem = ({ id }: { id: string }) => {
   };
   const chargeType = chargeTypes.find((type) => type.id === item.type);
   const date = item.date ?? new Date().toISOString().split("T")[0];
-  // TODO: was moving to unmanaged but need to useState for total value qty*unitPrice
   return (
     <div
       className={`[&>*:nth-child(odd)]dark:bg-gray-900 [&>*:nth-child(odd)]bg-gray-100 grid grid-cols-subgrid col-span-full last:print:hidden relative group`}
@@ -102,8 +70,8 @@ export const LineItem = ({ id }: { id: string }) => {
           name="qty"
           hidden={chargeType?.disabledFields?.includes("qty")}
           className={`${defaultInnerCellClasses}`}
-          value={item.qty}
-          onChange={(v) => onChange({ qty: v })}
+          value={item.qty === undefined ? undefined : String(item.qty)}
+          onChange={(v) => onChange({ qty: parseCurrency(v) })}
         />
       </div>
       <div className={defaultOuterCellClasses}>
@@ -113,8 +81,8 @@ export const LineItem = ({ id }: { id: string }) => {
           inputClassName="text-right"
           className={`${defaultInnerCellClasses}`}
           prefix="£"
-          value={item.unitPrice}
-          onChange={(v) => onChange({ unitPrice: ensureFutureCurrency(v) })}
+          value={item.unitPrice === undefined ? undefined : String(item.unitPrice)}
+          onChange={(v) => onChange({ unitPrice: parseCurrency(v) })}
         />
       </div>
       <div className={defaultOuterCellClasses}>

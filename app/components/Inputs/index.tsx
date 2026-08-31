@@ -46,9 +46,9 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
   // relative class used to check `prefix || suffix`
   <div className={`${className} 'relative'}`}>
     <div className="flex items-center rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
-      <Prefix children={prefix} />
+      <Prefix>{prefix}</Prefix>
       {children}
-      <Suffix children={suffix} />
+      <Suffix>{suffix}</Suffix>
     </div>
   </div>
 );
