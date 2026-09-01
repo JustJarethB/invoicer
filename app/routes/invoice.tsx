@@ -51,7 +51,7 @@ export async function clientLoader() {
 }
 
 export default withLineItemProvider(function Home({ loaderData: { clients, ...loaderData } }: Route.ComponentProps) {
-  const [id, setId] = useState<string>(() => randomUUID());
+  const [id, setId] = useState<string>(`${new Date().getTime()}`.substring(0, 10));
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [purchaseOrder, setPurchaseOrder] = useState<string>("---");
   const [logo, setLogo] = useState<{ url: string } | null>(loaderData.logo);
