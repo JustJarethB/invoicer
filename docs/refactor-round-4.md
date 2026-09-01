@@ -26,6 +26,16 @@ You pointed out the round-1 numeric parsing lived at three separate `TextInput` 
 
 `parseCurrency` is now referenced in exactly one place — inside `NumberInput` — which is the boundary. Added `app/components/Inputs/NumberInput.test.tsx` (3 tests: type→number, number→string display, clear→`undefined`); it runs in `test:integration` since it lives under `app/components` (8 tests now).
 
+## Follow-up (user-requested): decouple `ManualSave` from the Address form
+
+You flagged that `ManualSave` knew about `Address`/`Client`/`saveClient` — coupled to the one place it's used, blocking reuse elsewhere. Addressed by making `ManualSave` generic in the same scope as `Autosave`:
+
+- **`ManualSave`** now takes `onChange?: (record: Record<string, string>) => void` (same boundary shape as `Autosave`) and a new **`onSave` render prop**: `(record, close) => ReactNode`. It handles staleness + the manual click + rendering whatever confirmation the caller returns. It no longer imports anything from `data/` and has no opinion about what "save" means — the only user-facing difference from Autosave is the deliberate click.
+- The **address→client expansion** (contactName field + pre-filled AddressPanel + `saveClient`) moved out of `ManualSave` into a new `app/components/home/SaveClientModal.tsx`, which belongs to the client domain.
+- **`routes/invoice.tsx`** composes the two: `onChange={(record) => setTo(addressFromRecord(record))}` and `onSave={saveToAsClient}`, where `saveToAsClient` returns `<SaveClientModal record={record} onClose={close} />`. The To-section's larger-type gathering lives at the call site, exactly as you framed it.
+
+Also removed a stray unused `randomUUID` import in `invoice.tsx` left over after your `15d973c` revert of the invoice id to a timestamp (reverted per your commit; I kept the timestamp as you set it).
+
 ## Why this is the stopping point
 
 Scanning the rest of the tree after rounds 1–4:

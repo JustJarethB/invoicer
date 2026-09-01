@@ -14,6 +14,7 @@ import type { Invoice } from "~/data/invoice";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
 import { ManualSave } from "~/components/home/ManualSave";
+import { SaveClientModal } from "~/components/home/SaveClientModal";
 import { Container } from "~/components/Container";
 import { TutorialWizard } from "~/components/TutorialWizard";
 import { HelpTooltip } from "~/components/Tooltip";
@@ -21,7 +22,6 @@ import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
 import { useThemeValue } from "~/components/ThemeSelector";
 import { logger } from "~/utils/logger";
 import { addressFromRecord } from "~/data/address";
-import { randomUUID } from "~/utils/uuid";
 
 /** Read the logo url from a form record. */
 export const logoFromRecord = (record: Record<string, string>): { url: string } => ({ url: record.url ?? "" });
@@ -59,6 +59,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   const [payment, setPayment] = useState(loaderData.payment);
   const [to, setTo] = useState<Address>(NULL_CLIENT.address);
   const lineItems = useLineItems();
+  const saveAddressAsClient = (record: Record<string, string>, close: () => void) => <SaveClientModal record={record} onClose={close} />;
   // TODO: load logo from client
   const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" };
   const handleSaveInvoice = async () => {
@@ -140,7 +141,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
             </div>
 
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-              <ManualSave onChange={setTo}>
+              <ManualSave onChange={(record) => setTo(addressFromRecord(record))} onSave={saveAddressAsClient}>
                 <AddressPanel title="To:" address={to} />
               </ManualSave>
             </div>

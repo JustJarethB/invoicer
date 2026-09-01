@@ -1,84 +1,55 @@
 import { ArrowPathRoundedSquareIcon } from "@heroicons/react/16/solid";
-import { useRef, useState, type PropsWithChildren } from "react";
+import { useRef, useState, type PropsWithChildren, type ReactNode } from "react";
 import { TooltipWrapper } from "../Tooltip";
-import { Modal } from "../Modal";
-import { AddressPanel } from "./AddressPanel";
-import { TextInput } from "../Inputs";
-import { addressFromRecord, formJsonAddress, type Address } from "~/data/address";
-import { Button } from "./Button";
-import { saveClient, type Client } from "~/data/client";
 import { formJson } from "../../utils/formJson";
-import { randomUUID } from "~/utils/uuid";
 
 type Props = {
   hideIcon?: boolean;
-  onChange?: (address: Address) => void;
+  onChange?: (record: Record<string, string>) => void;
+  /**
+   * Called when the user clicks the save icon with the current form record.
+   * Return the confirmation UI (e.g. a modal) to render, or null to render
+   * nothing. The caller decides what "save" means and what extra data (if any)
+   * the confirmation gathers. This is the user-facing difference from Autosave:
+   * the save is a deliberate click, not on every change.
+   */
+  onSave?: (record: Record<string, string>, close: () => void) => ReactNode;
 };
-// TODO: currently ManualSave is only used for saving clients, but it should be generalized to save any form data.
-export const ManualSave = ({ children, hideIcon, onChange: onChangeParent }: PropsWithChildren<Props>) => {
+
+/**
+ * Wraps a form and tracks staleness, exposing a manual save affordance via
+ * `onSave`. Generic over the form's shape — it only knows records, never a
+ * specific domain type. Use for any form that should persist on click rather
+ * than on change.
+ */
+export const ManualSave = ({ children, hideIcon, onChange: onChangeParent, onSave }: PropsWithChildren<Props>) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [isStale, setIsStale] = useState(false);
-  const [saveData, setSaveData] = useState<Address | null>(null);
+  const [confirmation, setConfirmation] = useState<ReactNode>(null);
+
+  const closeConfirmation = () => setConfirmation(null);
+
   const onChange = async () => {
     setIsStale(true);
     if (!formRef.current) return;
-    // AddressPanel renders these five inputs, so the record is address-shaped.
-    onChangeParent?.(addressFromRecord(await formJson(formRef.current)));
+    onChangeParent?.(await formJson(formRef.current));
   };
-  const onSave = async () => {
-    if (!formRef.current) throw new Error("Form reference is not set");
-    setSaveData(addressFromRecord(await formJson(formRef.current)));
+  const handleSave = async () => {
+    if (!formRef.current || !onSave) return;
+    setConfirmation(onSave(await formJson(formRef.current), closeConfirmation));
   };
   return (
     <form ref={formRef} onChange={onChange} className="relative">
       <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
         <TooltipWrapper tooltip="Save these values for later">
           <ArrowPathRoundedSquareIcon
-            onClick={onSave}
+            onClick={handleSave}
             className={`${isStale ? "text-amber-400" : "text-blue-400 rotate-180 opacity-50"} transition-all duration-300 h-5 w-5 cursor-pointer`}
           />
         </TooltipWrapper>
       </span>
       {children}
-      {saveData && <ClientModal data={saveData} onClose={() => setSaveData(null)} />}
+      {confirmation}
     </form>
-  );
-};
-const ClientModal = ({ data, onClose }: { data: Address; onClose: () => void }) => {
-  const formMetaRef = useRef<HTMLFormElement>(null);
-  const formAddressRef = useRef<HTMLFormElement>(null);
-
-  return (
-    <Modal onClose={onClose} title="Save Client">
-      <form ref={formMetaRef}>
-        <TextInput name="contactName" className="font-bold text-xl" placeholder="Display Name" />
-      </form>
-      <form ref={formAddressRef}>
-        <AddressPanel title="" address={data} />
-      </form>
-      <div className="flex items-center justify-between">
-        <Button color="secondary" className="mt-4" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          color="primary"
-          className="mt-4"
-          onClick={async () => {
-            const id = randomUUID();
-            const saveData: Client = {
-              id,
-              ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current as HTMLFormElement)),
-              address: formJsonAddress(formAddressRef.current as HTMLFormElement),
-              email: "",
-              phone: "",
-            };
-            await saveClient(id, saveData);
-            onClose();
-          }}
-        >
-          Save
-        </Button>
-      </div>
-    </Modal>
   );
 };
