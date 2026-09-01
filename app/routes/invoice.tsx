@@ -26,6 +26,8 @@ import { addressFromRecord } from "~/data/address";
 /** Read the logo url from a form record. */
 export const logoFromRecord = (record: Record<string, string>): { url: string } => ({ url: record.url ?? "" });
 
+const saveAddressAsClient = (record: Record<string, string>, close: () => void) => <SaveClientModal record={record} onClose={close} />;
+
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Create Invoice" },
@@ -59,7 +61,6 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   const [payment, setPayment] = useState(loaderData.payment);
   const [to, setTo] = useState<Address>(NULL_CLIENT.address);
   const lineItems = useLineItems();
-  const saveAddressAsClient = (record: Record<string, string>, close: () => void) => <SaveClientModal record={record} onClose={close} />;
   // TODO: load logo from client
   const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" };
   const handleSaveInvoice = async () => {

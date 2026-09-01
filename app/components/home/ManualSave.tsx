@@ -39,17 +39,19 @@ export const ManualSave = ({ children, hideIcon, onChange: onChangeParent, onSav
     setConfirmation(onSave(await formJson(formRef.current), closeConfirmation));
   };
   return (
-    <form ref={formRef} onChange={onChange} className="relative">
-      <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
-        <TooltipWrapper tooltip="Save these values for later">
-          <ArrowPathRoundedSquareIcon
-            onClick={handleSave}
-            className={`${isStale ? "text-amber-400" : "text-blue-400 rotate-180 opacity-50"} transition-all duration-300 h-5 w-5 cursor-pointer`}
-          />
-        </TooltipWrapper>
-      </span>
-      {children}
+    <>
+      <form ref={formRef} onChange={onChange} className="relative">
+        <span className={`${hideIcon && "hidden"} absolute top-1 right-1 print:hidden`}>
+          <TooltipWrapper tooltip="Save these values for later">
+            <ArrowPathRoundedSquareIcon
+              onClick={handleSave}
+              className={`${isStale ? "text-amber-400" : "text-blue-400 rotate-180 opacity-50"} transition-all duration-300 h-5 w-5 cursor-pointer`}
+            />
+          </TooltipWrapper>
+        </span>
+        {children}
+      </form>
       {confirmation}
-    </form>
+    </>
   );
 };
