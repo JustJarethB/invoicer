@@ -4,12 +4,11 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import { Button } from "~/components/home/Button";
 import { Status } from "~/components/home/Status";
 import { Modal } from "~/components/Modal";
-import { TextInput } from "~/components/Inputs";
+import { NumberInput } from "~/components/Inputs";
 import { paymentStatusOf, type Invoice, type Payment, type PaymentSummary } from "~/data/invoice";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
-import { parseCurrency } from "~/utils/parseCurrency";
 import { formatCurrency } from "~/utils/formatCurrency";
 
 export function meta() {
@@ -206,11 +205,10 @@ const PaidStatus = ({ id, summary }: { id: string; summary: PaymentSummary }) =>
 
 const PaymentModal = ({ invoiceId, summary, onClose }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
   const makePayment = useMakePayment();
-  const [raw, setRaw] = useState("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {
-    const amount = parseCurrency(raw);
     if (amount === undefined || !isValidPaymentAmount(amount)) {
       setError("Enter an amount greater than 0");
       return;
@@ -228,13 +226,13 @@ const PaymentModal = ({ invoiceId, summary, onClose }: { invoiceId: string; summ
       <p className="text-sm mb-1">
         Outstanding: <strong>£{formatCurrency(summary.due)}</strong>
       </p>
-      <TextInput
+      <NumberInput
         autoFocus
         name="amount"
         prefix="£"
         placeholder="0.00"
-        value={raw}
-        onChange={(v) => setRaw(v)}
+        value={amount}
+        onChange={setAmount}
         inputClassName="text-right"
         onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === "Enter") {

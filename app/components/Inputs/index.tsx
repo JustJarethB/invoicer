@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
 import "./index.css";
 import { logger } from "~/utils/logger";
+import { parseCurrency } from "~/utils/parseCurrency";
 
 const Prefix = ({ children }: PropsWithChildren) => {
   if (!children) return null;
@@ -59,6 +60,21 @@ type InputProps<T extends "textarea" | "input"> = Omit<ComponentPropsWithoutRef<
     formatOnChange?: (value: string) => string; // This is called before `onChange`
     inputClassName?: string;
   };
+
+/**
+ * Numeric boundary over TextInput. Accepts/emits `number | undefined` so callers
+ * never see the raw string: display is String(value) and parsing goes through
+ * parseCurrency (empty/unparseable input becomes `undefined`, letting the field
+ * stay blank rather than storing 0/NaN). Use for any money or quantity field.
+ */
+type NumberInputProps = Omit<InputProps<"textarea">, "value" | "defaultValue" | "onChange"> & {
+  value?: number;
+  onChange?: (value: number | undefined) => void;
+};
+export const NumberInput = ({ value, onChange, ...rest }: NumberInputProps) => (
+  <TextInput {...rest} value={value === undefined ? undefined : String(value)} onChange={(v) => onChange?.(parseCurrency(v))} />
+);
+
 export const TextInput = ({
   placeholder = "---",
   value,

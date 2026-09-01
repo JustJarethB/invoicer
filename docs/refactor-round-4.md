@@ -17,6 +17,15 @@ The wrapper was only a pass-through, and because it lived in `utils/formJson` it
 - Removal from `utils/formJson.tsx` leaves that module focused on Blob→base64 file handling, which is its actual job.
 - Three callers now all import from `data/address`: `ManualSave` (via `addressFromRecord` on the change/save paths + `formJsonAddress` in ClientModal), `routes/clients.tsx` (`formJsonAddress`), and `routes/invoice.tsx` (`addressFromRecord`).
 
+## Follow-up (user-requested): `NumberInput` boundary component
+
+You pointed out the round-1 numeric parsing lived at three separate `TextInput` call sites rather than in the component — correct. Added `NumberInput` to `app/components/Inputs/index.tsx`, a thin `TextInput` wrapper whose interface is `number | undefined` in and out (display via `String(value)`, parse via `parseCurrency`; blank/unparseable → `undefined`). All three numeric call sites now use it and carry no parse/format code:
+
+- `LineItem.tsx` — `qty` and `unitPrice` (the `String(item.x)` / `parseCurrency(v)` pairs deleted)
+- `routes/invoices.tsx` `PaymentModal` — amount now `useState<number | undefined>`; validation runs on the number directly
+
+`parseCurrency` is now referenced in exactly one place — inside `NumberInput` — which is the boundary. Added `app/components/Inputs/NumberInput.test.tsx` (3 tests: type→number, number→string display, clear→`undefined`); it runs in `test:integration` since it lives under `app/components` (8 tests now).
+
 ## Why this is the stopping point
 
 Scanning the rest of the tree after rounds 1–4:

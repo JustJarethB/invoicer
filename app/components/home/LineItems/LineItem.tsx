@@ -1,5 +1,4 @@
-import { DateInput, SelectInput, TextInput } from "~/components/Inputs";
-import { parseCurrency } from "~/utils/parseCurrency";
+import { DateInput, NumberInput, SelectInput, TextInput } from "~/components/Inputs";
 import { chargeTypes, linePrice, type LineItem as LineItemType } from "~/data/invoice";
 import { useDeleteLineItem, useLineItem, useSetLineItem } from "./LineItemProvider";
 import { formatCurrency } from "~/utils/formatCurrency";
@@ -66,23 +65,23 @@ export const LineItem = ({ id }: { id: string }) => {
         />
       </div>
       <div className={defaultOuterCellClasses}>
-        <TextInput
+        <NumberInput
           name="qty"
           hidden={chargeType?.disabledFields?.includes("qty")}
           className={`${defaultInnerCellClasses}`}
-          value={item.qty === undefined ? undefined : String(item.qty)}
-          onChange={(v) => onChange({ qty: parseCurrency(v) })}
+          value={item.qty}
+          onChange={(qty) => onChange({ qty })}
         />
       </div>
       <div className={defaultOuterCellClasses}>
-        <TextInput
+        <NumberInput
           name="unitPrice"
           hidden={chargeType?.disabledFields?.includes("unitPrice")}
           inputClassName="text-right"
           className={`${defaultInnerCellClasses}`}
           prefix="£"
-          value={item.unitPrice === undefined ? undefined : String(item.unitPrice)}
-          onChange={(v) => onChange({ unitPrice: parseCurrency(v) })}
+          value={item.unitPrice}
+          onChange={(unitPrice) => onChange({ unitPrice })}
         />
       </div>
       <div className={defaultOuterCellClasses}>
