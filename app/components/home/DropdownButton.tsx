@@ -41,7 +41,7 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
       <div className="relative">
         <Button
           aria-expanded={open}
-          aria-haspopup="listbox"
+          aria-haspopup="menu"
           disabled={options.length === 0}
           className={`rounded-t-lg ${open || "rounded-b-lg"} flex items-center`}
           onClick={() => setOpen(!open)}
@@ -50,7 +50,6 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
           {open ? <ChevronUpIcon className="-mr-1 ml-2 h-5 w-5" /> : <ChevronDownIcon className="-mr-1 ml-2 h-5 w-5" />}
         </Button>
         <div
-          role="listbox"
           className={`absolute bg-gray-700 rounded-lg transition-all w-full border-t-2 border-t-gray-800 overflow-hidden ${
             open ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
@@ -58,8 +57,6 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
           {options.map(({ key, value }, i) => (
             <button
               key={key}
-              role="option"
-              aria-selected={false}
               className="text-white text-xs block w-full justify-center px-2 py-1 hover:bg-gray-800 transition-colors duration-100"
               type="button"
               value={value}
