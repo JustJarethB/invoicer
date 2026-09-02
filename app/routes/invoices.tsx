@@ -116,7 +116,8 @@ function InvoiceTable() {
 const InvoiceRow = ({ id }: { id: string }) => {
   const invoice = useInvoice(id);
   const deleteInvoice = useContext(InvoiceContext).deleteInvoice;
-  const { totalDue, due, paymentStatus } = paymentStatusOf(invoice);
+  const summary = paymentStatusOf(invoice);
+  const { totalDue, due, paymentStatus } = summary;
   const [open, setOpen] = useState(false);
   const mobile = useMobile();
   const handleDelete = () => {
@@ -151,7 +152,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
       <td className="text-sm">£ {formatCurrency(totalDue)}</td>
       <td className={`text-sm ${paymentStatus === "overpaid" ? "text-amber-700" : ""}`}>£ {formatCurrency(due)}</td>
       <td className="text-center">
-        <PaidStatus id={id} summary={paymentStatusOf(invoice)} />
+        <PaidStatus id={id} summary={summary} />
       </td>
       {open && (
         <td className="col-start-2 col-span-full pt-4 space-y-2">

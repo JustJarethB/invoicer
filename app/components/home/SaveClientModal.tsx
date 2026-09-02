@@ -20,10 +20,11 @@ export const SaveClientModal = ({ record, onClose, onSaved }: { record: Record<s
   const address = addressFromRecord(record);
 
   const save = async () => {
+    if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
     const id = randomUUID();
     const client: Client = {
       id,
-      ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current as HTMLFormElement)),
+      ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
       address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
       email: "",
       phone: "",

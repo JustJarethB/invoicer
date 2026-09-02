@@ -10,6 +10,7 @@ export const parseCurrency = (v: string): number | undefined => {
   const negative = s.startsWith("-");
   // Allow a leading decimal (".5") by normalising it to "0.5" before matching.
   const normalised = s.replace(/^(-?)\./, "$10.");
+  // Intentionally lenient, allow and ignore non-numeric
   const match = normalised.match(/0*(\d+\.?\d{0,2})/);
   if (!match) return undefined;
   const value = Number(match[1]);

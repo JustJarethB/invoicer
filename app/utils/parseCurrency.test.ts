@@ -37,4 +37,12 @@ describe("parseCurrency", () => {
     expect(parseCurrency("   ")).toBeUndefined();
     expect(parseCurrency("abc")).toBeUndefined();
   });
+
+  it("extracts the number from input with surrounding non-numeric characters", () => {
+    // The regex is intentionally lenient: it pulls the first number out of the
+    // string so paste artifacts like "£123" or "abc123" still produce a value.
+    expect(parseCurrency("abc123")).toBe(123);
+    expect(parseCurrency("123abc")).toBe(123);
+    expect(parseCurrency("abc123abc")).toBe(123);
+  });
 });
