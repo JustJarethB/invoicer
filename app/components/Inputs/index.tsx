@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
 import "./index.css";
 import { logger } from "~/utils/logger";
+import { parseCurrency } from "~/utils/parseCurrency";
 
 const Prefix = ({ children }: PropsWithChildren) => {
   if (!children) return null;
@@ -46,9 +47,9 @@ const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps
   // relative class used to check `prefix || suffix`
   <div className={`${className} 'relative'}`}>
     <div className="flex items-center rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
-      <Prefix children={prefix} />
+      <Prefix>{prefix}</Prefix>
       {children}
-      <Suffix children={suffix} />
+      <Suffix>{suffix}</Suffix>
     </div>
   </div>
 );
@@ -59,6 +60,30 @@ type InputProps<T extends "textarea" | "input"> = Omit<ComponentPropsWithoutRef<
     formatOnChange?: (value: string) => string; // This is called before `onChange`
     inputClassName?: string;
   };
+
+/**
+ * Numeric boundary over TextInput. Accepts/emits `number | undefined` so callers
+ * never see the raw string.
+ */
+type NumberInputProps = Omit<InputProps<"textarea">, "value" | "defaultValue" | "onChange"> & {
+  value?: number;
+  onChange?: (value: number | undefined) => void;
+};
+export const NumberInput = ({ value, onChange, onBlur, ...rest }: NumberInputProps) => {
+  const [text, setText] = useState<string>(value === undefined ? "" : String(value));
+  const handleChange = (v: string) => {
+    setText(v);
+    onChange?.(parseCurrency(v));
+  };
+  const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    const parsed = parseCurrency(text);
+    setText(parsed === undefined ? "" : String(parsed));
+    onChange?.(parsed);
+    onBlur?.(e);
+  };
+  return <TextInput {...rest} value={text} onChange={handleChange} onBlur={handleBlur} />;
+};
+
 export const TextInput = ({
   placeholder = "---",
   value,

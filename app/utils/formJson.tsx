@@ -32,6 +32,7 @@ const getProcessedValue = (value: string | Blob): Promise<string> => {
   return Promise.resolve(value as string);
 };
 
+/** Read all fields of a form into a plain string record (files -> base64). */
 export const formJson = async <T extends {}>(form: HTMLFormElement): Promise<T> => {
   const formData = new FormData(form);
   const data: Record<string, string> = {};

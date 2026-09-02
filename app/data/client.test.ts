@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { db } from "../db";
 import { deleteClient, getClients, NULL_CLIENT, saveClient, type Client } from "./client";
-import { Address } from "./address";
+import { emptyAddress } from "./address";
 
 describe("client data layer", () => {
   const makeClient = (id: string, contactName: string): Client => ({
@@ -9,7 +9,7 @@ describe("client data layer", () => {
     contactName,
     email: `${contactName}@example.com`,
     phone: "01234567890",
-    address: new Address(contactName, "1 Street", "City", "County", "PC1 1AA"),
+    address: { ...emptyAddress(), name: contactName, streetAddress: "1 Street", city: "City", county: "County", postCode: "PC1 1AA" },
   });
 
   it("saves a client and tracks it in clientKeys", async () => {

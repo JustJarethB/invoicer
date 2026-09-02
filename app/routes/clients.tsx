@@ -5,12 +5,14 @@ import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { NULL_CLIENT, saveClient, deleteClient, type Client, getClients } from "~/data/client";
 import { formJson } from "~/utils/formJson";
+import { formJsonAddress } from "~/data/address";
+import { randomUUID } from "~/utils/uuid";
 
 export function meta() {
   return [{ title: "Clients" }];
 }
 
-const newClient = (): Client => ({ ...NULL_CLIENT, id: `${new Date().getTime()}` });
+const newClient = (): Client => ({ ...NULL_CLIENT, id: randomUUID() });
 export default () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [cacheBuster, setCacheBuster] = useState(0);
@@ -50,9 +52,10 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      const { contactName, phone, email, ...address } = await formJson<Omit<Client, "address" | "id"> & Client["address"]>(e.currentTarget);
+      const { contactName, phone, email } = await formJson<Pick<Client, "contactName" | "phone" | "email">>(e.currentTarget);
+      const address = formJsonAddress(e.currentTarget);
       const updatedClient: Client = {
-        id: client.id || `${new Date().getTime()}`,
+        id: client.id || randomUUID(),
         contactName,
         address,
         email,

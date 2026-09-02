@@ -1,14 +1,12 @@
 import { StandardField } from "~/components/home/StandardField";
-import { formatCurrency } from "../../utils/formatCurrency";
-import { linePrice } from "../../utils/linePrice";
+import { formatCurrency } from "~/utils/formatCurrency";
+import { chargeTypes, invoiceTotal, linePrice } from "~/data/invoice";
 import { useLineItems } from "./LineItems/LineItemProvider";
-import { chargeTypes } from "./LineItems/LineItem";
 import { Container } from "../Container";
 
 export const Totals = () => {
   const lineItems = useLineItems();
-  const subTotal = lineItems.map(linePrice).reduce((p, c) => p + c, 0);
-  // const vat = lineItems.map(item => (item.qty * item.unitPrice * item.vatRate) || 0).reduce((p, c) => p + c, 0);
+  const subTotal = invoiceTotal({ lineItems });
   return (
     <Container className="flex flex-col h-full w-full">
       <h2>Totals:</h2>
@@ -33,7 +31,6 @@ export const Totals = () => {
             );
           })}
         </div>
-        {/* <StandardField title="VAT" parentClass="text-gray-500" value={formatCurrency(vat)} /> */}
         <div className="">
           <hr className="py-2 dark:text-gray-800" />
           <StandardField

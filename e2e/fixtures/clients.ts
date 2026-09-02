@@ -1,4 +1,4 @@
-import { Address } from "~/data/address";
+import { emptyAddress } from "~/data/address";
 import type { Client } from "~/data/client";
 import type { Page } from "@playwright/test";
 
@@ -7,7 +7,7 @@ export const clientFixture = (overrides?: Partial<Client>): Client => ({
   contactName: "Acme Corp",
   email: "billing@acme.test",
   phone: "01234567890",
-  address: new Address("Acme Corp", "1 Acme Way", "Acmeville", "", "AC1 1ME"),
+  address: { ...emptyAddress(), name: "Acme Corp", streetAddress: "1 Acme Way", city: "Acmeville", postCode: "AC1 1ME" },
   ...overrides,
 });
 

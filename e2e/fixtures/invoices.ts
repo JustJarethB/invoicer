@@ -1,5 +1,5 @@
-import { Address } from "~/data/address";
-import type { LineItem } from "~/components/home/LineItems/LineItemProvider";
+import { emptyAddress, type Address } from "~/data/address";
+import type { LineItem, Payment } from "~/data/invoice";
 import type { Page } from "@playwright/test";
 
 export type InvoiceFixture = {
@@ -10,7 +10,7 @@ export type InvoiceFixture = {
   from: Address;
   to: Address;
   lineItems: LineItem[];
-  payments: { amount: number; date: string; method?: string; reference?: string }[];
+  payments: Payment[];
 };
 
 export const invoiceFixture = (overrides?: Partial<InvoiceFixture>): InvoiceFixture => ({
@@ -18,15 +18,15 @@ export const invoiceFixture = (overrides?: Partial<InvoiceFixture>): InvoiceFixt
   date: "2025-01-01",
   purchaseOrder: "PO-123",
   logo: { url: "" },
-  from: new Address("From Co", "1 From St", "Fromville", "", "F1 1FF"),
-  to: new Address("To Co", "2 To Rd", "Toville", "", "T2 2TT"),
+  from: { ...emptyAddress(), name: "From Co", streetAddress: "1 From St", city: "Fromville", postCode: "F1 1FF" },
+  to: { ...emptyAddress(), name: "To Co", streetAddress: "2 To Rd", city: "Toville", postCode: "T2 2TT" },
   lineItems: [
     {
       uuid: "line-1",
       description: "Design",
       name: "Hourly",
-      qty: "2",
-      unitPrice: "150",
+      qty: 2,
+      unitPrice: 150,
       type: "0",
       date: "2025-01-01",
     },

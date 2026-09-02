@@ -1,19 +1,9 @@
 import { createContext, type ReactNode, useState, useContext } from "react";
-import { withProvider } from "../withProvider";
 import { randomUUID } from "~/utils/uuid";
-import type { chargeTypes } from "./LineItem";
+import type { LineItem } from "~/data/invoice";
 
-export type LineItem = {
-  uuid: string;
-  date?: string;
-  name?: string;
-  description?: string;
-  unit?: string;
-  qty?: string;
-  unitPrice?: string;
-  vatRate?: string;
-  type?: "-1" | (typeof chargeTypes)[number]["id"];
-};
+export type { LineItem };
+
 type LineItemContextType = {
   lineItems: LineItem[];
   setLineItems: (lineItems: LineItem[]) => void;
@@ -62,4 +52,12 @@ export const useDeleteLineItem = (id: string) => {
     setLineItems(newLineItems);
   };
 };
-export const withLineItemProvider = withProvider(LineItemProvider);
+export const withLineItemProvider = <P extends object>(Component: React.ComponentType<P>) => {
+  return function WrappedComponent(props: P) {
+    return (
+      <LineItemProvider>
+        <Component {...props} />
+      </LineItemProvider>
+    );
+  };
+};

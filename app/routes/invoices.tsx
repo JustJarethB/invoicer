@@ -2,30 +2,19 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import * as outline from "@heroicons/react/24/outline";
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
 import { Button } from "~/components/home/Button";
-import type { LineItem } from "~/components/home/LineItems/LineItemProvider";
 import { Status } from "~/components/home/Status";
-import { withProvider } from "~/components/home/withProvider";
-import type { Address } from "~/data/address";
+import { Modal } from "~/components/Modal";
+import { NumberInput } from "~/components/Inputs";
+import { paymentStatusOf, type Invoice, type Payment, type PaymentSummary } from "~/data/invoice";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
-import { linePrice } from "~/utils/linePrice";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
+import { formatCurrency } from "~/utils/formatCurrency";
 
 export function meta() {
   return [{ title: "Invoices" }];
 }
 
-type Payment = { amount: number; date: string; method?: string; reference?: string };
-type Invoice = {
-  id: string;
-  date: string;
-  purchaseOrder: string;
-  logo: { url: string };
-  from: Address;
-  to: Address;
-  lineItems: LineItem[];
-  payments: Payment[];
-};
 type InvoiceContext = {
   invoices: Invoice[];
   makePayment: (invoiceId: Invoice["id"], amount: number) => void;
@@ -91,23 +80,16 @@ const useInvoice = (invoiceId: string) => {
   }
   return maybeInvoice;
 };
-const useInvoiceTotal = (invoiceId: string) =>
-  useInvoice(invoiceId)
-    .lineItems.map(linePrice)
-    .reduce((p, c) => p + c, 0);
-type PaymentStatus = "overpaid" | "paid" | "partial" | "unpaid";
-const useInvoicePaymentStatus = (invoiceId: string) => {
-  const { payments } = useInvoice(invoiceId);
-  const totalDue = useInvoiceTotal(invoiceId);
-  // TODO: remove null check once done properly
-  const totalPaid = (payments ?? []).map((p) => p.amount).reduce((p, c) => p + c, 0);
-  const paymentStatus: PaymentStatus =
-    totalPaid > totalDue ? "overpaid" : totalPaid > 0 && totalPaid < totalDue ? "partial" : totalPaid === totalDue ? "paid" : "unpaid";
-  return { totalDue, totalPaid, paymentStatus, due: totalDue - totalPaid };
-};
-const withInvoiceProvider = withProvider(InvoiceProvider);
 
-export default withInvoiceProvider(function Invoices() {
+export default function Invoices() {
+  return (
+    <InvoiceProvider>
+      <InvoiceTable />
+    </InvoiceProvider>
+  );
+}
+
+function InvoiceTable() {
   const invoices = useInvoiceIds();
   return (
     <table className="mt-16 mb-4 container mx-auto max-w-5xl w-4/5 grid gap-4 grid-cols-[0.75fr_1fr_1fr_2fr_2fr_0.5fr_0.5fr_0.75fr]">
@@ -129,12 +111,13 @@ export default withInvoiceProvider(function Invoices() {
       </tbody>
     </table>
   );
-});
+}
 
 const InvoiceRow = ({ id }: { id: string }) => {
   const invoice = useInvoice(id);
   const deleteInvoice = useContext(InvoiceContext).deleteInvoice;
-  const { totalDue, due, paymentStatus } = useInvoicePaymentStatus(id);
+  const summary = paymentStatusOf(invoice);
+  const { totalDue, due, paymentStatus } = summary;
   const [open, setOpen] = useState(false);
   const mobile = useMobile();
   const handleDelete = () => {
@@ -166,10 +149,10 @@ const InvoiceRow = ({ id }: { id: string }) => {
       <td className="text-sm">{invoice.date}</td>
       <td className="text-sm">{invoice.purchaseOrder}</td>
       <td className="text-sm">{invoice.to.name}</td>
-      <td className="text-sm">£ {totalDue}</td>
-      <td className={`text-sm ${paymentStatus === "overpaid" ? "text-amber-700" : ""}`}>£ {due}</td>
+      <td className="text-sm">£ {formatCurrency(totalDue)}</td>
+      <td className={`text-sm ${paymentStatus === "overpaid" ? "text-amber-700" : ""}`}>£ {formatCurrency(due)}</td>
       <td className="text-center">
-        <PaidStatus id={id} />
+        <PaidStatus id={id} summary={summary} />
       </td>
       {open && (
         <td className="col-start-2 col-span-full pt-4 space-y-2">
@@ -178,7 +161,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
               <strong>PO / Reference:</strong> {invoice.purchaseOrder}
             </p>
             <p className="text-sm">
-              <strong>Total Due:</strong> £{totalDue}
+              <strong>Total Due:</strong> £{formatCurrency(totalDue)}
             </p>
           </span>
           <p className="text-sm mb-2">
@@ -187,8 +170,8 @@ const InvoiceRow = ({ id }: { id: string }) => {
           {invoice.lineItems.map((item) => (
             <div key={item.uuid} className="space-x-4 mt-2">
               <span className="text-md">{item.description}</span>
-              {item.unitPrice && <span className="text-sm">£{item.unitPrice}</span>}
-              {item.type === "2" && <span className="text-sm">qty: {item.qty}</span>}
+              {item.unitPrice !== undefined && <span className="text-sm">£{formatCurrency(item.unitPrice)}</span>}
+              {item.type === "2" && item.qty !== undefined && <span className="text-sm">qty: {item.qty}</span>}
             </div>
           ))}
         </td>
@@ -196,19 +179,78 @@ const InvoiceRow = ({ id }: { id: string }) => {
     </tr>
   );
 };
-const PaidStatus = ({ id }: { id: string }) => {
-  const makePayment = useMakePayment();
-  const { paymentStatus } = useInvoicePaymentStatus(id);
+
+/**
+ * Click-to-pay control. Opens a small modal instead of window.prompt so the
+ * amount is validated by a real input rather than `parseFloat` on free text.
+ */
+const PaidStatus = ({ id, summary }: { id: string; summary: PaymentSummary }) => {
+  const { paymentStatus } = summary;
+  const [showPayment, setShowPayment] = useState(false);
   const color = paymentStatus === "paid" ? "success" : paymentStatus === "unpaid" ? "danger" : "warning";
-  const handleOnClick = () => {
-    if (paymentStatus !== "paid") {
-      // eslint-disable-next-line no-alert
-      makePayment(id, parseFloat(prompt("Amount") ?? "0"));
+  return (
+    <>
+      <Status
+        size="sm"
+        onClick={() => {
+          if (paymentStatus !== "paid") setShowPayment(true);
+        }}
+        color={color}
+      >
+        {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
+      </Status>
+      {showPayment && <PaymentModal invoiceId={id} summary={summary} onClose={() => setShowPayment(false)} />}
+    </>
+  );
+};
+
+const PaymentModal = ({ invoiceId, summary, onClose }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
+  const makePayment = useMakePayment();
+  const [amount, setAmount] = useState<number | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = () => {
+    if (amount === undefined || !isValidPaymentAmount(amount)) {
+      setError("Enter a non-zero amount");
+      return;
+    }
+    try {
+      makePayment(invoiceId, amount);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Payment failed");
     }
   };
+
   return (
-    <Status size="sm" onClick={handleOnClick} color={color}>
-      {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
-    </Status>
+    <Modal title={`Record payment for ${invoiceId}`} onClose={onClose}>
+      <p className="text-sm mb-1">
+        Outstanding: <strong>£{formatCurrency(summary.due)}</strong>
+      </p>
+      <NumberInput
+        autoFocus
+        name="amount"
+        prefix="£"
+        placeholder="0.00"
+        value={amount}
+        onChange={setAmount}
+        inputClassName="text-right"
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+        }}
+      />
+      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <div className="flex justify-end gap-4 pt-4">
+        <Button color="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button color="success" onClick={submit}>
+          Record
+        </Button>
+      </div>
+    </Modal>
   );
 };

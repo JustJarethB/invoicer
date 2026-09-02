@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/16/solid";
 import { Button } from "./Button";
 
@@ -11,6 +11,25 @@ type Props = {
 
 export const DropdownButton = ({ options, onClick, children }: Props) => {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape and on any click outside the menu, so the popup doesn't
+  // linger after the user has moved on.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
 
   const handleClick = (value: string, index: number) => {
     onClick(value, index);
@@ -18,9 +37,15 @@ export const DropdownButton = ({ options, onClick, children }: Props) => {
   };
 
   return (
-    <div className="group">
+    <div ref={containerRef} className="group">
       <div className="relative">
-        <Button disabled={options.length === 0} className={`rounded-t-lg ${open || "rounded-b-lg"} flex items-center`} onClick={() => setOpen(!open)}>
+        <Button
+          aria-expanded={open}
+          aria-haspopup="menu"
+          disabled={options.length === 0}
+          className={`rounded-t-lg ${open || "rounded-b-lg"} flex items-center`}
+          onClick={() => setOpen(!open)}
+        >
           {children}
           {open ? <ChevronUpIcon className="-mr-1 ml-2 h-5 w-5" /> : <ChevronDownIcon className="-mr-1 ml-2 h-5 w-5" />}
         </Button>
