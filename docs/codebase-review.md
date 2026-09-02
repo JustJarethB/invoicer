@@ -20,7 +20,7 @@ Solid foundation, minimal bugs. The main gap versus the Matt Pocock / T3 bar is 
 
 `qty`, `unitPrice`, `vatRate` are `string` on the domain model (`LineItemProvider.tsx:6-16`). Every consumer re-parses: `linePrice` does `Number(qty ?? 0)` (`app/utils/linePrice.tsx:5`), `isValidPaymentAmount` guards `prompt()` output, `formatCurrency` defends against NaN at render time (`app/utils/formatCurrency.tsx:1`).
 
-The parse-at-the-boundary rule is inverted: the uncontrolled textarea *is* the boundary, and the raw string leaks all the way into saved invoices (`"qty": "2"` in localStorage forever). This is the root of the NaN-total audit-bug class.
+The parse-at-the-boundary rule is inverted: the uncontrolled textarea _is_ the boundary, and the raw string leaks all the way into saved invoices (`"qty": "2"` in localStorage forever). This is the root of the NaN-total audit-bug class.
 
 Fix direction: parse once when a line item field is committed, store `qty: number | undefined`, make `linePrice` a pure function over numbers. Tests get simpler as a side effect.
 

@@ -65,28 +65,27 @@ describe("paymentStatusOf", () => {
   });
 
   it("reports partial when some but not all is paid", () => {
-    const summary = paymentStatusOf(
-      makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [{ amount: 100, date: "2026-01-01" }])
-    );
+    const summary = paymentStatusOf(makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [{ amount: 100, date: "2026-01-01" }]));
     expect(summary.paymentStatus).toBe("partial");
     expect(summary.due).toBe(200);
   });
 
   it("reports paid when total paid equals total due", () => {
     const summary = paymentStatusOf(
-      makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [
-        { amount: 100, date: "2026-01-01" },
-        { amount: 200, date: "2026-01-02" },
-      ])
+      makeInvoice(
+        [line({ qty: 2, unitPrice: 150, type: "0" })],
+        [
+          { amount: 100, date: "2026-01-01" },
+          { amount: 200, date: "2026-01-02" },
+        ]
+      )
     );
     expect(summary.paymentStatus).toBe("paid");
     expect(summary.due).toBe(0);
   });
 
   it("reports overpaid when payments exceed the total", () => {
-    const summary = paymentStatusOf(
-      makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [{ amount: 400, date: "2026-01-01" }])
-    );
+    const summary = paymentStatusOf(makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [{ amount: 400, date: "2026-01-01" }]));
     expect(summary.paymentStatus).toBe("overpaid");
     expect(summary.due).toBe(-100);
   });

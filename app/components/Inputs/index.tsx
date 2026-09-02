@@ -63,17 +63,26 @@ type InputProps<T extends "textarea" | "input"> = Omit<ComponentPropsWithoutRef<
 
 /**
  * Numeric boundary over TextInput. Accepts/emits `number | undefined` so callers
- * never see the raw string: display is String(value) and parsing goes through
- * parseCurrency (empty/unparseable input becomes `undefined`, letting the field
- * stay blank rather than storing 0/NaN). Use for any money or quantity field.
+ * never see the raw string.
  */
 type NumberInputProps = Omit<InputProps<"textarea">, "value" | "defaultValue" | "onChange"> & {
   value?: number;
   onChange?: (value: number | undefined) => void;
 };
-export const NumberInput = ({ value, onChange, ...rest }: NumberInputProps) => (
-  <TextInput {...rest} value={value === undefined ? undefined : String(value)} onChange={(v) => onChange?.(parseCurrency(v))} />
-);
+export const NumberInput = ({ value, onChange, onBlur, ...rest }: NumberInputProps) => {
+  const [text, setText] = useState<string>(value === undefined ? "" : String(value));
+  const handleChange = (v: string) => {
+    setText(v);
+    onChange?.(parseCurrency(v));
+  };
+  const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    const parsed = parseCurrency(text);
+    setText(parsed === undefined ? "" : String(parsed));
+    onChange?.(parsed);
+    onBlur?.(e);
+  };
+  return <TextInput {...rest} value={text} onChange={handleChange} onBlur={handleBlur} />;
+};
 
 export const TextInput = ({
   placeholder = "---",

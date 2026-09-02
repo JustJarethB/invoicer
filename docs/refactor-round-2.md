@@ -8,7 +8,9 @@ Trigger: after the first round of changes (domain types, numeric money, deletion
 ## What the re-review found
 
 ### A. The address seam was still shallow (the worst leftover)
+
 `AddressPanel` renders five named inputs (`name`, `streetAddress`, `city`, `county`, `postCode`), and **four separate call sites** each hand-extracted those fields and cast the result:
+
 - `routes/invoice.tsx` — `setFrom(from as unknown as Address)` and `setTo(to as unknown as Address)`
 - `ManualSave.tsx` — `formJson<Address>` then `setSaveData(data as unknown as Address)`, and `await formJson<Address>` in `ClientModal`
 - `routes/clients.tsx` — rest-spread `{ contactName, phone, email, ...address }`
@@ -16,6 +18,7 @@ Trigger: after the first round of changes (domain types, numeric money, deletion
 The field-name list was duplicated knowledge. Every caller lying with `as unknown as` is the type system reporting a misplaced seam.
 
 **Fix:** one extractor per shape, living with its type.
+
 - `app/data/address.ts` → `addressFromRecord(record)` (defaults absent fields to `""`)
 - `app/utils/formJson.tsx` → `formJsonAddress(form)`
 - `app/data/payment.ts` → `paymentDetailsFromRecord(record)`
@@ -33,7 +36,7 @@ All four call sites now call an extractor on a plain record. **Zero `as unknown 
 
 ## Deliberately left for later
 
-- **`Autosave` still has a generic `onChange(record)` interface.** The wrapper earns less than its interface (it is form + `formJson` + `db.save`), but only two call sites use it and deleting it forces a decision about inline save affordances (the spinner icon). Out of a clean-up pass's scope. It is typed *enough* now that callers no longer cast.
+- **`Autosave` still has a generic `onChange(record)` interface.** The wrapper earns less than its interface (it is form + `formJson` + `db.save`), but only two call sites use it and deleting it forces a decision about inline save affordances (the spinner icon). Out of a clean-up pass's scope. It is typed _enough_ now that callers no longer cast.
 - `formatCurrency`/`parseCurrency` are the formatting/parse boundary pair but are not unified into one "money" module. Not worth it at two functions each.
 - No snapshot/e2e run locally (Playwright Chromium crashes on this machine); rely on CI for the visual pass after push.
 

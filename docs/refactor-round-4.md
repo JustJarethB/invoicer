@@ -8,6 +8,7 @@ Smallest round yet. One theme: finish the Address seam started in round 2 by mak
 ## Changes
 
 **One home for Address extraction.** Round 2 introduced two helpers with overlapping jobs:
+
 - `addressFromRecord(record)` — the real conversion (record → Address)
 - `formJsonAddress(form)` — a thin async wrapper that lived in `utils/formJson.tsx`
 

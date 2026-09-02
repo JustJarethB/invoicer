@@ -210,7 +210,7 @@ const PaymentModal = ({ invoiceId, summary, onClose }: { invoiceId: string; summ
 
   const submit = () => {
     if (amount === undefined || !isValidPaymentAmount(amount)) {
-      setError("Enter an amount greater than 0");
+      setError("Enter a non-zero amount");
       return;
     }
     try {

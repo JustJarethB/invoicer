@@ -15,6 +15,12 @@ describe("parseCurrency", () => {
     expect(parseCurrency("100.999")).toBe(100.99);
   });
 
+  it("accepts a trailing decimal point while the user is mid-number", () => {
+    // Typing "12." must emit 12, otherwise NumberInput rewrites the field to
+    // "12" on every keystroke and the decimal digits can never be entered.
+    expect(parseCurrency("12.")).toBe(12);
+  });
+
   it("parses a leading-decimal input as a fraction of one", () => {
     // Typing ".5" should mean £0.50, not 5 or undefined.
     expect(parseCurrency(".5")).toBe(0.5);

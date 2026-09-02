@@ -13,9 +13,10 @@ describe("isValidPaymentAmount", () => {
     expect(isValidPaymentAmount(0)).toBe(false);
   });
 
-  it("rejects negative amounts", () => {
-    // Refunds are not supported by the payment flow; negative values are user error.
-    expect(isValidPaymentAmount(-10)).toBe(false);
+  it("accepts negative amounts as corrections", () => {
+    // A user who over-recorded a payment fixes it by entering a negative amount,
+    // bringing totalPaid back in line with what was actually received.
+    expect(isValidPaymentAmount(-10)).toBe(true);
   });
 
   it("rejects NaN and Infinity", () => {
