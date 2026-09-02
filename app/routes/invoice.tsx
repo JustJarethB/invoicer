@@ -26,7 +26,9 @@ import { addressFromRecord } from "~/data/address";
 /** Read the logo url from a form record. */
 export const logoFromRecord = (record: Record<string, string>): { url: string } => ({ url: record.url ?? "" });
 
-const saveAddressAsClient = (record: Record<string, string>, close: () => void) => <SaveClientModal record={record} onClose={close} />;
+const saveAddressAsClient = (record: Record<string, string>, close: () => void, onSaved: () => void) => (
+  <SaveClientModal record={record} onClose={close} onSaved={onSaved} />
+);
 
 export function meta({}: Route.MetaArgs) {
   return [

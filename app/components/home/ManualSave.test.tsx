@@ -6,7 +6,9 @@ import { SaveClientModal } from "./SaveClientModal";
 import { TextInput } from "~/components/Inputs";
 import { getClients } from "~/data/client";
 
-const saveAddressAsClient = (record: Record<string, string>, close: () => void) => <SaveClientModal record={record} onClose={close} />;
+const saveAddressAsClient = (record: Record<string, string>, close: () => void, onSaved: () => void) => (
+  <SaveClientModal record={record} onClose={close} onSaved={onSaved} />
+);
 
 describe("ManualSave", () => {
   it("opens the caller's confirmation on save-click and persists via it", async () => {
@@ -42,6 +44,52 @@ describe("ManualSave", () => {
       expect(clients[0].contactName).toBe("Acme");
       expect(clients[0].address.name).toBe("Acme Ltd");
     });
+  });
+
+  it("marks the form clean only when the confirmation's Save succeeds", async () => {
+    // Stale after edit; clicking the icon opens the modal but must NOT clear
+    // staleness — that happens on the modal's Save (onSaved), not on open/cancel.
+    render(
+      <ManualSave onSave={saveAddressAsClient}>
+        <TextInput name="name" defaultValue="Acme" onChange={() => {}} />
+      </ManualSave>
+    );
+    const icon = document.querySelector("svg.cursor-pointer") as Element;
+
+    await userEvent.type(screen.getByRole("textbox"), "x");
+    expect(icon).toHaveClass("text-amber-400");
+
+    // Icon click opens the confirmation; still dirty.
+    await userEvent.click(icon);
+    expect(await screen.findByText("Save Client")).toBeInTheDocument();
+    expect(icon).toHaveClass("text-amber-400");
+
+    // Completing the save marks the form clean.
+    await userEvent.type(screen.getByPlaceholderText("Display Name"), "Acme");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => {
+      expect(icon).toHaveClass("text-blue-400");
+      expect(icon).not.toHaveClass("text-amber-400");
+    });
+  });
+
+  it("stays dirty when the confirmation is cancelled", async () => {
+    render(
+      <ManualSave onSave={saveAddressAsClient}>
+        <TextInput name="name" defaultValue="Acme" onChange={() => {}} />
+      </ManualSave>
+    );
+    const icon = document.querySelector("svg.cursor-pointer") as Element;
+
+    await userEvent.type(screen.getByRole("textbox"), "x");
+    expect(icon).toHaveClass("text-amber-400");
+
+    await userEvent.click(icon);
+    expect(await screen.findByText("Save Client")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    // Cancel closed the modal without saving, so the form is still dirty.
+    expect(icon).toHaveClass("text-amber-400");
   });
 
   it("does nothing when no onSave is provided", async () => {

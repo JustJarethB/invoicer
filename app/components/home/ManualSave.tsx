@@ -10,10 +10,13 @@ type Props = {
    * Called when the user clicks the save icon with the current form record.
    * Return the confirmation UI (e.g. a modal) to render, or null to render
    * nothing. The caller decides what "save" means and what extra data (if any)
-   * the confirmation gathers. This is the user-facing difference from Autosave:
-   * the save is a deliberate click, not on every change.
+   * the confirmation gathers.
+   *
+   * `close` dismisses the confirmation without committing (cancel/backdrop).
+   * `onSaved` must be called by the confirmation when the save actually
+   * succeeds — that is the point at which the form is marked clean.
    */
-  onSave?: (record: Record<string, string>, close: () => void) => ReactNode;
+  onSave?: (record: Record<string, string>, close: () => void, onSaved: () => void) => ReactNode;
 };
 
 /**
@@ -29,6 +32,8 @@ export const ManualSave = ({ children, hideIcon, onChange: onChangeParent, onSav
 
   const closeConfirmation = () => setConfirmation(null);
 
+  const handleSaved = () => setIsStale(false);
+
   const onChange = async () => {
     setIsStale(true);
     if (!formRef.current) return;
@@ -36,7 +41,7 @@ export const ManualSave = ({ children, hideIcon, onChange: onChangeParent, onSav
   };
   const handleSave = async () => {
     if (!formRef.current || !onSave) return;
-    setConfirmation(onSave(await formJson(formRef.current), closeConfirmation));
+    setConfirmation(onSave(await formJson(formRef.current), closeConfirmation, handleSaved));
   };
   return (
     <>

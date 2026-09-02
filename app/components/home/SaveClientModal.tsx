@@ -14,7 +14,7 @@ import { randomUUID } from "~/utils/uuid";
  * and persists a new client. This belongs to the client domain, not to
  * ManualSave — ManualSave only hands it the form record.
  */
-export const SaveClientModal = ({ record, onClose }: { record: Record<string, string>; onClose: () => void }) => {
+export const SaveClientModal = ({ record, onClose, onSaved }: { record: Record<string, string>; onClose: () => void; onSaved: () => void }) => {
   const formMetaRef = useRef<HTMLFormElement>(null);
   const formAddressRef = useRef<HTMLFormElement>(null);
   const address = addressFromRecord(record);
@@ -29,6 +29,7 @@ export const SaveClientModal = ({ record, onClose }: { record: Record<string, st
       phone: "",
     };
     await saveClient(id, client);
+    onSaved();
     onClose();
   };
 
