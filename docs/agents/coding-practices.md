@@ -271,273 +271,466 @@ and the refactor rounds). Do not reintroduce them.
   deliberate; behaviour tests carry the weight. See
   `TESTING_STRATEGY.md`.
 
-## 7. Pass / fail examples
+## 7. Design patterns
 
-FAIL snippets reproduce real audit findings (the code has since been
-deleted or rewritten); PASS snippets show the current pattern. Where a
-snippet introduces a name the audit deleted, the name is illustrative —
-follow the pattern, not the identifier.
+These rules are general TypeScript/React community practice, not
+Invoicr inventions. They are collected here because the codebase
+already follows them everywhere — write new code in these shapes so
+it matches the tree.
 
-### 7.1. Money is a number — parse at the boundary, once
+### 7.1. Prefer a lookup table over switch and if chains
 
-FAIL — string state leaks into the domain, is re-parsed at render, and
-goes NaN when the field is empty:
+Map variants to values with a `const` lookup table — exhaustive at
+compile time, and adding a case is adding a row, not a branch.
 
-```tsx
-const [qty, setQty] = useState("");
-
-<input value={qty} onChange={(e) => setQty(e.target.value)} />
-<span>{formatCurrency(Number(qty ?? 0) * Number(line.unitPrice))}</span>
-```
-
-PASS — the boundary emits `number | undefined`; the domain stays
-numeric; absence means "not set" (this is the real `LineItem.tsx`
-shape):
+❌ Bad code
 
 ```tsx
-<NumberInput
-  name="qty"
-  value={item.qty}
-  onChange={(qty) => onChange({ qty })}
-/>
-<span>{formatCurrency(linePrice(item))}</span>
-```
+type Variant = "success" | "warning" | "danger";
 
-```ts
-// app/data/invoice.ts — the one place absence becomes zero.
-// Blank or untyped lines contribute nothing; Discount ignores qty.
-export const linePrice = ({
-  qty,
-  unitPrice,
-  type,
-}: Pick<LineItem, "qty" | "unitPrice" | "type">) =>
-  chargeTypes
-    .find((chargeType) => chargeType.id === type)
-    ?.calculation(qty ?? 0, unitPrice ?? 0) ?? 0;
-```
-
-### 7.2. Types are contracts — never cast
-
-FAIL — `formJson` returns `Record<string, string>`; every caller lied
-to the type system (four call sites did this):
-
-```ts
-const record = await formJson<Record<string, string>>(formRef.current);
-setTo(record as unknown as Address); // the cast is the seam screaming
-```
-
-PASS — one extractor per shape, living with its type; empty strings
-are normalised inside the extractor, once (real code from
-`app/data/address.ts`):
-
-```ts
-export const addressFromRecord = (record: Record<string, string>): Address => ({
-  name: record.name ?? "",
-  streetAddress: record.streetAddress ?? "",
-  city: record.city ?? "",
-  county: record.county ?? "",
-  postCode: record.postCode ?? "",
-});
-```
-
-Zero casts remain; adding one means your seam is wrong.
-
-### 7.3. No `prompt()` for money
-
-FAIL — untyped input defended by a downstream guard (the pre-audit
-`routes/invoices.tsx`):
-
-```ts
-const raw = window.prompt("Payment amount");
-const amount = parseFloat(raw ?? "");
-if (!isValidPaymentAmount(amount)) return;
-makePayment(invoiceId, amount);
-```
-
-PASS — a modal with a typed input; validation runs on the number the
-input already produced (the real `PaymentModal`):
-
-```tsx
-const [amount, setAmount] = useState<number | undefined>(undefined);
-const [error, setError] = useState<string | null>(null);
-
-<NumberInput
-  autoFocus
-  name="amount"
-  prefix="£"
-  placeholder="0.00"
-  value={amount}
-  onChange={setAmount}
-/>;
-// submit: amount === undefined || !isValidPaymentAmount(amount)
-//   → setError("Enter a non-zero amount")
-```
-
-The guard remains as a final check at the state boundary — but the
-input makes garbage rare instead of expected.
-
-### 7.4. Ids are crypto uuids
-
-FAIL — two saves in the same millisecond collide (round-2 bug: the
-client key and the `saveClient` key could differ):
-
-```ts
-const id = `${new Date().getTime()}`.substring(0, 10);
-```
-
-PASS (real code — `LineItemProvider.tsx` and `utils/uuid.ts`):
-
-```ts
-import { randomUUID } from "~/utils/uuid";
-
-const newLineItem = (): LineItem => ({ uuid: randomUUID() });
-```
-
-Note the absent optional fields — no `qty: 0` or `type: "1"` filler.
-
-### 7.5. One home per concept; routes are thin
-
-FAIL — the canonical `Invoice` type lived in a route, next to inline
-derivation (`routes/invoices.tsx` was 214 lines):
-
-```tsx
-// routes/invoices.tsx — the old shape
-export type Invoice = { id: string; lineItems: LineItem[] };
-const useInvoiceTotal = () =>
-  useInvoices().map((inv) =>
-    inv.lineItems.reduce((sum, l) => sum + linePrice(l), 0)
-  );
-```
-
-PASS — the type lives in `app/data/invoice.ts`; derivation is a pure,
-unit-tested function; the route fetches, composes, renders (real
-code):
-
-```tsx
-// routes/invoices.tsx — now
-import { paymentStatusOf, type Invoice } from "~/data/invoice";
-
-const summary = paymentStatusOf(invoice);
-const { totalDue, due, paymentStatus } = summary;
-<td>£ {formatCurrency(totalDue)}</td>;
-```
-
-### 7.6. Format money only at render
-
-FAIL — domain logic returning a display string:
-
-```ts
-export const invoiceTotal = (invoice: Invoice): string =>
-  formatCurrency(invoice.lineItems.map(linePrice).reduce((p, c) => p + c, 0));
-```
-
-PASS — numbers in, numbers out; the only place a total becomes a
-string is the render boundary (real code):
-
-```ts
-export const invoiceTotal = (invoice: Pick<Invoice, "lineItems">): number =>
-  invoice.lineItems.map(linePrice).reduce((p, c) => p + c, 0);
-```
-
-Saved invoices hold numbers; `formatCurrency` appears only in tsx.
-
-### 7.7. Delete dead code, lie props and hook costumes
-
-FAIL — all three found in one audit round:
-
-```tsx
-// const fixture = { name: "Jane Realname", email: "jane@real.example" };
-function useDb() {
-  return useMemo(() => db, []); // a module constant in a hook costume
-}
-<PaidStatus summary={{ ...realSummary, totalPaid: 0 }} />; // the lie
-```
-
-PASS — delete the fixture (git remembers), delete `useDb` (call the
-data module directly), and feed components the real domain object:
-
-```tsx
-const summary = paymentStatusOf(invoice);
-<PaidStatus id={id} summary={summary} />;
-```
-
-If a prop must be hand-constructed to fit, the interface is wrong —
-change the interface, don't lie to it.
-
-### 7.8. Layout routes over new HOCs
-
-FAIL — wrapping a route by hand when `app/routes.ts` already composes
-(how `withLineItemProvider` works today — flagged debt, do not copy):
-
-```tsx
-export default withLineItemProvider(function Home() {
-  /* ... */
-});
-```
-
-PASS — the established in-repo composition: `routes.ts` wraps a layout
-around child routes, and the layout renders `<Outlet />`
-(`app/layouts/navbar.tsx`):
-
-```tsx
-// app/routes.ts
-layout("layouts/navbar.tsx", [
-  index("routes/invoice.tsx"),
-  route("clients", "routes/clients.tsx"),
-]);
-```
-
-### 7.9. Keyed lists and revoked blob URLs
-
-FAIL — no key, and an object URL that is never revoked (both were
-real audit findings):
-
-```tsx
-{
-  invoices.map((invoice) => (
-    <tr>
-      <td>{invoice.id}</td>
-      <td>
-        <img src={URL.createObjectURL(file)} alt="logo" />
-      </td>
-    </tr>
-  ));
-}
-```
-
-PASS — stable keys, and the URL's lifetime owned by the component
-(the real `ImageInput` pattern):
-
-```tsx
-const releasePreviewImage = () => {
-  if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-  objectUrlRef.current = null;
+const badgeClasses = (variant: Variant): string => {
+  switch (variant) {
+    case "success":
+      return "bg-green-100 text-green-800";
+    case "warning":
+      return "bg-amber-100 text-amber-800";
+    case "danger":
+      return "bg-red-100 text-red-800";
+  }
 };
-useEffect(() => releasePreviewImage, []); // revoke on unmount
+```
 
-{
-  invoices.map((invoice) => <InvoiceRow key={invoice.id} id={invoice.id} />);
+✅ Good code
+
+```tsx
+type Variant = "success" | "warning" | "danger";
+
+const badgeClasses: Record<Variant, string> = {
+  success: "bg-green-100 text-green-800",
+  warning: "bg-amber-100 text-amber-800",
+  danger: "bg-red-100 text-red-800",
+};
+
+// badgeClasses[variant] — a missing row is a compile error.
+```
+
+In this repo: `Button.tsx` maps color/size to classes with `switch` —
+the live refactor candidate for this rule.
+
+### 7.2. Prefer type aliases over interface
+
+Use `type` aliases: they cannot be silently declaration-merged, and
+they express unions, intersections and mapped types `interface` can't.
+
+❌ Bad code
+
+```ts
+interface User {
+  id: string;
+  name: string;
+}
+
+interface User {
+  // Declaration merging: compiles, and silently changes User
+  // for every file in the project.
+  email: string;
 }
 ```
 
-### 7.10. `logger`, not `console`
-
-FAIL:
+✅ Good code
 
 ```ts
-console.log("saved invoice", invoice);
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+// A duplicate `type User` is a compile error — no silent merging.
+type Admin = User & { permissions: string[] };
 ```
 
-PASS (real code — `app/utils/logger.ts`, used across the app):
+### 7.3. Prefer string-literal unions over enums
+
+Use string-literal unions: zero runtime cost, inferred from plain
+literals, and callers never import an enum to pass a string.
+
+❌ Bad code
 
 ```ts
-import { logger } from "~/utils/logger";
+enum Status {
+  Draft = "draft",
+  Sent = "sent",
+  Paid = "paid",
+}
 
-logger.debug("Loaded clients:", clients);
+const setStatus = (status: Status): void => {
+  /* ... */
+};
+
+setStatus("draft"); // Error: not assignable to type Status
+setStatus(Status.Draft); // every caller must import the enum
 ```
 
-`no-console` and `no-alert` are warnings, and warnings are review
-topics: they exist to push you towards `logger` and typed inputs.
+✅ Good code
+
+```ts
+type Status = "draft" | "sent" | "paid";
+
+const setStatus = (status: Status): void => {
+  /* ... */
+};
+
+setStatus("draft"); // the literal is the value — nothing to import
+```
+
+### 7.4. Write components as arrow functions, never classes or `React.FC`
+
+Write components as arrow functions with destructured, alias-typed
+props — never class components, never `React.FC`.
+
+❌ Bad code
+
+```tsx
+import { type FC } from "react";
+
+const Badge: FC<{ label: string; count: number }> = (props) => {
+  return (
+    <span>
+      {props.label}: {props.count}
+    </span>
+  );
+};
+```
+
+✅ Good code
+
+```tsx
+type BadgeProps = {
+  label: string;
+  count: number;
+};
+
+const Badge = ({ label, count }: BadgeProps) => {
+  return (
+    <span>
+      {label}: {count}
+    </span>
+  );
+};
+```
+
+### 7.5. Provide deep data through context with focused hooks
+
+When data travels through 3+ components that only forward it, provide
+it via context and expose one focused hook per operation.
+
+❌ Bad code
+
+```tsx
+const App = ({ user }: { user: User }) => <Layout user={user} />;
+
+// A courier, nothing more — Layout does not use `user` itself:
+const Layout = ({ user }: { user: User }) => <Header user={user} />;
+
+const Header = ({ user }: { user: User }) => <Avatar name={user.name} />;
+```
+
+✅ Good code
+
+```tsx
+type Session = { user: { name: string }; logout: () => void };
+
+const SessionContext = createContext<Session | null>(null);
+
+const useSession = (): Session => {
+  const ctx = useContext(SessionContext);
+  if (!ctx) throw new Error("useSession must be inside SessionProvider");
+  return ctx;
+};
+
+// One focused hook per operation — Layout and Header forward nothing.
+const useCurrentUser = () => useSession().user;
+const useLogout = () => useSession().logout;
+```
+
+In this repo: `LineItemProvider` exposes `useLineItems`,
+`useLineItem`, `useSetLineItem` and `useDeleteLineItem`.
+
+### 7.6. Derive values in render; never mirror them in state
+
+If a value can be computed during render, compute it — mirroring it
+in `useState` forks the source of truth and syncs via effects.
+
+❌ Bad code
+
+```tsx
+const PriceTag = ({ price }: { price: number }) => {
+  const [formatted, setFormatted] = useState("");
+
+  useEffect(() => {
+    setFormatted(`$${price.toFixed(2)}`);
+  }, [price]);
+
+  return <span>{formatted}</span>;
+};
+```
+
+✅ Good code
+
+```tsx
+const PriceTag = ({ price }: { price: number }) => {
+  // Derived during render — always in sync, no effect needed.
+  const formatted = `$${price.toFixed(2)}`;
+
+  return <span>{formatted}</span>;
+};
+```
+
+### 7.7. Return early with guard clauses
+
+Handle failure first and return or throw immediately, so the happy
+path stays flat and reads top to bottom.
+
+❌ Bad code
+
+```tsx
+const Profile = ({ user }: { user: User | null }) => {
+  if (user) {
+    if (user.avatarUrl) {
+      return <img src={user.avatarUrl} alt={user.name} />;
+    } else {
+      return <Placeholder name={user.name} />;
+    }
+  } else {
+    return null;
+  }
+};
+```
+
+✅ Good code
+
+```tsx
+const Profile = ({ user }: { user: User | null }) => {
+  if (!user) return null;
+  if (!user.avatarUrl) return <Placeholder name={user.name} />;
+
+  return <img src={user.avatarUrl} alt={user.name} />;
+};
+```
+
+### 7.8. Check literal config with satisfies
+
+Check literal config with `satisfies`: it validates the shape while
+keeping the inferred narrow types an annotation would widen away.
+
+❌ Bad code
+
+```ts
+const theme: Record<string, string | number> = {
+  fontFamily: "Inter, sans-serif",
+  fontSize: 14,
+  lineHeight: 1.5,
+};
+
+// The annotation widened every value to string | number.
+theme.fontFamily.toUpperCase(); // Error: possibly a number
+```
+
+✅ Good code
+
+```ts
+const theme = {
+  fontFamily: "Inter, sans-serif",
+  fontSize: 14,
+  lineHeight: 1.5,
+} satisfies Record<string, string | number>;
+
+// Checked against the shape, but each value keeps its narrow type.
+theme.fontFamily.toUpperCase(); // OK — fontFamily is string
+```
+
+In this repo: `chargeTypes satisfies ChargeType[]` in
+`data/invoice.ts`; `satisfies RouteConfig` in `routes.ts`.
+
+### 7.9. Model absence with optional fields, not sentinels
+
+Model "not set" with optional fields, never sentinels — `""` and `0`
+collide with real values; `undefined` unambiguously means absent.
+
+❌ Bad code
+
+```ts
+type Customer = {
+  name: string; // "" means "no name given"
+  company: string; // "" means "no company"
+};
+
+const greet = (c: Customer): string =>
+  c.name === "" ? "Hello" : `Hello, ${c.name}`;
+```
+
+✅ Good code
+
+```ts
+type Customer = {
+  name?: string; // undefined means absent — no sentinel needed
+  company?: string;
+};
+
+const greet = (c: Customer): string => `Hello, ${c.name ?? "there"}`;
+```
+
+### 7.10. Freeze static structures with as const
+
+Freeze static lists and objects with `as const` — you get literal
+types and read-only enforcement for free.
+
+❌ Bad code
+
+```ts
+const columns = ["name", "qty", "price"]; // inferred as string[]
+
+type Column = (typeof columns)[number]; // just string — no help
+
+columns.push("total"); // mutable, and still only string[]
+```
+
+✅ Good code
+
+```ts
+const columns = ["name", "qty", "price"] as const;
+
+type Column = (typeof columns)[number]; // "name" | "qty" | "price"
+
+columns.push("total"); // Error: the tuple is readonly
+```
+
+### 7.11. Derive prop types with Pick and Omit
+
+Project prop types from their source with `Pick`/`Omit`; re-typed
+fields drift out of sync with the original.
+
+❌ Bad code
+
+```ts
+type InputProps = { value: string; maxLength?: number; placeholder?: string };
+
+type SearchFieldProps = {
+  value: string; // copied from InputProps by hand...
+  maxLength?: number; // ...and already drifting out of sync
+  onSearch: (query: string) => void;
+};
+```
+
+✅ Good code
+
+```ts
+type InputProps = { value: string; maxLength?: number; placeholder?: string };
+
+type SearchFieldProps = Pick<InputProps, "value" | "maxLength"> & {
+  onSearch: (query: string) => void;
+};
+
+// InputProps changes? SearchFieldProps follows automatically.
+```
+
+In this repo: `Pick<ComponentPropsWithoutRef<typeof TextInput>,`
+`"maxLength" | "formatOnChange">` in `Inputs/index.tsx`.
+
+### 7.12. Key lists by stable id, never by index
+
+Key list items by a stable id — index keys make React reuse the
+wrong DOM node and state when the list reorders or shrinks.
+
+❌ Bad code
+
+```tsx
+const ItemList = ({ items }: { items: Item[] }) => (
+  <ul>
+    {items.map((item, index) => (
+      <Row key={index} item={item} />
+    ))}
+  </ul>
+);
+```
+
+✅ Good code
+
+```tsx
+const ItemList = ({ items }: { items: Item[] }) => (
+  <ul>
+    {items.map((item) => (
+      <Row key={item.id} item={item} />
+    ))}
+  </ul>
+);
+```
+
+In this repo: lists key by `item.uuid` and `invoice.id`.
+
+### 7.13. Never use non-null assertions
+
+Never assert non-null with `!` — it silences the compiler and
+detonates at runtime; narrow with a guard or throw instead.
+
+❌ Bad code
+
+```ts
+type Item = { id: string; name: string };
+
+const getItem = (items: Item[], id: string): Item =>
+  // Compiles fine — and throws "undefined is not an object" later.
+  items.find((i) => i.id === id)!;
+```
+
+✅ Good code
+
+```ts
+type Item = { id: string; name: string };
+
+const getItem = (items: Item[], id: string): Item => {
+  const item = items.find((i) => i.id === id);
+  if (!item) throw new Error(`getItem: no item with id "${id}"`);
+  return item;
+};
+```
+
+### 7.14. Compose with render props, not boolean props
+
+Replace boolean-prop pyramids with composition: the component owns
+the behavior, the caller owns the markup via a render prop.
+
+❌ Bad code
+
+```tsx
+type SaveButtonProps = {
+  label: string;
+  showIcon?: boolean;
+  confirmFirst?: boolean;
+  fullWidth?: boolean;
+  redirectAfter?: boolean;
+};
+
+// Every new variation is another boolean; combinations explode.
+```
+
+✅ Good code
+
+```tsx
+import type { ReactNode } from "react";
+
+type SaveButtonProps = {
+  record: { id: string };
+  children: (save: () => void, isSaving: boolean) => ReactNode;
+};
+
+// SaveButton owns the save flow; callers compose their own markup:
+// <SaveButton record={draft}>{(save) => <a onClick={save}>Save</a>}</SaveButton>
+```
+
+In this repo: `ManualSave` takes `onSave?: (record, close, onSaved) =>
+ReactNode`.
 
 ## 8. Definition of done
 
