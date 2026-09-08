@@ -51,6 +51,9 @@ export default tseslint.config(
       "prefer-const": "warn",
       "react-refresh/only-export-components": "warn",
 
+      // Export order is a reading-order concern: `export default App` belongs near
+      // the top of root.tsx, not relocated below every other export alphabetically.
+      "sort/exports": "off",
       "sort/import-members": "warn",
       "sort/imports": "off",
       "sort/object-properties": "warn",
