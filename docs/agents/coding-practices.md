@@ -1,6 +1,6 @@
 # Coding practices
 
-Rules for LLM agents changing Invoicr. Read before your first change.
+Rules for LLM agents changing Invoicer. Read before your first change.
 
 Not a style guide (Prettier/ESLint own formatting), not a testing doc
 (`TESTING_STRATEGY.md`), not process (`CLAUDE.md`, `docs/agents/`).
@@ -15,7 +15,9 @@ Ordered; when rules conflict, the earlier wins.
    `number | undefined`; downstream stays numeric. Uncontrolled form
    strings caused the NaN plague.
 2. **Types are contracts; never cast.** `as unknown as` is forbidden —
-   a cast reports a misplaced seam; move the seam.
+   a cast reports a misplaced seam; move the seam. A narrow `as` is
+   tolerated only at a boundary you own (`db.ts` at the `JSON.parse`
+   edge), never to silence a mismatch between two of our own types.
 3. **One home per concept.** Domain types live in `app/data/`.
 4. **Money is a number.** Formatted only at render (`formatCurrency`),
    parsed only at input. Never a string.
@@ -35,7 +37,7 @@ Ordered; when rules conflict, the earlier wins.
 ## 2. Design patterns
 
 General TS/React community practice, chosen because the codebase
-already follows it everywhere — write new code in these shapes.
+largely follows it already — write new code in these shapes.
 
 ### 2.1. Prefer a lookup table over switch and if chains
 
@@ -249,7 +251,7 @@ extractor per shape, living with its type, normalising defaults once:
 // ❌ the type system is silenced, not convinced
 const address = record as unknown as Address;
 
-// ✅ the seam that replaced every cast in this repo
+// ✅ an extractor — the seam that replaces casts in this repo
 export const addressFromRecord = (record: Record<string, string>): Address => ({
   name: record.name ?? "",
   streetAddress: record.streetAddress ?? "",
