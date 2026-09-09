@@ -50,7 +50,7 @@ export type LineItem = {
   qty?: number;
   unitPrice?: number;
   vatRate?: number;
-  type?: "-1" | ChargeType["id"];
+  type?: ChargeType["id"];
 };
 
 export type Payment = {

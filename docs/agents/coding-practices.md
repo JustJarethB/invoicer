@@ -1,6 +1,8 @@
 # Coding practices
 
 Rules for LLM agents changing Invoicer. Read before your first change.
+The canonical product name is defined in `CONTEXT.md`; spell it
+"Invoicer" (the `package.json` package name stays `invoicr`).
 
 Not a style guide (Prettier/ESLint own formatting), not a testing doc
 (`TESTING_STRATEGY.md`), not process (`CLAUDE.md`, `docs/agents/`).
@@ -13,7 +15,12 @@ Ordered; when rules conflict, the earlier wins.
 
 1. **Parse at the boundary, once.** `NumberInput` emits
    `number | undefined`; downstream stays numeric. Uncontrolled form
-   strings caused the NaN plague.
+   strings caused the NaN plague. The render boundary is the input layer
+   (`components/Inputs/`) plus the form-to-record readers; everything
+   after it sees typed values. localStorage is a boundary too:
+   `db.get` returns unvalidated JSON — validate the shape at read; `as`
+   on a db result is a seam bug (`invoices.tsx:61` is the live
+   candidate).
 2. **Types are contracts; never cast.** `as unknown as` is forbidden —
    a cast reports a misplaced seam; move the seam. A narrow `as` is
    tolerated only at a boundary you own (`db.ts` at the `JSON.parse`
@@ -23,21 +30,26 @@ Ordered; when rules conflict, the earlier wins.
    parsed only at input. Never a string.
 5. **Routes are thin.** Fetch, compose, render; derivation is pure
    functions in `app/data/`.
-6. **Absence, not empty.** An unset field is a missing property
-   (`qty?: number`), never `""`, never a sentinel `0`.
+6. **Absence, not empty.** An unset line-item field is a missing
+   property (`qty?: number`), never `""`, never a sentinel `0`.
+   `Address`/`PaymentDetails` keep `""` defaults as their settled
+   representation — do not copy that to new domain types.
 7. **Delete more than you add.** Dead code, lie props and shallow
    wrappers were all fixed by deletion.
 8. **Interfaces must earn their keep.** A wrapper whose interface is as
-   complex as its implementation gets deleted (`Autosave`,
+   complex as its implementation is deletion debt: delete it when your
+   change touches it; do not imitate or extend it (`Autosave`,
    `withLineItemProvider` are the flagged examples).
-9. **Components read, they do not compute.** A component that derives
-   nothing belongs to a route; totals, statuses and formatting live in
-   `app/data/` or the render boundary.
+9. **Components read, they do not compute.** Totals, statuses and
+   formatting live in `app/data/` or inline in JSX. Do not create a
+   component file that only forwards props — delete or inline it.
 
 ## 2. Design patterns
 
 General TS/React community practice, chosen because the codebase
-largely follows it already — write new code in these shapes.
+largely follows it already. Where it does not, the pattern names the
+file as a migration candidate (e.g. `Button.tsx` in §2.1, `root.tsx`
+in §2.4). Write new code in these shapes regardless.
 
 ### 2.1. Prefer a lookup table over switch and if chains
 
@@ -114,6 +126,9 @@ setStatus("draft");
 
 Arrow functions with destructured, alias-typed props. Never class
 components, `function` declarations, or `React.FC`.
+
+In this repo: `root.tsx` and `routes/invoices.tsx` still declare
+components with `function` — migrate them when you touch them.
 
 ```tsx
 // ❌ class component (or `function`, or `React.FC`)
@@ -217,7 +232,9 @@ const useLogout = () => useSession().logout;
 ```
 
 In this repo: `LineItemProvider` exposes `useLineItems`, `useLineItem`,
-`useSetLineItem`, `useDeleteLineItem`.
+`useSetLineItem`, `useDeleteLineItem`. Its context default is
+permissive (`[]`, throwing placeholder setters) and has no guard — the
+guard-and-throw hook above is the target shape, not the current one.
 
 ### 2.9. Use functional state updates, not stale closures
 
@@ -251,7 +268,7 @@ extractor per shape, living with its type, normalising defaults once:
 // ❌ the type system is silenced, not convinced
 const address = record as unknown as Address;
 
-// ✅ an extractor — the seam that replaces casts in this repo
+// ✅ an extractor — the seam that removed every `as unknown as` from app source
 export const addressFromRecord = (record: Record<string, string>): Address => ({
   name: record.name ?? "",
   streetAddress: record.streetAddress ?? "",
@@ -261,28 +278,51 @@ export const addressFromRecord = (record: Record<string, string>): Address => ({
 });
 ```
 
+`formJson` returning `Record<string, string>` is the sanctioned generic
+reader. Casting its result to a domain type is not: extractors
+(`addressFromRecord`, `paymentDetailsFromRecord`, `logoFromRecord`) are
+the only bridge from a record to a domain type. Narrow literal casts
+(`as const`, `satisfies`) are not this rule's target. Live narrow casts
+remain at `app/data/invoice.ts:36` and `LineItem.tsx:46` — replace them
+when you touch those files. The `LineItem.tsx:46` cast exists because
+`SelectInput` still emits the raw string of its option value; when the
+input emits typed values, the cast goes.
+
 ## 3. Anti-patterns
 
-Each was a real, merged bug in this repo. Do not reintroduce:
+Each was a real, merged bug in this repo. Do not reintroduce. Where an
+instance survives, the bullet names it: live instances are migration
+candidates, not permission.
 
 - **Stringly-typed money** — the NaN plague. Money is `number`.
 - **`prompt`/`alert`/`confirm`** — validation belongs in a typed input.
-- **Defensive re-parsing downstream** — `Number()` outside
-  `components/Inputs/` means the boundary leaked.
+- **Defensive re-parsing downstream** — `Number()` on user input
+  outside the input boundary means the boundary leaked. Exemptions:
+  `parseCurrency`/`formatCurrency` are the sanctioned parse/format
+  pair.
 - **`as unknown as`** — add an extractor; move the seam.
 - **Nested or chained ternaries** — even the one in `paymentStatusOf`
   is debt, not a pattern; use `if`/`return`.
-- **Dead or commented-out code** — the deleted fixture block contained
-  real personal data. Delete; git remembers.
+- **Dead or commented-out code** — delete it. If the block contains
+  personal data, deletion is not enough: never commit it in the first
+  place, and route a history purge (`git filter-repo` / BFG +
+  force-push, coordinated with the repo owner) — public history stays
+  public. Live: a commented-out `useEffect` at `TutorialWizard.tsx:10` —
+  delete or revive it when you touch the file.
 - **Lie props** — a hand-built `summary={{ ..., totalPaid: 0 }}` means
   the interface is wrong; change the interface.
 - **Shallow wrappers** — `Autosave`/`withLineItemProvider` are flagged
   debt; do not imitate or extend.
 - **Shapes built in more than one place** — `logo: { url: logo }`
-  double-wrapped. One constructor per shape, at the boundary.
-- **TODO without an issue link** — file it or do it now.
+  double-wrapped. One constructor per shape, at the boundary. Live:
+  `invoice.tsx:67` and `:74` build `{ url }` inline next to
+  `logoFromRecord` — route the shape through the constructor when you
+  touch it.
+- **TODO without an issue link** — file it or do it now. Seven live
+  (`invoices.tsx:124` among them): resolve or link them when touched.
 - **`new Date().getTime()` ids** — collide within a millisecond; use
-  `randomUUID()`.
+  `randomUUID()`. Live at `invoice.tsx:58`, in the invoice-id generator
+  itself — migrate when you touch it.
 - **Unkeyed lists** — React cannot reconcile them.
 - **Blob-URL leaks** — see `ImageInput`'s `releasePreviewImage`.
 - **`console.log`** — use `logger`.
@@ -293,7 +333,8 @@ Each was a real, merged bug in this repo. Do not reintroduce:
 
 All gates green before push; CI re-runs them and adds Playwright:
 `pnpm run typecheck`, `lint`, `format:check`, `test:unit`,
-`test:integration`.
+`test:integration`. UI changes may require snapshot updates — see
+`TESTING_STRATEGY.md` for the update flow before forcing anything.
 
 Before opening the PR: self-review the diff as a stranger would and
 delete what you cannot justify in one sentence; introduce no §3

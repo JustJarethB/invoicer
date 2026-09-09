@@ -1,5 +1,9 @@
 # Glossary
 
+The canonical product name is **Invoicer** (`package.json` package
+name is `invoicr`). Use "Invoicer" in docs, issue titles and PR
+descriptions.
+
 Use these exact terms in code, tests, issue titles and PR
 descriptions. No synonyms, no abbreviations.
 
