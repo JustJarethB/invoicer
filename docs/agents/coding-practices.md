@@ -387,20 +387,28 @@ setStatus("draft"); // the literal is the value — nothing to import
 ### 7.4. Write components as arrow functions, never classes or `React.FC`
 
 Write components as arrow functions with destructured, alias-typed
-props — never class components, never `React.FC`.
+props — never class components, never `function` declarations, never
+`React.FC`.
 
 ❌ Bad code
 
 ```tsx
-import { type FC } from "react";
+import { Component } from "react";
 
-const Badge: FC<{ label: string; count: number }> = (props) => {
-  return (
-    <span>
-      {props.label}: {props.count}
-    </span>
-  );
-};
+class Badge extends Component<{ label: string; count: number }> {
+  render() {
+    return (
+      <span>
+        {this.props.label}: {this.props.count}
+      </span>
+    );
+  }
+}
+
+// `function` keyword is also out — the repo is 100% arrows:
+function Status({ ok }: { ok: boolean }) {
+  return <span>{ok ? "✓" : "✗"}</span>;
+}
 ```
 
 ✅ Good code
@@ -669,32 +677,46 @@ const ItemList = ({ items }: { items: Item[] }) => (
 
 In this repo: lists key by `item.uuid` and `invoice.id`.
 
-### 7.13. Never use non-null assertions
+### 7.13. Use functional state updates, not stale closures
 
-Never assert non-null with `!` — it silences the compiler and
-detonates at runtime; narrow with a guard or throw instead.
+When the next state is computed from the previous state, pass an
+updater function to the setter — reading the current value from a
+closure captures a stale copy.
 
 ❌ Bad code
 
-```ts
-type Item = { id: string; name: string };
+```tsx
+const Counter = ({ step }: { step: number }) => {
+  const [count, setCount] = useState(0);
 
-const getItem = (items: Item[], id: string): Item =>
-  // Compiles fine — and throws "undefined is not an object" later.
-  items.find((i) => i.id === id)!;
+  // `count` is the value from this render — a stale copy:
+  const increment = () => setCount(count + step);
+
+  const double = () => {
+    increment();
+    increment(); // both read the same old count — +step once, not twice
+  };
+};
 ```
 
 ✅ Good code
 
-```ts
-type Item = { id: string; name: string };
+```tsx
+const Counter = ({ step }: { step: number }) => {
+  const [count, setCount] = useState(0);
 
-const getItem = (items: Item[], id: string): Item => {
-  const item = items.find((i) => i.id === id);
-  if (!item) throw new Error(`getItem: no item with id "${id}"`);
-  return item;
+  // The updater always receives the latest state:
+  const increment = () => setCount((c) => c + step);
+
+  const double = () => {
+    increment();
+    increment(); // both updaters queue — applied to the latest value
+  };
 };
 ```
+
+In this repo: `setOpen((o) => !o)` in `routes/invoices.tsx`,
+`setInvoices((prev) => prev.map(...))` — never read-then-set.
 
 ### 7.14. Compose with render props, not boolean props
 
