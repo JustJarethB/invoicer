@@ -1,31 +1,19 @@
 # Coding practices
 
-Rules for LLM agents changing Invoicr. Grounded in this repo's files and
-audit history. Read before your first change.
+Rules for LLM agents changing Invoicr. Read before your first change.
 
 Not a style guide (Prettier/ESLint own formatting), not a testing doc
 (`TESTING_STRATEGY.md`), not process (`CLAUDE.md`, `docs/agents/`).
 This doc is judgement: where code lives, what shape it takes, and which
 mistakes this repository has already made and will not make again.
 
-## 1. Read the repo first
-
-In order: `app/data/invoice.ts` (domain centre — canonical types, pure
-derivations, the JSDoc standard), `app/db.ts` (deep-module exemplar),
-`docs/codebase-review.md` + `docs/refactor-round-*.md` (the audit
-history — every §7 anti-pattern was a real, merged bug), `CLAUDE.md`
-and `docs/agents/*` (process).
-
-Do not invent vocabulary. The domain calls it a `LineItem`; so do your
-code, tests and PR description — never "entry", "row", "invoice line".
-
-## 2. Prime directives
+## 1. Prime directives
 
 Ordered; when rules conflict, the earlier wins.
 
 1. **Parse at the boundary, once.** `NumberInput` emits
    `number | undefined`; downstream stays numeric. Uncontrolled form
-   strings caused the NaN plague (audit 1).
+   strings caused the NaN plague.
 2. **Types are contracts; never cast.** `as unknown as` is forbidden —
    a cast reports a misplaced seam; move the seam.
 3. **One home per concept.** Domain types live in `app/data/`.
@@ -40,126 +28,16 @@ Ordered; when rules conflict, the earlier wins.
 8. **Interfaces must earn their keep.** A wrapper whose interface is as
    complex as its implementation gets deleted (`Autosave`,
    `withLineItemProvider` are the flagged examples).
+9. **Components read, they do not compute.** A component that derives
+   nothing belongs to a route; totals, statuses and formatting live in
+   `app/data/` or the render boundary.
 
-## 3. Architecture boundaries
-
-Import direction is fixed: `routes → components → data/utils`. Nothing
-points upward; `data/` and `utils/` never import React or components.
-
-- `app/data/` — domain types, pure derivations, persistence via
-  `db.ts`. No React, no formatting.
-- `app/utils/` — generic helpers: `formatCurrency`, `parseCurrency`,
-  `formJson`, `randomUUID`, `logger`.
-- `app/components/` — React; `components/Inputs/` is the form boundary,
-  the only place strings become numbers.
-- `app/routes/` — thin routes wired in `app/routes.ts`.
-
-Decision table for new code:
-
-| You need to add              | Put it in                        | Because                         |
-| ---------------------------- | -------------------------------- | ------------------------------- |
-| A domain type or field       | `app/data/<concept>.ts`          | One home per concept            |
-| A derivation (total, status) | Pure fn in `app/data/invoice.ts` | Unit-testable without rendering |
-| FormData → domain shape      | Extractor beside its type        | The seam that replaced casts    |
-| A numeric form field         | `components/Inputs/`             | The only string→number boundary |
-| A generic helper             | `app/utils/`                     | No React imports                |
-| localStorage read/write      | Owning data module, via `db.ts`  | Key scheme stays hidden         |
-| Shared state for a subtree   | Provider + focused hooks         | One hook per operation          |
-| A new page                   | `app/routes/` + `app/routes.ts`  | Fetch, compose, render only     |
-| Display formatting           | `formatCurrency` at render       | Never inside domain logic       |
-
-## 4. Naming
-
-Domain vocabulary (exact terms, no synonyms):
-
-| Concept         | File                  | Names                                          |
-| --------------- | --------------------- | ---------------------------------------------- |
-| Invoice         | `app/data/invoice.ts` | `Invoice`, `invoiceTotal`, `paymentStatusOf`   |
-| Line item       | `app/data/invoice.ts` | `LineItem`, `linePrice`                        |
-| Payment         | `app/data/invoice.ts` | `Payment`, `PaymentStatus`                     |
-| Charge type     | `app/data/invoice.ts` | `ChargeType`, `chargeTypes`                    |
-| Client          | `app/data/client.ts`  | `Client`, `NULL_CLIENT`, `saveClient`          |
-| Address         | `app/data/address.ts` | `Address`, `emptyAddress`, `addressFromRecord` |
-| Payment details | `app/data/payment.ts` | `PaymentDetails`, `paymentDetailsFromRecord`   |
-
-Predicates prefix `is`/`has` (`isValidPaymentAmount`); derivations are
-named for what they return (`invoiceTotal`, not `calcTotal`);
-extractors are `<Thing>FromRecord`. No abbreviations.
-
-## 5. Readability and TypeScript
-
-- Comments explain WHY, not WHAT — the JSDoc on `chargeTypes` is the
-  standard. A comment restating code is a smell: rename, then delete.
-- Return early; guard clauses over nesting.
-- One concept per line; no parse+validate+format one-liners.
-- Chained ternaries only for domain decision tables
-  (`paymentStatusOf`); never for side-effecting control flow.
-- Strict mode is the floor: parse once at the boundary so the interior
-  can trust its types. No defensive re-checks deep in render code.
-- `satisfies` over annotation for literal config — checks without
-  widening (`chargeTypes satisfies ChargeType[]`).
-- Optional numeric fields are `qty?: number`; empty-string defaults are
-  normalised once inside extractors (`record.name ?? ""`).
-- A narrow `as` only at a boundary you own (`db.ts` at `JSON.parse`),
-  never between two of our own types. `any` warns; needing it means the
-  shape is wrong.
-- Type imports use the `type` keyword (`verbatimModuleSyntax` is on).
-- Lint owns `eqeqeq`, `curly`, `prefer-const`; `sort/imports` and
-  `sort/exports` are off deliberately — export order is reading order.
-
-## 6. Patterns that work here
-
-- **Deep modules.** `app/db.ts`: four functions hide the entire
-  persistence scheme. New persistence goes through `db.ts`, exposed
-  from the owning data module — never called from a component.
-- **Extractor seam.** One `<Thing>FromRecord` per shape, living with
-  its type (`addressFromRecord`). A cast means the seam is missing.
-- **Boundary components.** `NumberInput` accepts/emits
-  `number | undefined`; all string→number conversion lives in
-  `components/Inputs/`.
-- **Pure derivations.** `linePrice`, `invoiceTotal`, `paymentStatusOf`
-  are pure functions over numbers, unit-tested without rendering —
-  see `app/data/invoice.ts`.
-- **Context + focused hooks.** `LineItemProvider` exposes one hook per
-  operation (`useLineItems`, `useSetLineItem`, …), not a god-hook.
-- **Render-prop composition.** `ManualSave` takes `onSave`; the caller
-  owns what "save" means.
-- **Keyed lists.** `key={line.uuid}` — stable crypto uuids, never the
-  index.
-
-## 7. Anti-patterns
-
-Each was a real, merged bug (see `docs/codebase-review.md`). Do not
-reintroduce:
-
-- **Stringly-typed money** — the NaN plague. Money is `number`.
-- **`prompt`/`alert`/`confirm`** — validation belongs in a typed input.
-- **Defensive re-parsing downstream** — `Number()` outside
-  `components/Inputs/` means the boundary leaked.
-- **`as unknown as`** — add an extractor; move the seam.
-- **Dead or commented-out code** — the deleted fixture block contained
-  real personal data. Delete; git remembers.
-- **Lie props** — a hand-built `summary={{ ..., totalPaid: 0 }}` means
-  the interface is wrong; change the interface.
-- **Shallow wrappers** — `Autosave`/`withLineItemProvider` are flagged
-  debt; do not imitate or extend.
-- **Shapes built in more than one place** — `logo: { url: logo }`
-  double-wrapped. One constructor per shape, at the boundary.
-- **TODO without an issue link** — file it or do it now.
-- **`new Date().getTime()` ids** — collide within a millisecond; use
-  `randomUUID()`.
-- **Unkeyed lists** — React cannot reconcile them.
-- **Blob-URL leaks** — see `ImageInput`'s `releasePreviewImage`.
-- **`console.log`** — use `logger`.
-- **Prop drilling past two levels** — use the provider pattern.
-- **Snapshot tests for everything** — behaviour tests carry the weight.
-
-## 8. Design patterns
+## 2. Design patterns
 
 General TS/React community practice, chosen because the codebase
 already follows it everywhere — write new code in these shapes.
 
-### 8.1. Prefer a lookup table over switch and if chains
+### 2.1. Prefer a lookup table over switch and if chains
 
 Map variants to values with a `const` table — exhaustive at compile
 time; adding a case is adding a row, not a branch.
@@ -188,7 +66,7 @@ const badgeClasses: Record<Variant, string> = {
 In this repo: `Button.tsx` maps color/size via `switch` — the live
 candidate.
 
-### 8.2. Prefer type aliases over interface
+### 2.2. Prefer type aliases over interface
 
 `type` cannot silently declaration-merge, and it expresses unions and
 mapped types `interface` cannot.
@@ -212,7 +90,7 @@ type User = {
 type Admin = User & { permissions: string[] };
 ```
 
-### 8.3. Prefer string-literal unions over enums
+### 2.3. Prefer string-literal unions over enums
 
 Unions are zero-cost at runtime and inferred from plain literals;
 callers never import an enum to pass a string.
@@ -230,7 +108,7 @@ type Status = "draft" | "sent";
 setStatus("draft");
 ```
 
-### 8.4. Write components as arrow functions
+### 2.4. Write components as arrow functions
 
 Arrow functions with destructured, alias-typed props. Never class
 components, `function` declarations, or `React.FC`.
@@ -259,7 +137,7 @@ const Badge = ({ label, count }: BadgeProps) => (
 );
 ```
 
-### 8.5. Derive values in render; never mirror them in state
+### 2.5. Derive values in render; never mirror them in state
 
 If it can be computed during render, compute it — mirroring in
 `useState` forks the source of truth and syncs via effects.
@@ -278,7 +156,7 @@ const PriceTag = ({ price }: { price: number }) => (
 );
 ```
 
-### 8.6. Freeze static structures with as const
+### 2.6. Freeze static structures with as const
 
 ```ts
 // ❌ string[], mutable, no literal types
@@ -291,7 +169,7 @@ type Column = (typeof columns)[number];
 columns.push("total"); // Error: readonly
 ```
 
-### 8.7. Derive prop types with Pick and Omit
+### 2.7. Derive prop types with Pick and Omit
 
 Projected fields follow their source; hand-copied fields drift.
 
@@ -314,7 +192,7 @@ type SearchFieldProps = Pick<InputProps, "value" | "maxLength"> & {
 In this repo: `Pick<ComponentPropsWithoutRef<typeof TextInput>, ...>`
 in `Inputs/index.tsx`.
 
-### 8.8. Provide deep data through context with focused hooks
+### 2.8. Provide deep data through context with focused hooks
 
 Data travelling through 3+ courier components belongs in context, with
 one hook per operation.
@@ -339,7 +217,7 @@ const useLogout = () => useSession().logout;
 In this repo: `LineItemProvider` exposes `useLineItems`, `useLineItem`,
 `useSetLineItem`, `useDeleteLineItem`.
 
-### 8.9. Use functional state updates, not stale closures
+### 2.9. Use functional state updates, not stale closures
 
 When the next state depends on the previous, pass an updater — a
 closure captures a stale copy.
@@ -362,14 +240,61 @@ const double = () => {
 
 In this repo: `setOpen((o) => !o)`, `setInvoices((prev) => prev.map(...))`.
 
-## 9. Definition of done
+### 2.10. Extractors instead of casts
+
+A `FormData`/record must never meet a domain type through `as`. One
+extractor per shape, living with its type, normalising defaults once:
+
+```ts
+// ❌ the type system is silenced, not convinced
+const address = record as unknown as Address;
+
+// ✅ the seam that replaced every cast in this repo
+export const addressFromRecord = (record: Record<string, string>): Address => ({
+  name: record.name ?? "",
+  streetAddress: record.streetAddress ?? "",
+  city: record.city ?? "",
+  county: record.county ?? "",
+  postCode: record.postCode ?? "",
+});
+```
+
+## 3. Anti-patterns
+
+Each was a real, merged bug in this repo. Do not reintroduce:
+
+- **Stringly-typed money** — the NaN plague. Money is `number`.
+- **`prompt`/`alert`/`confirm`** — validation belongs in a typed input.
+- **Defensive re-parsing downstream** — `Number()` outside
+  `components/Inputs/` means the boundary leaked.
+- **`as unknown as`** — add an extractor; move the seam.
+- **Nested or chained ternaries** — even the one in `paymentStatusOf`
+  is debt, not a pattern; use `if`/`return`.
+- **Dead or commented-out code** — the deleted fixture block contained
+  real personal data. Delete; git remembers.
+- **Lie props** — a hand-built `summary={{ ..., totalPaid: 0 }}` means
+  the interface is wrong; change the interface.
+- **Shallow wrappers** — `Autosave`/`withLineItemProvider` are flagged
+  debt; do not imitate or extend.
+- **Shapes built in more than one place** — `logo: { url: logo }`
+  double-wrapped. One constructor per shape, at the boundary.
+- **TODO without an issue link** — file it or do it now.
+- **`new Date().getTime()` ids** — collide within a millisecond; use
+  `randomUUID()`.
+- **Unkeyed lists** — React cannot reconcile them.
+- **Blob-URL leaks** — see `ImageInput`'s `releasePreviewImage`.
+- **`console.log`** — use `logger`.
+- **Prop drilling past two levels** — use the provider pattern.
+- **Snapshot tests for everything** — behaviour tests carry the weight.
+
+## 4. Definition of done
 
 All gates green before push; CI re-runs them and adds Playwright:
 `pnpm run typecheck`, `lint`, `format:check`, `test:unit`,
 `test:integration`.
 
 Before opening the PR: self-review the diff as a stranger would and
-delete what you cannot justify in one sentence; introduce no §7
+delete what you cannot justify in one sentence; introduce no §3
 anti-pattern; conventional commit; the PR description explains WHY.
 
 If this document and the code ever disagree, the code is right — fix
