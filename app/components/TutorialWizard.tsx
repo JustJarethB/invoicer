@@ -34,7 +34,7 @@ type StageContentProps = {
 };
 
 // TODO: probably want to do dark/blur background with cutout indicating the focus area, maybe with a ring around it
-const getStageContent = ({ stage, closeTutorial, nextStage, prevStage, finishTutorial }: StageContentProps) => {
+const getStageContent = ({ closeTutorial, finishTutorial, nextStage, prevStage, stage }: StageContentProps) => {
   switch (stage) {
     case 0:
       return (

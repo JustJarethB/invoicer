@@ -57,7 +57,7 @@ export default tseslint.config(
       "sort/exports": "off",
       "sort/import-members": "warn",
       "sort/imports": "off",
-      "sort/object-properties": "warn",
+      "sort/object-properties": "off", // not convinced this is a good idea
     },
   }
 );

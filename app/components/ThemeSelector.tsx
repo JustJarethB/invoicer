@@ -1,7 +1,7 @@
-import { SunIcon, ComputerDesktopIcon, MoonIcon } from "@heroicons/react/24/outline";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type MouseEventHandler, type PropsWithChildren } from "react";
+import { ComputerDesktopIcon, MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import { createContext, type MouseEventHandler, type PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-const Option = ({ children, active, onClick }: PropsWithChildren<{ active?: boolean; onClick: MouseEventHandler<HTMLDivElement> }>) => (
+const Option = ({ active, children, onClick }: PropsWithChildren<{ active?: boolean; onClick: MouseEventHandler<HTMLDivElement> }>) => (
   <div
     onClick={onClick}
     className={

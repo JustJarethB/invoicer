@@ -1,11 +1,11 @@
 import { TrashIcon } from "@heroicons/react/24/outline";
 import * as outline from "@heroicons/react/24/outline";
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
+import { createContext, type PropsWithChildren, useContext, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Status } from "~/components/home/Status";
 import { Modal } from "~/components/Modal";
 import { NumberInput } from "~/components/Inputs";
-import { paymentStatusOf, type Invoice, type Payment, type PaymentSummary } from "~/data/invoice";
+import { type Invoice, type Payment, paymentStatusOf, type PaymentSummary } from "~/data/invoice";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
@@ -117,7 +117,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
   const invoice = useInvoice(id);
   const deleteInvoice = useContext(InvoiceContext).deleteInvoice;
   const summary = paymentStatusOf(invoice);
-  const { totalDue, due, paymentStatus } = summary;
+  const { due, paymentStatus, totalDue } = summary;
   const [open, setOpen] = useState(false);
   const mobile = useMobile();
   const handleDelete = () => {
@@ -204,7 +204,7 @@ const PaidStatus = ({ id, summary }: { id: string; summary: PaymentSummary }) =>
   );
 };
 
-const PaymentModal = ({ invoiceId, summary, onClose }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
+const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
   const makePayment = useMakePayment();
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);

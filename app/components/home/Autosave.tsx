@@ -1,5 +1,5 @@
 import { ArrowPathIcon } from "@heroicons/react/16/solid";
-import { useState, type PropsWithChildren } from "react";
+import { type PropsWithChildren, useState } from "react";
 import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
@@ -9,7 +9,7 @@ type Props = {
   onChange?: (newState: Record<string, string>) => void;
 };
 
-export const Autosave = ({ children, name, hideIcon, onChange: onChangeParent }: PropsWithChildren<Props>) => {
+export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }: PropsWithChildren<Props>) => {
   const [isSaving, setIsSaving] = useState(false);
   const onChange = async (e: React.ChangeEvent<HTMLFormElement>) => {
     const data: Record<string, string> = await formJson(e.currentTarget);

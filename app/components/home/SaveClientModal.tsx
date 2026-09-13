@@ -3,7 +3,7 @@ import { Modal } from "../Modal";
 import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
 import { Button } from "./Button";
-import { saveClient, type Client } from "~/data/client";
+import { type Client, saveClient } from "~/data/client";
 import { addressFromRecord, formJsonAddress } from "~/data/address";
 import { formJson } from "~/utils/formJson";
 import { randomUUID } from "~/utils/uuid";
@@ -14,7 +14,7 @@ import { randomUUID } from "~/utils/uuid";
  * and persists a new client. This belongs to the client domain, not to
  * ManualSave — ManualSave only hands it the form record.
  */
-export const SaveClientModal = ({ record, onClose, onSaved }: { record: Record<string, string>; onClose: () => void; onSaved: () => void }) => {
+export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<string, string>; onClose: () => void; onSaved: () => void }) => {
   const formMetaRef = useRef<HTMLFormElement>(null);
   const formAddressRef = useRef<HTMLFormElement>(null);
   const address = addressFromRecord(record);

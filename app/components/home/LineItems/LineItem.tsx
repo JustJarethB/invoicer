@@ -1,5 +1,5 @@
 import { DateInput, NumberInput, SelectInput, TextInput } from "~/components/Inputs";
-import { chargeTypes, linePrice, type LineItem as LineItemType } from "~/data/invoice";
+import { chargeTypes, type LineItem as LineItemType, linePrice } from "~/data/invoice";
 import { useDeleteLineItem, useLineItem, useSetLineItem } from "./LineItemProvider";
 import { formatCurrency } from "~/utils/formatCurrency";
 import { Button } from "../Button";

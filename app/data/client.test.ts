@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { db } from "../db";
-import { deleteClient, getClients, NULL_CLIENT, saveClient, type Client } from "./client";
+import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "./client";
 import { emptyAddress } from "./address";
 
 describe("client data layer", () => {

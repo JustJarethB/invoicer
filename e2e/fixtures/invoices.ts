@@ -1,4 +1,4 @@
-import { emptyAddress, type Address } from "~/data/address";
+import { type Address, emptyAddress } from "~/data/address";
 import type { LineItem, Payment } from "~/data/invoice";
 import type { Page } from "@playwright/test";
 

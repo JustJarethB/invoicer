@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MOBILE_BREAKPOINT } from "~/utils/constants";
 
 export function useMobile() {

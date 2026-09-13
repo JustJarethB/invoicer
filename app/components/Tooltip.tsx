@@ -1,5 +1,5 @@
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
-import { useMemo, type PropsWithChildren } from "react";
+import { type PropsWithChildren, useMemo } from "react";
 
 export const Tooltip = ({ children }: PropsWithChildren) => {
   return <span className="p-2 bg-gray-700 text-white text-xs rounded">{children}</span>;

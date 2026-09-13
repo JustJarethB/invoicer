@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
-import { getClients, NULL_CLIENT, type Client } from "~/data/client";
+import { type Client, getClients, NULL_CLIENT } from "~/data/client";
 import type { Address } from "~/data/address";
 import { useLineItems, withLineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { AddressPanel } from "~/components/home/AddressPanel";
@@ -9,7 +9,7 @@ import { fieldFormattingOf, StandardField } from "~/components/home/StandardFiel
 import { Totals } from "~/components/home/Totals";
 import { LineItems } from "~/components/home/LineItems";
 import type { Route } from "./+types/invoice";
-import { paymentDetailsFromRecord, type PaymentDetails } from "~/data/payment";
+import { type PaymentDetails, paymentDetailsFromRecord } from "~/data/payment";
 import type { Invoice } from "~/data/invoice";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
