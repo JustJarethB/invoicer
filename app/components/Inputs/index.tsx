@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentPropsWithoutRef, type PropsWithChildren } from "react";
+import { type ComponentPropsWithoutRef, type PropsWithChildren, useEffect, useRef, useState } from "react";
 import "./index.css";
 import { logger } from "~/utils/logger";
 import { parseCurrency } from "~/utils/parseCurrency";
@@ -43,7 +43,7 @@ type InputWrapperProps = PropsWithChildren<{
   suffix?: string;
 }>;
 
-const InputWrapper = ({ className, prefix, suffix, children }: InputWrapperProps) => (
+const InputWrapper = ({ children, className, prefix, suffix }: InputWrapperProps) => (
   // relative class used to check `prefix || suffix`
   <div className={`${className} 'relative'}`}>
     <div className="flex items-center rounded-lg dark:focus-within:bg-black focus-within:bg-white  focus-within:ring-2 focus-within:ring-gray-300 dark:focus-within:ring-gray-800">
@@ -69,7 +69,7 @@ type NumberInputProps = Omit<InputProps<"textarea">, "value" | "defaultValue" | 
   value?: number;
   onChange?: (value: number | undefined) => void;
 };
-export const NumberInput = ({ value, onChange, onBlur, ...rest }: NumberInputProps) => {
+export const NumberInput = ({ onBlur, onChange, value, ...rest }: NumberInputProps) => {
   const [text, setText] = useState<string>(value === undefined ? "" : String(value));
   const handleChange = (v: string) => {
     setText(v);
@@ -85,15 +85,15 @@ export const NumberInput = ({ value, onChange, onBlur, ...rest }: NumberInputPro
 };
 
 export const TextInput = ({
-  placeholder = "---",
-  value,
-  defaultValue,
-  onChange,
   className = "",
+  defaultValue,
+  formatOnChange,
   inputClassName,
+  onChange,
+  placeholder = "---",
   prefix,
   suffix,
-  formatOnChange,
+  value,
   ...rest
 }: InputProps<"textarea">) => {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -135,7 +135,7 @@ export const TextInput = ({
   );
 };
 
-export const DateInput = ({ placeholder = "", value, defaultValue, onChange, className = "", prefix, suffix, ...rest }: InputProps<"input">) => {
+export const DateInput = ({ className = "", defaultValue, onChange, placeholder = "", prefix, suffix, value, ...rest }: InputProps<"input">) => {
   const val = value ?? defaultValue;
   return (
     <InputWrapper {...{ className, prefix, suffix }}>
@@ -152,13 +152,13 @@ export const DateInput = ({ placeholder = "", value, defaultValue, onChange, cla
   );
 };
 export const SelectInput = ({
-  placeholder = "",
-  value = "",
-  onChange,
   className = "",
+  onChange,
+  options = [],
+  placeholder = "",
   prefix,
   suffix,
-  options = [],
+  value = "",
   ...rest
 }: InputProps<"input"> & { options: string[] | { label: string; value: string | number | undefined; disabled?: boolean }[] }) => {
   const optionsToUse = options.map((v) => (typeof v !== "string" ? v : { label: v, value: v }));
@@ -175,7 +175,7 @@ export const SelectInput = ({
         {...{ value, placeholder }}
         onChange={(e) => onChange?.(e.currentTarget.value)}
       >
-        {optionsToUse.map(({ label, value: v, disabled = false }) => (
+        {optionsToUse.map(({ disabled = false, label, value: v }) => (
           <option key={v} disabled={disabled} value={v}>
             {label}
           </option>
@@ -191,12 +191,12 @@ type ImageInputProps = ComponentPropsWithoutRef<"img"> & {
   onChange?: (value: string) => void;
 } & Pick<InputProps<"input">, "name">;
 export const ImageInput = ({
+  className = "",
+  defaultValue,
+  name,
+  onChange,
   placeholder = "https://via.placeholder.com/150",
   value,
-  defaultValue,
-  onChange,
-  name,
-  className = "",
   ...rest
 }: ImageInputProps) => {
   const [imageSrc, setImageSrc] = useState(value || defaultValue);

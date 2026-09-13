@@ -1,4 +1,4 @@
-import { useEffect, type PropsWithChildren } from "react";
+import { type PropsWithChildren, useEffect } from "react";
 
 type Props = {
   title: string;

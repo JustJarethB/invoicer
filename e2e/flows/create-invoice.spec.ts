@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { seedClient } from "../fixtures/clients";
 
 test("create and save invoice, then view it in the invoice list", async ({ page }) => {

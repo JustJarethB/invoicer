@@ -9,7 +9,7 @@ type Props = {
   children: React.ReactNode;
 };
 
-export const DropdownButton = ({ options, onClick, children }: Props) => {
+export const DropdownButton = ({ children, onClick, options }: Props) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

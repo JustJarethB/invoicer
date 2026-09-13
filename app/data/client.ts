@@ -1,5 +1,5 @@
 import { db } from "~/db";
-import { emptyAddress, type Address } from "./address";
+import { type Address, emptyAddress } from "./address";
 import { logger } from "~/utils/logger";
 
 export type Client = {

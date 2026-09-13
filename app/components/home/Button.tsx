@@ -36,13 +36,13 @@ const getSizeClassName = (icon: boolean, size: ButtonProps["size"]) => {
 
 export const Button = ({
   children,
-  onClick,
+  className,
   color,
+  contentOnly = false,
   icon = false,
+  onClick,
   outline = false,
   size = "md",
-  contentOnly = false,
-  className,
   ...rest
 }: ComponentPropsWithoutRef<"button"> & ButtonProps) => (
   <button

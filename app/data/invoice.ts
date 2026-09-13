@@ -73,7 +73,7 @@ export type Invoice = {
 };
 
 /** Price of a single line. Blank or untyped lines contribute nothing. */
-export const linePrice = ({ qty, unitPrice, type }: Pick<LineItem, "qty" | "unitPrice" | "type">) =>
+export const linePrice = ({ qty, type, unitPrice }: Pick<LineItem, "qty" | "unitPrice" | "type">) =>
   chargeTypes.find((chargeType) => chargeType.id === type)?.calculation(qty ?? 0, unitPrice ?? 0) ?? 0;
 
 /** Sum of all line prices on an invoice. */
