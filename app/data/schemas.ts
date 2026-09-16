@@ -136,7 +136,7 @@ export type Client = z.output<typeof clientSchema>;
 
 /** Client contact fields captured by the clients page form. */
 export const clientFormSchema = z.object({
-  contactName: z.string(),
+  contactName: z.string().check(z.refine((value) => value.trim().length > 0, "Display name is required")),
   email: z.string(),
   phone: z.string(),
 });
