@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
-import { NULL_CLIENT, saveClient, deleteClient, type Client, getClients } from "~/data/client";
+import { type Client, clientFromForm, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
 import { formJsonAddress } from "~/data/address";
 import { randomUUID } from "~/utils/uuid";
@@ -52,13 +52,13 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      const { contactName, phone, email } = await formJson<Pick<Client, "contactName" | "phone" | "email">>(e.currentTarget);
+      const { contactName, email, phone } = clientFromForm(await formJson(e.currentTarget));
       const address = formJsonAddress(e.currentTarget);
       const updatedClient: Client = {
-        id: client.id || randomUUID(),
-        contactName,
         address,
+        contactName,
         email,
+        id: client.id || randomUUID(),
         phone,
       };
       saveDB(client.id, updatedClient);
