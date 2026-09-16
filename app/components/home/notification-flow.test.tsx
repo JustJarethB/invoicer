@@ -132,7 +132,9 @@ describe("notification call sites", () => {
         expect(clients).toHaveLength(1);
         expect(clients[0].contactName).toBe("Acme Co");
       });
-      expect(eventsOfType("client.saved")).toHaveLength(1);
+      // The publish rides the save's own promise chain (two 100ms simulated
+      // delays), so it can land after getClients already sees the data.
+      await vi.waitFor(() => expect(eventsOfType("client.saved")).toHaveLength(1));
       expect(eventsOfType("client.saved")[0].severity).toBe("success");
       expect(onClose).toHaveBeenCalled();
     });
