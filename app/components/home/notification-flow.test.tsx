@@ -87,6 +87,9 @@ describe("notification call sites", () => {
       const onClose = vi.fn();
       renderPaymentModal(onClose);
 
+      // InvoiceProvider loads invoices asynchronously (db simulates 100ms per
+      // read); wait past that so makePayment finds the seeded invoice.
+      await new Promise((resolve) => setTimeout(resolve, 300));
       await userEvent.type(screen.getByRole("textbox"), "10");
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
@@ -109,6 +112,9 @@ describe("notification call sites", () => {
       const onClose = vi.fn();
       renderPaymentModal(onClose);
 
+      // Same async-load wait as the success test: without it the click can
+      // race the provider's fetch and hit "invoice not found" instead.
+      await new Promise((resolve) => setTimeout(resolve, 300));
       await userEvent.type(screen.getByRole("textbox"), "10");
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
