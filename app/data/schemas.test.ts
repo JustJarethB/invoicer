@@ -1,27 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   addressSchema,
-  chargeTypeIdSchema,
   clientFormSchema,
   type Invoice,
+  invoiceSchema,
   type LineItem,
   parseChargeTypeId,
   parseClientNameForm,
-  parseRecord,
   paymentDetailsSchema,
 } from "./schemas";
-import { z } from "zod/mini";
-
-const invoiceSchema = z.object({
-  date: z.string(),
-  from: addressSchema,
-  id: z.string(),
-  lineItems: z.array(z.object({ qty: z.optional(z.number()), type: z.optional(chargeTypeIdSchema), uuid: z.string() })),
-  logo: z.object({ url: z.string() }),
-  payments: z.optional(z.array(z.object({ amount: z.number(), date: z.string() }))),
-  purchaseOrder: z.string(),
-  to: addressSchema,
-});
 
 const validAddress = { city: "Town", county: "Shire", name: "Acme", postCode: "PC1 1AA", streetAddress: "1 St" };
 
@@ -140,15 +127,5 @@ describe("parseClientNameForm", () => {
 
   it("rejects a record without contactName", () => {
     expect(parseClientNameForm({}).success).toBe(false);
-  });
-});
-
-describe("parseRecord", () => {
-  it("accepts a flat string record", () => {
-    expect(parseRecord({ a: "1", b: "2" }).success).toBe(true);
-  });
-
-  it("rejects a record with a non-string value", () => {
-    expect(parseRecord({ a: 1 }).success).toBe(false);
   });
 });
