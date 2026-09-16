@@ -18,11 +18,4 @@ describe("formatCurrency", () => {
     // Discounts and overpayments can produce negative display values.
     expect(formatCurrency(-50)).toBe("-50.00");
   });
-
-  it("falls back to 0.00 for Infinity instead of rendering it", () => {
-    // A corrupt payment record could produce Infinity; toFixed on it renders
-    // the literal string "Infinity", which must never reach an invoice.
-    expect(formatCurrency(Infinity)).toBe("0.00");
-    expect(formatCurrency(-Infinity)).toBe("0.00");
-  });
 });

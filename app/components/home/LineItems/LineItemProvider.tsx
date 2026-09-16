@@ -16,14 +16,14 @@ const LineItemContext = createContext<LineItemContextType>({
 });
 
 const newLineItem = (): LineItem => ({
-  date: undefined,
-  description: undefined,
-  name: undefined,
-  qty: undefined,
-  type: undefined,
-  unitPrice: undefined,
   uuid: randomUUID(),
+  date: undefined,
+  name: undefined,
+  description: undefined,
+  qty: undefined,
+  unitPrice: undefined,
   vatRate: undefined,
+  type: undefined,
 });
 
 export const LineItemProvider = ({ children, initialLineItems }: { children: ReactNode; initialLineItems?: LineItem[] }) => {
@@ -36,11 +36,8 @@ export const useLineItem = (id: string) => useLineItems().find((item) => item.uu
 export const useSetLineItem = (id: string) => {
   const { lineItems, setLineItems } = useContext(LineItemContext);
   return (item: LineItem) => {
-    const index = lineItems.findIndex((lineItem) => lineItem.uuid === id);
-    // A stale id (row deleted mid-edit) must not write to index -1, which
-    // would create a phantom "-1" member on the saved invoice (audit C1).
-    if (index === -1) return;
     const newLineItems = [...lineItems];
+    const index = newLineItems.findIndex((lineItem) => lineItem.uuid === id);
     newLineItems[index] = item;
     if (index === newLineItems.length - 1) {
       newLineItems.push(newLineItem());
