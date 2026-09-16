@@ -3,12 +3,8 @@ import { type PropsWithChildren, useState } from "react";
 import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
-
-/** The domain keys Autosave may persist to; each has a schema in ~/data/schemas. */
-export type AutosaveDomain = "from-address" | "payment-details" | "logo";
-
 type Props = {
-  name: AutosaveDomain;
+  name: string;
   hideIcon?: boolean;
   onChange?: (newState: Record<string, string>) => void;
 };
@@ -19,7 +15,7 @@ export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }:
     const data: Record<string, string> = await formJson(e.currentTarget);
     onChangeParent?.(data);
     setIsSaving(true);
-    await db.saveForm(name, data);
+    await db.save([name], data);
     setIsSaving(false);
   };
   return (
