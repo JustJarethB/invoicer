@@ -1,5 +1,4 @@
-import type { Address } from "./address";
-import type { PaymentDetails } from "./payment";
+import type { Address, ChargeTypeId, Invoice, LineItem, Payment } from "./schemas";
 
 /**
  * Charge types describe how a line contributes to the invoice total.
@@ -7,7 +6,7 @@ import type { PaymentDetails } from "./payment";
  * subtracts a flat amount once (quantity is ignored).
  */
 export type ChargeType = {
-  id: "0" | "1" | "2" | "3";
+  id: ChargeTypeId;
   label: string;
   calculation: (qty: number, unitPrice: number) => number;
   disabledFields?: (keyof LineItem)[];
@@ -15,62 +14,34 @@ export type ChargeType = {
 
 export const chargeTypes = [
   {
+    calculation: (qty, unitPrice) => qty * unitPrice,
     id: "0",
     label: "Service",
-    calculation: (qty, unitPrice) => qty * unitPrice,
   },
   {
+    calculation: (qty, unitPrice) => qty * unitPrice,
     id: "1",
     label: "Rental",
-    calculation: (qty, unitPrice) => qty * unitPrice,
   },
   {
+    calculation: (qty, unitPrice) => qty * unitPrice,
     id: "2",
     label: "Expense",
-    calculation: (qty, unitPrice) => qty * unitPrice,
   },
   {
-    id: "3",
-    label: "Discount",
     calculation: (_qty, unitPrice) => -unitPrice,
     disabledFields: ["qty", "unit"] as (keyof LineItem)[],
+    id: "3",
+    label: "Discount",
   },
 ] satisfies ChargeType[];
 
 /**
- * A line on the invoice. Money fields are numbers once they leave the form
- * boundary; an empty field is represented by absence of the property.
+ * LineItem, Payment and Invoice are derived from the zod schemas in
+ * `~/data/schemas` (see the migration notes there); they are re-exported here
+ * so the rest of the app can keep importing them from this module.
  */
-export type LineItem = {
-  uuid: string;
-  date?: string;
-  name?: string;
-  description?: string;
-  unit?: string;
-  qty?: number;
-  unitPrice?: number;
-  vatRate?: number;
-  type?: "-1" | ChargeType["id"];
-};
-
-export type Payment = {
-  amount: number;
-  date: string;
-  method?: string;
-  reference?: string;
-};
-
-export type Invoice = {
-  id: string;
-  date: string;
-  purchaseOrder: string;
-  logo: { url: string };
-  from: Address;
-  to: Address;
-  lineItems: LineItem[];
-  payment?: PaymentDetails;
-  payments: Payment[];
-};
+export type { Invoice, LineItem, Payment };
 
 /** Price of a single line. Blank or untyped lines contribute nothing. */
 export const linePrice = ({ qty, type, unitPrice }: Pick<LineItem, "qty" | "unitPrice" | "type">) =>
@@ -94,5 +65,7 @@ export const paymentStatusOf = (invoice: Pick<Invoice, "lineItems" | "payments">
   const totalPaid = (invoice.payments ?? []).map((p) => p.amount).reduce((p, c) => p + c, 0);
   const paymentStatus: PaymentStatus =
     totalPaid > totalDue ? "overpaid" : totalPaid > 0 && totalPaid < totalDue ? "partial" : totalPaid === totalDue ? "paid" : "unpaid";
-  return { totalDue, totalPaid, paymentStatus, due: totalDue - totalPaid };
+  return { due: totalDue - totalPaid, paymentStatus, totalDue, totalPaid };
 };
+
+export type { Address };

@@ -11,6 +11,7 @@ import { LineItems } from "~/components/home/LineItems";
 import type { Route } from "./+types/invoice";
 import { type PaymentDetails, paymentDetailsFromRecord } from "~/data/payment";
 import type { Invoice } from "~/data/invoice";
+import { type Logo, parseLogo } from "~/data/schemas";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
 import { ManualSave } from "~/components/home/ManualSave";
@@ -23,8 +24,11 @@ import { useThemeValue } from "~/components/ThemeSelector";
 import { logger } from "~/utils/logger";
 import { addressFromRecord } from "~/data/address";
 
-/** Read the logo url from a form record. */
-export const logoFromRecord = (record: Record<string, string>): { url: string } => ({ url: record.url ?? "" });
+/** Read the logo url from a form record. `url` may be absent in a fresh form. */
+export const logoFromRecord = (record: Record<string, string>): Logo | null => {
+  const parsed = parseLogo(record);
+  return parsed.success ? parsed.data : null;
+};
 
 const saveAddressAsClient = (record: Record<string, string>, close: () => void, onSaved: () => void) => (
   <SaveClientModal record={record} onClose={close} onSaved={onSaved} />
@@ -38,20 +42,20 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function clientLoader() {
-  const from: Address = (await db.get<Address>(["from-address"])) ?? NULL_CLIENT.address;
-  const payment: PaymentDetails = (await db.get<PaymentDetails>(["payment-details"])) ?? {
+  const from: Address = (await db.get(["from-address"])) ?? NULL_CLIENT.address;
+  const payment: PaymentDetails = (await db.get(["payment-details"])) ?? {
+    bankName: "",
+    emailAddress: "",
+    info: "",
+    number: "",
+    phoneNumber: "",
+    sortCode: "",
     terms: "",
     type: "",
-    bankName: "",
-    sortCode: "",
-    number: "",
-    emailAddress: "",
-    phoneNumber: "",
-    info: "",
   };
   const clients: Client[] = await getClients();
-  const logo: { url: string } | null = await db.get<{ url: string }>(["logo"]);
-  return { from, payment, clients, logo };
+  const logo: Logo | null = await db.get(["logo"]);
+  return { clients, from, logo, payment };
 }
 
 export default withLineItemProvider(function Home({ loaderData: { clients, ...loaderData } }: Route.ComponentProps) {
@@ -67,15 +71,15 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" };
   const handleSaveInvoice = async () => {
     const invoice: Invoice = {
-      payments: [],
-      id,
       date,
-      purchaseOrder,
-      logo: logo ?? { url: "" },
       from,
-      to,
+      id,
       lineItems,
+      logo: logo ?? { url: "" },
       payment,
+      payments: [],
+      purchaseOrder,
+      to,
     };
     await db.save(["invoice", id], invoice);
     logger.success("Invoice Saved"); // TODO: toast this
@@ -92,8 +96,9 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       <TutorialWizard />
       <Controls
         clients={clients}
-        loadClientAddress={(i) => {
-          setTo(clients[i].address);
+        loadClientAddress={(clientId) => {
+          const client = clients.find((c) => c.id === clientId);
+          if (client) setTo(client.address);
         }}
         saveInvoice={handleSaveInvoice}
       />
@@ -138,13 +143,13 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
               </div>
             </div>
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-              <Autosave onChange={(record) => setFrom(addressFromRecord(record))} name="from-address">
+              <Autosave onChange={(record) => setFrom(addressFromRecord(record) ?? from)} name="from-address">
                 <AddressPanel title="From:" address={from} />
               </Autosave>
             </div>
 
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
-              <ManualSave onChange={(record) => setTo(addressFromRecord(record))} onSave={saveAddressAsClient}>
+              <ManualSave onChange={(record) => setTo(addressFromRecord(record) ?? to)} onSave={saveAddressAsClient}>
                 <AddressPanel title="To:" address={to} />
               </ManualSave>
             </div>

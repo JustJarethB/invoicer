@@ -1,24 +1,20 @@
-// TODO: terms/email/phone/info are universal
-// rest are dependent on the type of payment
-export type PaymentDetails = {
-  terms: string;
-  type: string;
-  bankName: string;
-  sortCode: string;
-  number: string;
-  emailAddress: string;
-  phoneNumber: string;
-  info: string;
-};
+import type { PaymentDetails } from "./schemas";
+import type { FormRecord } from "./schemas";
+
+/**
+ * PaymentDetails is derived from the zod schema in `~/data/schemas` and
+ * re-exported here so the rest of the app keeps importing it from this module.
+ */
+export type { PaymentDetails };
 
 /** Build PaymentDetails from a form record, defaulting absent fields to empty. */
-export const paymentDetailsFromRecord = (record: Record<string, string>): PaymentDetails => ({
+export const paymentDetailsFromRecord = (record: FormRecord): PaymentDetails => ({
+  bankName: record.bankName ?? "",
+  emailAddress: record.emailAddress ?? "",
+  info: record.info ?? "",
+  number: record.number ?? "",
+  phoneNumber: record.phoneNumber ?? "",
+  sortCode: record.sortCode ?? "",
   terms: record.terms ?? "",
   type: record.type ?? "",
-  bankName: record.bankName ?? "",
-  sortCode: record.sortCode ?? "",
-  number: record.number ?? "",
-  emailAddress: record.emailAddress ?? "",
-  phoneNumber: record.phoneNumber ?? "",
-  info: record.info ?? "",
 });

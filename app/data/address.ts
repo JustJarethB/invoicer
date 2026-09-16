@@ -1,43 +1,47 @@
-export type Address = {
-  name: string;
-  streetAddress: string;
-  city: string;
-  county: string;
-  postCode: string;
-};
+import { type Address, addressSchema, type FormRecord } from "./schemas";
+import { z } from "zod/mini";
+
+/**
+ * Address is derived from the zod schema in `~/data/schemas` and re-exported
+ * here so the rest of the app keeps importing it from this module.
+ */
+export type { Address };
 
 export const emptyAddress = (): Address => ({
-  name: "",
-  streetAddress: "",
   city: "",
   county: "",
+  name: "",
   postCode: "",
+  streetAddress: "",
 });
 
 /**
- * Build an Address from a plain key/value record. Unknown or missing fields
- * fall back to empty strings so callers never need an `as unknown as Address` cast.
+ * Build an Address from a plain key/value record. The record passes through
+ * the address schema, so unknown fields are stripped and missing fields
+ * default to an empty string (the schema has no required fields — the caller
+ * decides the fallback, not a cast).
  */
-export const addressFromRecord = (record: Record<string, string>): Address => ({
-  name: record.name ?? "",
-  streetAddress: record.streetAddress ?? "",
-  city: record.city ?? "",
-  county: record.county ?? "",
-  postCode: record.postCode ?? "",
-});
+export const addressFromRecord = (record: FormRecord): Address | null => {
+  const parsed = z.safeParse(addressSchema, record);
+  return parsed.success ? parsed.data : null;
+};
 
 const ADDRESS_FIELDS = ["name", "streetAddress", "city", "county", "postCode"] as const;
 
 /**
  * Read the five address fields from a form. Reads only the fields Address knows
  * about, so it cannot pick up unrelated inputs the way a generic form-to-record
- * helper can.
+ * helper can. FormDataEntryValue is `string | File | null`; a File cannot
+ * appear for these text inputs, so the entry is checked at runtime and an
+ * impossible value falls back to "" instead of being cast.
  */
 export const formJsonAddress = (form: HTMLFormElement): Address => {
   const fd = new FormData(form);
   const record: Record<string, string> = {};
   for (const field of ADDRESS_FIELDS) {
-    record[field] = (fd.get(field) as string | null) ?? "";
+    const value: FormDataEntryValue | null = fd.get(field);
+    record[field] = typeof value === "string" ? value : "";
   }
-  return addressFromRecord(record);
+  const parsed = z.safeParse(addressSchema, record);
+  return parsed.success ? parsed.data : emptyAddress();
 };

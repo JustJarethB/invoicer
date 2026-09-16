@@ -21,12 +21,12 @@ type InvoiceContext = {
   deleteInvoice: (invoiceID: Invoice["id"]) => void;
 };
 const InvoiceContext = createContext<InvoiceContext>({
+  deleteInvoice: function (): void {
+    throw new Error("Function not implemented");
+  },
   invoices: [],
   makePayment: function (): void {
     throw new Error("Function not implemented.");
-  },
-  deleteInvoice: function (): void {
-    throw new Error("Function not implemented");
   },
 });
 
@@ -58,15 +58,15 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
   };
   useEffect(() => {
     const fetchInvoices = async () => {
-      const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
+      const fetchedInvoices = await db.getAll(["invoice"]);
       setInvoices(fetchedInvoices);
     };
     fetchInvoices();
   }, []);
   const value = {
+    deleteInvoice,
     invoices,
     makePayment,
-    deleteInvoice,
   } satisfies InvoiceContext;
   return <InvoiceContext.Provider value={value}>{children}</InvoiceContext.Provider>;
 };
