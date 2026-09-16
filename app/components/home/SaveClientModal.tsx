@@ -21,16 +21,16 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
   const address = addressFromRecord(record);
 
   const save = async () => {
-    if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
-    const id = randomUUID();
-    const client: Client = {
-      id,
-      ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
-      address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
-      email: "",
-      phone: "",
-    };
     try {
+      if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
+      const id = randomUUID();
+      const client: Client = {
+        id,
+        ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
+        address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
+        email: "",
+        phone: "",
+      };
       await saveClient(id, client);
       eventBus.publish({ type: "client.saved", severity: "success", message: "Client saved", context: { clientId: id } });
       onSaved();
@@ -38,6 +38,8 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
     } catch (e) {
       // Save failed: keep the modal open (pre-existing behaviour — the
       // rejection already skipped onSaved/onClose) and surface the failure.
+      // The detached-form-ref guard also routes here instead of escaping as
+      // an unhandled rejection.
       eventBus.publish({
         type: "client.failed",
         severity: "error",

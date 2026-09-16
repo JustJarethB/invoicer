@@ -5,6 +5,7 @@ import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
+import { eventBus } from "~/utils/events";
 import { formJsonAddress } from "~/data/address";
 import { randomUUID } from "~/utils/uuid";
 
@@ -21,8 +22,18 @@ export default () => {
   }, []);
   useEffect(() => {
     const loadClients = async () => {
-      const clientsData = await getClients();
-      setClients(clientsData);
+      try {
+        setClients(await getClients());
+      } catch (e) {
+        // A corrupt stored value crashes db.get's JSON.parse; without this
+        // guard the client list silently rendered empty.
+        eventBus.publish({
+          type: "client.loadFailed",
+          severity: "warning",
+          message: "Saved clients could not be loaded",
+          context: { error: e instanceof Error ? e.message : String(e) },
+        });
+      }
     };
     loadClients();
   }, [setClients, cacheBuster]);
@@ -39,12 +50,32 @@ export default () => {
 
 const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: () => void }) => {
   const saveDB = async (key: string, client: Client) => {
-    await saveClient(key, client);
-    refreshCache();
+    try {
+      await saveClient(key, client);
+      eventBus.publish({ type: "client.saved", severity: "success", message: "Client saved", context: { clientId: key } });
+      refreshCache();
+    } catch (e) {
+      eventBus.publish({
+        type: "client.failed",
+        severity: "error",
+        message: "Client could not be saved",
+        context: { clientId: key, error: e instanceof Error ? e.message : String(e) },
+      });
+    }
   };
   const removeDB = async (key: string) => {
-    await deleteClient(key);
-    refreshCache();
+    try {
+      await deleteClient(key);
+      eventBus.publish({ type: "client.deleted", severity: "success", message: "Client deleted", context: { clientId: key } });
+      refreshCache();
+    } catch (e) {
+      eventBus.publish({
+        type: "client.delete.failed",
+        severity: "error",
+        message: "Client could not be deleted",
+        context: { clientId: key, error: e instanceof Error ? e.message : String(e) },
+      });
+    }
   };
   const { address } = client;
   const [isEditing, setIsEditing] = useState(false);

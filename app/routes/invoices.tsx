@@ -69,13 +69,35 @@ export const InvoiceProvider = ({ children }: PropsWithChildren) => {
   };
 
   const deleteInvoice = (invoiceId: string) => {
-    db.remove(["invoice", invoiceId]);
+    db.remove(["invoice", invoiceId])
+      .then(() => {
+        eventBus.publish({ type: "invoice.deleted", severity: "success", message: "Invoice deleted", context: { invoiceId } });
+      })
+      .catch((e: unknown) => {
+        eventBus.publish({
+          type: "invoice.delete.failed",
+          severity: "error",
+          message: "Invoice could not be deleted",
+          context: { invoiceId, error: e instanceof Error ? e.message : String(e) },
+        });
+      });
     setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
   };
   useEffect(() => {
     const fetchInvoices = async () => {
-      const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
-      setInvoices(fetchedInvoices);
+      try {
+        const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
+        setInvoices(fetchedInvoices);
+      } catch (e) {
+        // A corrupt stored value crashes db.get's JSON.parse; without this
+        // guard the invoice list silently rendered empty.
+        eventBus.publish({
+          type: "invoice.loadFailed",
+          severity: "warning",
+          message: "Saved invoices could not be loaded",
+          context: { error: e instanceof Error ? e.message : String(e) },
+        });
+      }
     };
     fetchInvoices();
   }, []);
