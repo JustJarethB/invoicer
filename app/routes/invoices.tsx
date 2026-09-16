@@ -10,6 +10,7 @@ import { db } from "~/db";
 import { useMobile } from "~/hooks";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
 import { formatCurrency } from "~/utils/formatCurrency";
+import { eventBus } from "~/utils/events";
 
 export function meta() {
   return [{ title: "Invoices" }];
@@ -30,7 +31,7 @@ const InvoiceContext = createContext<InvoiceContext>({
   },
 });
 
-const InvoiceProvider = ({ children }: PropsWithChildren) => {
+export const InvoiceProvider = ({ children }: PropsWithChildren) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const makePayment = (invoiceId: string, amount: number) => {
     if (!isValidPaymentAmount(amount)) {
@@ -48,7 +49,22 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
       throw new Error(`Invoice with id ${invoiceId} not found`);
     }
     const newInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
-    db.save(["invoice", invoiceId], newInvoice);
+    db.save(["invoice", invoiceId], newInvoice)
+      .then(() => {
+        // Single publish point for payment confirmations: PaymentModal must
+        // not publish success too, or every payment would surface twice.
+        // Publish only once the save resolves — a rejected save must not
+        // surface as a success confirmation.
+        eventBus.publish({ type: "payment.recorded", severity: "success", message: "Payment recorded", context: { invoiceId, amount } });
+      })
+      .catch((e: unknown) => {
+        eventBus.publish({
+          type: "payment.failed",
+          severity: "error",
+          message: "Payment could not be saved",
+          context: { invoiceId, amount, error: e instanceof Error ? e.message : String(e) },
+        });
+      });
     setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? newInvoice : inv)));
   };
 
@@ -204,13 +220,16 @@ const PaidStatus = ({ id, summary }: { id: string; summary: PaymentSummary }) =>
   );
 };
 
-const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
+export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
   const makePayment = useMakePayment();
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const submit = () => {
     if (amount === undefined || !isValidPaymentAmount(amount)) {
+      // Validation errors map to severity "error" per the notification card.
+      // The inline red text is pre-existing UI and stays (behaviour preserved).
+      eventBus.publish({ type: "payment.rejected", severity: "error", message: "Enter a non-zero amount" });
       setError("Enter a non-zero amount");
       return;
     }
@@ -218,7 +237,9 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
       makePayment(invoiceId, amount);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment failed");
+      const message = e instanceof Error ? e.message : "Payment failed";
+      eventBus.publish({ type: "payment.failed", severity: "error", message, context: { invoiceId } });
+      setError(message);
     }
   };
 

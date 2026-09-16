@@ -3,6 +3,7 @@ import { type PropsWithChildren, useState } from "react";
 import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
+import { eventBus } from "~/utils/events";
 type Props = {
   name: string;
   hideIcon?: boolean;
@@ -15,8 +16,21 @@ export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }:
     const data: Record<string, string> = await formJson(e.currentTarget);
     onChangeParent?.(data);
     setIsSaving(true);
-    await db.save([name], data);
-    setIsSaving(false);
+    try {
+      await db.save([name], data);
+    } catch (e) {
+      // Silent failure today: a rejected save left the spinner spinning and
+      // the user uninformed. Publish a recoverable-issue warning; the form
+      // stays dirty either way.
+      eventBus.publish({
+        type: "autosave.failed",
+        severity: "warning",
+        message: "Changes could not be saved automatically",
+        context: { form: name, error: e instanceof Error ? e.message : String(e) },
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
     <form onChange={onChange} className="relative">
