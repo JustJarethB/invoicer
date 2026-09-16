@@ -1,7 +1,7 @@
 import { type ComponentPropsWithoutRef, type PropsWithChildren, useEffect, useRef, useState } from "react";
 import "./index.css";
-import { logger } from "~/utils/logger";
 import { parseCurrency } from "~/utils/parseCurrency";
+import { eventBus } from "~/utils/events";
 
 const Prefix = ({ children }: PropsWithChildren) => {
   if (!children) return null;
@@ -221,7 +221,12 @@ export const ImageInput = ({
 
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return logger.warn("No file selected");
+    if (!file) {
+      // A file-picker cancel is routine, not a recoverable issue — debug
+      // keeps it off the toast severities.
+      eventBus.publish({ type: "image.unselected", severity: "debug", message: "No image file selected" });
+      return;
+    }
     releasePreviewImage();
     const objectUrl = URL.createObjectURL(file);
     objectUrlRef.current = objectUrl;

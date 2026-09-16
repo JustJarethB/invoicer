@@ -7,6 +7,7 @@ import { type Client, saveClient } from "~/data/client";
 import { addressFromRecord, formJsonAddress } from "~/data/address";
 import { formJson } from "~/utils/formJson";
 import { randomUUID } from "~/utils/uuid";
+import { eventBus } from "~/utils/events";
 
 /**
  * "Save this address as a client" confirmation. Gathers the extra field a
@@ -20,18 +21,32 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
   const address = addressFromRecord(record);
 
   const save = async () => {
-    if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
-    const id = randomUUID();
-    const client: Client = {
-      id,
-      ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
-      address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
-      email: "",
-      phone: "",
-    };
-    await saveClient(id, client);
-    onSaved();
-    onClose();
+    try {
+      if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
+      const id = randomUUID();
+      const client: Client = {
+        id,
+        ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
+        address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
+        email: "",
+        phone: "",
+      };
+      await saveClient(id, client);
+      eventBus.publish({ type: "client.saved", severity: "success", message: "Client saved", context: { clientId: id } });
+      onSaved();
+      onClose();
+    } catch (e) {
+      // Save failed: keep the modal open (pre-existing behaviour — the
+      // rejection already skipped onSaved/onClose) and surface the failure.
+      // The detached-form-ref guard also routes here instead of escaping as
+      // an unhandled rejection.
+      eventBus.publish({
+        type: "client.failed",
+        severity: "error",
+        message: "Client could not be saved",
+        context: { error: e instanceof Error ? e.message : String(e) },
+      });
+    }
   };
 
   return (

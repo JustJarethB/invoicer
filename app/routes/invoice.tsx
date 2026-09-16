@@ -20,7 +20,7 @@ import { TutorialWizard } from "~/components/TutorialWizard";
 import { HelpTooltip } from "~/components/Tooltip";
 import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
 import { useThemeValue } from "~/components/ThemeSelector";
-import { logger } from "~/utils/logger";
+import { eventBus } from "~/utils/events";
 import { addressFromRecord } from "~/data/address";
 
 /** Read the logo url from a form record. */
@@ -77,8 +77,17 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       lineItems,
       payment,
     };
-    await db.save(["invoice", id], invoice);
-    logger.success("Invoice Saved"); // TODO: toast this
+    try {
+      await db.save(["invoice", id], invoice);
+      eventBus.publish({ type: "invoice.saved", severity: "success", message: "Invoice saved", context: { invoiceId: id } });
+    } catch (e) {
+      eventBus.publish({
+        type: "invoice.failed",
+        severity: "error",
+        message: "Invoice could not be saved",
+        context: { invoiceId: id, error: e instanceof Error ? e.message : String(e) },
+      });
+    }
   };
 
   useEffect(() => {
