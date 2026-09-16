@@ -17,8 +17,9 @@ export const emptyAddress = (): Address => ({
 
 /**
  * Build an Address from a plain key/value record. The record passes through
- * the address schema, so unknown fields are stripped and missing fields are
- * rejected — the caller decides the fallback, not a cast.
+ * the address schema, so unknown fields are stripped and missing fields
+ * default to an empty string (the schema has no required fields — the caller
+ * decides the fallback, not a cast).
  */
 export const addressFromRecord = (record: FormRecord): Address | null => {
   const parsed = z.safeParse(addressSchema, record);
