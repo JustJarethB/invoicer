@@ -152,6 +152,34 @@ const getAll = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<Arr
   return reads.filter((item) => item !== null);
 };
 
+/**
+ * Stored id segments for a domain, read from the localStorage keys themselves
+ * rather than from the records: for each stored `[domain, id]` key the id is
+ * taken verbatim. A key whose record is missing or corrupt still appears, and
+ * no key-equals-record-id assumption is made (saveClient permits key != id).
+ */
+const storedIds = async <K extends DomainKeys>(domain: K): Promise<string[]> => {
+  if (typeof localStorage === "undefined") return [];
+  const ids: string[] = [];
+  for (const keyStr of matchPartialKeys([domain]).sort()) {
+    let parsedKey: unknown;
+    try {
+      parsedKey = JSON.parse(keyStr);
+    } catch (e) {
+      logger.error("Failed to parse localStorage key:", keyStr, e);
+      continue;
+    }
+    const key = parseStringArray(parsedKey);
+    if (!key.success) continue;
+    const [first, ...rest] = key.data;
+    if (first !== domain || rest.length !== 1) continue;
+    // An empty id segment is never written by production callers and would
+    // collide with NULL_CLIENT's "" id, so it is skipped.
+    if (rest[0] !== "") ids.push(rest[0]);
+  }
+  return Array.from(new Set(ids));
+};
+
 const remove = async (keys: string[]) => {
   if (typeof localStorage === "undefined") return false;
   localStorage.removeItem(JSON.stringify(keys));
@@ -165,4 +193,5 @@ export const db = {
   remove,
   save,
   saveForm,
+  storedIds,
 };

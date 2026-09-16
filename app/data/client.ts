@@ -18,35 +18,35 @@ export const NULL_CLIENT: Client = {
  * must not be treated as "no clients saved": the next write would overwrite
  * the index with only the new key and permanently orphan every previously
  * saved client. On an invalid blob the index is rebuilt from the
- * `["clients", id]` records actually present in localStorage — the same
- * partial-key scan db.getAll uses — so the index can never silently drop
- * reachable clients again.
+ * `["clients", key]` localStorage keys actually present — the same partial-key
+ * scan db.getAll uses — so the index can never silently drop reachable
+ * clients, including keys whose stored record is missing or unreadable.
  */
-const readClientKeys = async (): Promise<{ keys: string[]; present: boolean }> => {
+const readClientKeys = async (): Promise<string[]> => {
   const keys = await db.get(["clientKeys"]);
   if (keys !== null) {
-    return { keys, present: true };
+    return keys;
   }
   const raw = localStorage.getItem(JSON.stringify(["clientKeys"]));
   if (raw === null) {
     // Genuine first write: the index has never existed.
-    return { keys: [], present: false };
+    return [];
   }
   // A blob exists but failed its schema: rebuild the index from the client
-  // records on disk so a corrupt index cannot orphan saved clients.
-  logger.error("clientKeys index failed validation; rebuilding it from stored client records.");
-  const clients = await db.getAll(["clients"]);
-  const rebuilt = clients.map((client) => client.id).filter((id) => id !== "");
-  return { keys: rebuilt, present: true };
+  // storage keys on disk so a corrupt index cannot orphan saved clients. The
+  // scan reads ids from the keys themselves, so a key survives even when its
+  // record is missing.
+  logger.error("clientKeys index failed validation; rebuilding it from stored client keys.");
+  return db.storedIds("clients");
 };
 
 export const saveClient = async (key: string, client: Client) => {
-  const { keys } = await readClientKeys();
+  const keys = await readClientKeys();
   await db.save(["clients", key], client);
   await db.save(["clientKeys"], Array.from(new Set([...keys, key])));
 };
 export const deleteClient = async (key: string) => {
-  const { keys } = await readClientKeys();
+  const keys = await readClientKeys();
   await db.save(
     ["clientKeys"],
     keys.filter((item) => item !== key)
@@ -55,7 +55,7 @@ export const deleteClient = async (key: string) => {
 };
 
 export const getClients = async (): Promise<Client[]> => {
-  const { keys } = await readClientKeys();
+  const keys = await readClientKeys();
   const clients = await Promise.all(
     keys.map(async (key) => {
       const client = await db.get(["clients", key]);

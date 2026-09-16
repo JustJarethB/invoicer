@@ -128,4 +128,12 @@ describe("parseClientNameForm", () => {
   it("rejects a record without contactName", () => {
     expect(parseClientNameForm({}).success).toBe(false);
   });
+
+  it("rejects an empty or whitespace-only contactName", () => {
+    // The SaveClientModal name form is the only client-name boundary; an
+    // empty display name must not parse or the modal would persist a
+    // nameless client.
+    expect(parseClientNameForm({ contactName: "" }).success).toBe(false);
+    expect(parseClientNameForm({ contactName: "  " }).success).toBe(false);
+  });
 });
