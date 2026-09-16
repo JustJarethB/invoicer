@@ -28,7 +28,7 @@ export default () => {
         // A corrupt stored value crashes db.get's JSON.parse; without this
         // guard the client list silently rendered empty.
         eventBus.publish({
-          type: "client.loadFailed",
+          type: "client.load.failed",
           severity: "warning",
           message: "Saved clients could not be loaded",
           context: { error: e instanceof Error ? e.message : String(e) },

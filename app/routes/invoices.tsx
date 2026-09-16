@@ -92,7 +92,7 @@ export const InvoiceProvider = ({ children }: PropsWithChildren) => {
         // A corrupt stored value crashes db.get's JSON.parse; without this
         // guard the invoice list silently rendered empty.
         eventBus.publish({
-          type: "invoice.loadFailed",
+          type: "invoice.load.failed",
           severity: "warning",
           message: "Saved invoices could not be loaded",
           context: { error: e instanceof Error ? e.message : String(e) },

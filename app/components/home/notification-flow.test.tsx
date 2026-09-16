@@ -7,7 +7,7 @@ import { ImageInput, TextInput } from "~/components/Inputs";
 import { db } from "~/db";
 import { getClients } from "~/data/client";
 import { paymentStatusOf, type PaymentSummary } from "~/data/invoice";
-import { eventBus, type AppEvent } from "~/utils/events";
+import { type AppEvent, eventBus } from "~/utils/events";
 import { InvoiceProvider, PaymentModal } from "~/routes/invoices";
 
 // The call sites publish through the app-wide singleton, which buffers
