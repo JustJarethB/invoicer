@@ -2,6 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Modal } from "./Modal";
 import { Toaster } from "./Toaster";
 import { MAX_TOASTS, TOAST_DURATIONS } from "./toastConfig";
 import { type AppEventInput, createEventBus, eventBus, type EventBus } from "~/utils/events";
@@ -228,5 +229,49 @@ describe("Toaster", () => {
     expect(screen.getByText("default-bus-boom")).toBeInTheDocument();
     // Explicit unmount so the singleton bus carries no leaked listener.
     unmount();
+  });
+});
+
+describe("Toaster + Modal Escape interplay", () => {
+  // The real scenario: payment.rejected publishes an error toast while the
+  // payment modal deliberately stays open. Error toasts never auto-dismiss,
+  // so no fake timers are needed here.
+  const mountInterplay = (onModalClose: () => void) => {
+    const bus = makeBus();
+    render(
+      <Modal title="Payment" onClose={onModalClose}>
+        Payment details
+      </Modal>
+    );
+    render(<Toaster bus={bus} />);
+    publishInAct(bus, makeEvent({ severity: "error", message: "payment.rejected" }));
+  };
+
+  it("dismisses a focused toast on Escape without closing an open Modal", async () => {
+    const onModalClose = vi.fn();
+    mountInterplay(onModalClose);
+
+    const dismiss = within(toastItem("payment.rejected")).getByRole("button", { name: "Dismiss error message" });
+    dismiss.focus();
+    expect(dismiss).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByText("payment.rejected")).toBeNull();
+    expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
+    expect(onModalClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Payment")).toBeInTheDocument();
+  });
+
+  it("still closes the Modal on Escape when focus is outside any toast, leaving the toast untouched", async () => {
+    const onModalClose = vi.fn();
+    mountInterplay(onModalClose);
+
+    expect(document.activeElement).toBe(document.body);
+    await userEvent.keyboard("{Escape}");
+
+    expect(onModalClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("payment.rejected")).toBeInTheDocument();
+    expect(screen.getByText("Payment")).toBeInTheDocument();
   });
 });
