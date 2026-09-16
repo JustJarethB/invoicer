@@ -31,6 +31,7 @@ export default tseslint.config(
       "@typescript-eslint/no-empty-object-type": "off",
 
       "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
@@ -56,7 +57,7 @@ export default tseslint.config(
       "sort/exports": "off",
       "sort/import-members": "warn",
       "sort/imports": "off",
-      "sort/object-properties": "warn",
+      "sort/object-properties": "off", // not convinced this is a good idea
     },
   }
 );

@@ -2,6 +2,10 @@
 
 ## Agent skills
 
+### Coding practices
+
+Read `docs/agents/coding-practices.md` before your first change.
+
 ### Issue tracker
 
 Issues and specs live as GitHub issues. Use the `gh` CLI. See `docs/agents/issue-tracker.md`.

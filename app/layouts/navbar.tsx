@@ -1,6 +1,6 @@
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { type MouseEventHandler, type PropsWithChildren, useEffect, useState } from "react";
-import { Outlet, NavLink, type NavLinkProps } from "react-router";
+import { NavLink, type NavLinkProps, Outlet } from "react-router";
 import { ThemeSelector } from "~/components/ThemeSelector";
 import SidebarIcon from "~/components/SidebarIcon";
 import { Button } from "~/components/home/Button";

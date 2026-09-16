@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Totals } from "./Totals";
-import { LineItemProvider, useSetLineItem, type LineItem } from "./LineItems/LineItemProvider";
+import { type LineItem, LineItemProvider, useSetLineItem } from "./LineItems/LineItemProvider";
 
 const TestHarness = () => {
   const setLineItem = useSetLineItem("seeded-line");

@@ -1,10 +1,10 @@
 import { type ComponentPropsWithoutRef } from "react";
-import { formatterOf, TextInput, type Formatter } from "~/components/Inputs";
+import { type Formatter, formatterOf, TextInput } from "~/components/Inputs";
 
 export const StandardField = ({
-  title,
   className,
   parentClass,
+  title,
   ...rest
 }: ComponentPropsWithoutRef<typeof TextInput> & { title: string; parentClass?: string }) => (
   <div className={`flex justify-between ${parentClass}`}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyAddress, type Address } from "./address";
+import { type Address, emptyAddress } from "./address";
 
 describe("Address", () => {
   it("stores all address fields", () => {

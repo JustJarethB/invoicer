@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { invoiceTotal, linePrice, paymentStatusOf, type Invoice, type LineItem, type Payment } from "./invoice";
+import { type Invoice, invoiceTotal, type LineItem, linePrice, type Payment, paymentStatusOf } from "./invoice";
 
 const line = (overrides: Partial<LineItem>): LineItem => ({ uuid: "l1", ...overrides });
 
