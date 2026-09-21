@@ -62,8 +62,7 @@ const renderPaymentModal = (onClose: () => void) =>
 
 describe("notification call sites", () => {
   describe("PaymentModal", () => {
-    it("publishes a payment.rejected error on an invalid amount and keeps the modal open", async () => {
-      // Validation errors map to severity "error" per the notification card.
+    it("keeps the modal open and shows inline error text on an invalid amount without publishing", async () => {
       listenForEvents();
       seedInvoice();
       const onClose = vi.fn();
@@ -71,10 +70,8 @@ describe("notification call sites", () => {
 
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
-      const rejected = eventsOfType("payment.rejected");
-      expect(rejected).toHaveLength(1);
-      expect(rejected[0].severity).toBe("error");
-      expect(rejected[0].message).toBe("Enter a non-zero amount");
+      expect(received).toHaveLength(0);
+      expect(screen.getByText("Enter a non-zero amount")).toBeInTheDocument();
       expect(onClose).not.toHaveBeenCalled();
       expect(eventsOfType("payment.recorded")).toHaveLength(0);
     });

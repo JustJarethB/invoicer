@@ -270,9 +270,6 @@ export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: strin
   const submit = async () => {
     if (submitting) return;
     if (amount === undefined || !isValidPaymentAmount(amount)) {
-      // Validation errors map to severity "error" per the notification card.
-      // The inline red text is pre-existing UI and stays (behaviour preserved).
-      eventBus.publish({ type: "payment.rejected", severity: "error", message: "Enter a non-zero amount" });
       setError("Enter a non-zero amount");
       return;
     }

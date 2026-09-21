@@ -233,7 +233,7 @@ describe("Toaster", () => {
 });
 
 describe("Toaster + Modal Escape interplay", () => {
-  // The real scenario: payment.rejected publishes an error toast while the
+  // The real scenario: payment.failed publishes an error toast while the
   // payment modal deliberately stays open. Error toasts never auto-dismiss,
   // so no fake timers are needed here.
   const mountInterplay = (onModalClose: () => void) => {
@@ -244,20 +244,20 @@ describe("Toaster + Modal Escape interplay", () => {
       </Modal>
     );
     render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "error", message: "payment.rejected" }));
+    publishInAct(bus, makeEvent({ severity: "error", message: "payment.failed" }));
   };
 
   it("dismisses a focused toast on Escape without closing an open Modal", async () => {
     const onModalClose = vi.fn();
     mountInterplay(onModalClose);
 
-    const dismiss = within(toastItem("payment.rejected")).getByRole("button", { name: "Dismiss error message" });
+    const dismiss = within(toastItem("payment.failed")).getByRole("button", { name: "Dismiss error message" });
     dismiss.focus();
     expect(dismiss).toHaveFocus();
 
     await userEvent.keyboard("{Escape}");
 
-    expect(screen.queryByText("payment.rejected")).toBeNull();
+    expect(screen.queryByText("payment.failed")).toBeNull();
     expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
     expect(onModalClose).not.toHaveBeenCalled();
     expect(screen.getByText("Payment")).toBeInTheDocument();
@@ -271,7 +271,7 @@ describe("Toaster + Modal Escape interplay", () => {
     await userEvent.keyboard("{Escape}");
 
     expect(onModalClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("payment.rejected")).toBeInTheDocument();
+    expect(screen.getByText("payment.failed")).toBeInTheDocument();
     expect(screen.getByText("Payment")).toBeInTheDocument();
   });
 });
