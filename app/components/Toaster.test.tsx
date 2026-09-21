@@ -1,29 +1,27 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Modal } from "./Modal";
 import { Toaster } from "./Toaster";
 import { MAX_TOASTS, TOAST_DURATIONS } from "./toastConfig";
-import { type AppEventInput, createEventBus, eventBus, type EventBus } from "~/utils/events";
+import { type AppEventInput, eventBus } from "~/utils/events";
 
 // Toast ids come from a module-level counter that intentionally never resets,
 // so tests never assert on ids — they query by message text, region, or
 // data-severity instead.
 
-const makeBus = (): EventBus => createEventBus();
-
 const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
-  type: "test.event",
+  type: "invoice",
   severity: "info",
   message: "Hello",
   ...overrides,
 });
 
 /** Publish inside act: a live publish synchronously dispatches to the mounted listener. */
-const publishInAct = (bus: EventBus, input: AppEventInput) => {
+const publishInAct = (input: AppEventInput) => {
   act(() => {
-    bus.publish(input);
+    eventBus.publish(input);
   });
 };
 
@@ -35,11 +33,16 @@ const toastItem = (message: string): HTMLElement => {
 
 describe("Toaster", () => {
   afterEach(() => {
+    // The tests share the app-wide singleton: restore timers, unmount so the
+    // harness registry holds only leftovers, then drain the replay buffer —
+    // no state leaks between tests.
     vi.useRealTimers();
+    cleanup();
+    eventBus.subscribe(() => {})();
   });
 
   it("renders empty live regions and no toasts when nothing was published", () => {
-    render(<Toaster bus={makeBus()} />);
+    render(<Toaster />);
 
     expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
     expect(screen.getByTestId("toast-region-polite")).toBeEmptyDOMElement();
@@ -48,10 +51,9 @@ describe("Toaster", () => {
 
   it("shows a published error toast in the assertive region and never auto-dismisses it", () => {
     vi.useFakeTimers();
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
+    render(<Toaster />);
 
-    publishInAct(bus, makeEvent({ severity: "error", message: "Boom" }));
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
 
     const item = toastItem("Boom");
     expect(item).toHaveAttribute("data-severity", "error");
@@ -65,11 +67,10 @@ describe("Toaster", () => {
 
   it("auto-dismisses success, info, and warning at their configured durations", () => {
     vi.useFakeTimers();
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "success", message: "saved" }));
-    publishInAct(bus, makeEvent({ severity: "info", message: "loaded" }));
-    publishInAct(bus, makeEvent({ severity: "warning", message: "stale" }));
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "success", message: "saved" }));
+    publishInAct(makeEvent({ severity: "info", message: "loaded" }));
+    publishInAct(makeEvent({ severity: "warning", message: "stale" }));
 
     const successMs = TOAST_DURATIONS.success ?? 0;
     const infoMs = TOAST_DURATIONS.info ?? 0;
@@ -96,12 +97,11 @@ describe("Toaster", () => {
   });
 
   it("stacks multiple simultaneous events across the polite and assertive regions", () => {
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "error", message: "e-msg" }));
-    publishInAct(bus, makeEvent({ severity: "warning", message: "w-msg" }));
-    publishInAct(bus, makeEvent({ severity: "info", message: "i-msg" }));
-    publishInAct(bus, makeEvent({ severity: "success", message: "s-msg" }));
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "e-msg" }));
+    publishInAct(makeEvent({ severity: "warning", message: "w-msg" }));
+    publishInAct(makeEvent({ severity: "info", message: "i-msg" }));
+    publishInAct(makeEvent({ severity: "success", message: "s-msg" }));
 
     const assertive = screen.getByTestId("toast-region-assertive");
     const polite = screen.getByTestId("toast-region-polite");
@@ -113,9 +113,8 @@ describe("Toaster", () => {
   });
 
   it("dismisses a toast via its dismiss button", async () => {
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "error", message: "Boom" }));
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
 
     await userEvent.click(within(toastItem("Boom")).getByRole("button", { name: /dismiss/i }));
 
@@ -124,9 +123,8 @@ describe("Toaster", () => {
   });
 
   it("dismisses a focused toast on Escape", async () => {
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "error", message: "Boom" }));
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
 
     await userEvent.tab();
     expect(within(toastItem("Boom")).getByRole("button", { name: /dismiss/i })).toHaveFocus();
@@ -136,23 +134,21 @@ describe("Toaster", () => {
   });
 
   it("ignores debug-severity events but keeps the subscription healthy", () => {
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
+    render(<Toaster />);
 
-    publishInAct(bus, makeEvent({ severity: "debug", message: "noise" }));
+    publishInAct(makeEvent({ severity: "debug", message: "noise" }));
     expect(screen.queryByText("noise")).toBeNull();
 
-    publishInAct(bus, makeEvent({ severity: "error", message: "Boom" }));
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
     expect(screen.getByText("Boom")).toBeInTheDocument();
   });
 
   it("renders pre-subscriber events replayed by the harness, filtered by severity", () => {
-    const bus = makeBus();
-    bus.publish(makeEvent({ severity: "error", message: "early-error" }));
-    bus.publish(makeEvent({ severity: "success", message: "early-success" }));
-    bus.publish(makeEvent({ severity: "debug", message: "early-noise" }));
+    eventBus.publish(makeEvent({ severity: "error", message: "early-error" }));
+    eventBus.publish(makeEvent({ severity: "success", message: "early-success" }));
+    eventBus.publish(makeEvent({ severity: "debug", message: "early-noise" }));
 
-    render(<Toaster bus={bus} />);
+    render(<Toaster />);
 
     expect(screen.getByText("early-error")).toBeInTheDocument();
     expect(screen.getByText("early-success")).toBeInTheDocument();
@@ -160,24 +156,22 @@ describe("Toaster", () => {
   });
 
   it("renders exactly one toast for one publish under StrictMode double-subscribe", () => {
-    const bus = makeBus();
     render(
       <StrictMode>
-        <Toaster bus={bus} />
+        <Toaster />
       </StrictMode>
     );
 
-    publishInAct(bus, makeEvent({ severity: "info", message: "once" }));
+    publishInAct(makeEvent({ severity: "info", message: "once" }));
 
     expect(screen.getAllByText("once")).toHaveLength(1);
   });
 
   it("evicts the oldest toasts once the stack exceeds MAX_TOASTS", () => {
-    const bus = makeBus();
-    render(<Toaster bus={bus} />);
+    render(<Toaster />);
 
     for (let i = 0; i <= MAX_TOASTS + 1; i++) {
-      publishInAct(bus, makeEvent({ severity: "error", message: `m${i}` }));
+      publishInAct(makeEvent({ severity: "error", message: `m${i}` }));
     }
 
     expect(screen.getAllByTestId("toast-item")).toHaveLength(MAX_TOASTS);
@@ -187,19 +181,17 @@ describe("Toaster", () => {
   });
 
   it("renders nothing after unmount and does not throw on later publishes", () => {
-    const bus = makeBus();
-    const { unmount } = render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "error", message: "Boom" }));
+    const { unmount } = render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
     expect(screen.getByText("Boom")).toBeInTheDocument();
 
     unmount();
     expect(screen.queryByText("Boom")).toBeNull();
-    expect(() => publishInAct(bus, makeEvent({ severity: "error", message: "after" }))).not.toThrow();
+    expect(() => publishInAct(makeEvent({ severity: "error", message: "after" }))).not.toThrow();
   });
 
   it("removes its listener on unmount (no leak in the harness registry)", () => {
-    const bus = makeBus();
-    const { unmount } = render(<Toaster bus={bus} />);
+    const { unmount } = render(<Toaster />);
     unmount();
 
     // Probe the harness registry through observable behaviour. Publish twice
@@ -207,16 +199,17 @@ describe("Toaster", () => {
     // are replayed to the spy (2 deliveries); with a leaked Toaster listener
     // they are delivered live to it instead, so the spy later sees only the
     // third publish (1 delivery).
-    bus.publish(makeEvent({ severity: "error", message: "probe-1" }));
-    bus.publish(makeEvent({ severity: "error", message: "probe-2" }));
+    eventBus.publish(makeEvent({ severity: "error", message: "probe-1" }));
+    eventBus.publish(makeEvent({ severity: "error", message: "probe-2" }));
 
     const spy = vi.fn();
-    bus.subscribe(spy);
+    const stopSpy = eventBus.subscribe(spy);
     act(() => {
-      bus.publish(makeEvent({ severity: "error", message: "probe-3" }));
+      eventBus.publish(makeEvent({ severity: "error", message: "probe-3" }));
     });
 
     expect(spy).toHaveBeenCalledTimes(3);
+    stopSpy();
   });
 
   it("consumes the default app-wide bus", () => {
@@ -233,18 +226,17 @@ describe("Toaster", () => {
 });
 
 describe("Toaster + Modal Escape interplay", () => {
-  // The real scenario: payment.failed publishes an error toast while the
+  // The real scenario: a failed payment publishes an error toast while the
   // payment modal deliberately stays open. Error toasts never auto-dismiss,
   // so no fake timers are needed here.
   const mountInterplay = (onModalClose: () => void) => {
-    const bus = makeBus();
     render(
       <Modal title="Payment" onClose={onModalClose}>
         Payment details
       </Modal>
     );
-    render(<Toaster bus={bus} />);
-    publishInAct(bus, makeEvent({ severity: "error", message: "payment.failed" }));
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "payment.failed" }));
   };
 
   it("dismisses a focused toast on Escape without closing an open Modal", async () => {

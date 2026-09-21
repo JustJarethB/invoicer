@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type AppEvent, createEventBus } from "./events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { type AppEvent, eventBus } from "./events";
 import { registerEventLogging } from "./eventLogging";
 import { logger } from "~/utils/logger";
 
@@ -8,35 +8,50 @@ vi.mock("~/utils/logger", () => ({
   default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), success: vi.fn(), debug: vi.fn() },
 }));
 
+let stopSink: (() => void) | undefined;
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
+afterEach(() => {
+  // The tests run against the app-wide singleton: drop the sink and drain
+  // the replay buffer so nothing leaks into the next test.
+  stopSink?.();
+  stopSink = undefined;
+  eventBus.subscribe(() => {})();
+});
+
 describe("eventLogging sink", () => {
   it("mirrors each severity onto the matching consola method, with context", () => {
-    const bus = createEventBus();
-    registerEventLogging(bus);
+    stopSink = registerEventLogging();
 
-    bus.publish({
-      type: "storage.unreadable",
+    eventBus.publish({
+      type: "storage",
       severity: "warning",
       message: "1 saved entry could not be read and was skipped",
-      context: { keys: ["not-json"] },
+      context: { action: "unreadable", keys: ["not-json"] },
     });
-    bus.publish({ type: "invoice.deleted", severity: "error", message: "Invoice could not be deleted", context: { invoiceId: "inv-1" } });
+    eventBus.publish({ type: "invoice", severity: "error", message: "Invoice could not be deleted", context: { action: "deleted", invoiceId: "inv-1" } });
 
-    expect(logger.warn).toHaveBeenCalledWith("[storage.unreadable] 1 saved entry could not be read and was skipped", { keys: ["not-json"] });
-    expect(logger.error).toHaveBeenCalledWith("[invoice.deleted] Invoice could not be deleted", { invoiceId: "inv-1" });
+    expect(logger.warn).toHaveBeenCalledWith("[storage] 1 saved entry could not be read and was skipped", {
+      action: "unreadable",
+      keys: ["not-json"],
+    });
+    expect(logger.error).toHaveBeenCalledWith("[invoice] Invoice could not be deleted", {
+      action: "deleted",
+      invoiceId: "inv-1",
+    });
   });
 
   it("does not consume replay events meant for UI surfaces", () => {
-    const bus = createEventBus();
-    registerEventLogging(bus);
+    stopSink = registerEventLogging();
 
-    bus.publish({ type: "storage.unreadable", severity: "warning", message: "1 saved entry could not be read and was skipped" });
+    eventBus.publish({ type: "storage", severity: "warning", message: "1 saved entry could not be read and was skipped", context: { action: "unreadable" } });
 
     const surface: AppEvent[] = [];
-    bus.subscribe((event) => surface.push(event));
+    const stopSurface = eventBus.subscribe((event) => surface.push(event));
     expect(surface.map((e) => e.message)).toEqual(["1 saved entry could not be read and was skipped"]);
+    stopSurface();
   });
 });

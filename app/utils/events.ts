@@ -3,55 +3,42 @@ import { logger } from "~/utils/logger";
 /**
  * App-wide event harness.
  *
- * Publishers and consumers are fully decoupled: a publisher calls `publish`
- * and knows nothing about who listens; a surface calls `subscribe` and knows
- * nothing about who publishes. The core is plain TypeScript with no React
- * dependency, so any surface (toast, email digest, log sink, webhook) can
- * subscribe without publishers changing.
+ * Events published while no replay-capable subscriber exists are queued and
+ * replayed to the first replay-capable subscriber (oldest first, through its
+ * filter, then discarded): Invoicer boots with client loaders that can
+ * surface events before any UI surface has mounted, and those events are
+ * worth showing once a surface exists. Later subscribers do not receive
+ * history. Non-replayable sinks (the boot-time log sink) receive live events
+ * but never drain the buffer; buffering re-arms whenever no replay-capable
+ * subscriber remains.
  *
- * Pre-subscriber policy — QUEUE AND REPLAY. Events published while no
- * replay-capable subscriber exists are retained in a bounded replay buffer
- * (oldest dropped past the limit). When the first replay-capable subscriber
- * attaches, buffered events are replayed to it (through its filter, oldest
- * first) and the buffer is cleared; from then on events are delivered live.
- * Buffering re-arms whenever no replay-capable subscriber remains. Sinks
- * registered with `replayable: false` (the boot-time log sink) receive live
- * events but never drain the buffer. Rationale: Invoicer boots with client
- * loaders that can surface events (storage parse failures, save
- * confirmations) before any UI surface has mounted, and those events are
- * worth showing once a surface exists. Late subscribers after the first do
- * not receive history.
- *
- * Listener isolation: a listener that throws is reported through `logger`
- * and does not prevent remaining listeners from receiving the event.
- *
- * Filtering: a filter's `types` and `severities` restrict delivery. An
- * omitted field is unrestricted; a provided array requires membership (so an
- * empty array matches nothing). When both are provided, both must match.
+ * A listener that throws is logged and skipped, so one broken surface cannot
+ * block the others. A filter array requires membership: an omitted field is
+ * unrestricted, an empty array matches nothing.
  */
 
 export const SEVERITIES = ["debug", "info", "success", "warning", "error"] as const;
 
 export type EventSeverity = (typeof SEVERITIES)[number];
 
+/** Domain keys, not issue names: severity and context carry what happened. */
+export const EVENT_TYPES = ["invoice", "payment", "client", "autosave", "storage", "image"] as const;
+
+export type AppEventType = (typeof EVENT_TYPES)[number];
+
 export type AppEvent = {
-  readonly type: string;
+  readonly type: AppEventType;
   readonly severity: EventSeverity;
   readonly message: string;
   readonly timestamp: number;
   readonly context?: Readonly<Record<string, unknown>>;
 };
 
-export type AppEventInput = {
-  type: string;
-  severity: EventSeverity;
-  message: string;
-  timestamp?: number;
-  context?: Record<string, unknown>;
-};
+/** Publish-side input: AppEvent with the harness-stamped timestamp optional. */
+export type AppEventInput = Omit<AppEvent, "timestamp"> & { readonly timestamp?: number };
 
 export type EventFilter = {
-  readonly types?: readonly string[];
+  readonly types?: readonly AppEventType[];
   readonly severities?: readonly EventSeverity[];
 };
 
@@ -72,20 +59,26 @@ export type EventBus = {
 /** Events retained while no subscriber exists; oldest are dropped past this. */
 const REPLAY_BUFFER_LIMIT = 100;
 
-/**
- * Stamp and freeze a publish input, or return undefined when the input is
- * malformed (wrong types, empty type/message, unknown severity). A timestamp
- * that is not a finite number is replaced with the current time. The context
- * is shallow-copied so later mutation by the publisher cannot change what
- * consumers saw.
- */
+/** Extract a display message from an unknown caught value. */
+export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
+const isEventSeverity = (value: unknown): value is EventSeverity => typeof value === "string" && SEVERITIES.some((s) => s === value);
+
+const isAppEventType = (value: unknown): value is AppEventType => typeof value === "string" && EVENT_TYPES.some((t) => t === value);
+
+/** Callers pass caught values in `context.error`; serialise them once, here. */
+const withNormalisedError = (context: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> => {
+  const error = context.error;
+  if (error === undefined || typeof error === "string") return context;
+  return { ...context, error: errorMessage(error) };
+};
+
 const normaliseEvent = (input: AppEventInput): AppEvent | undefined => {
   if (typeof input !== "object" || input === null) return undefined;
-  if (typeof input.type !== "string" || input.type.trim() === "") return undefined;
+  if (!isAppEventType(input.type) || !isEventSeverity(input.severity)) return undefined;
   if (typeof input.message !== "string" || input.message.trim() === "") return undefined;
-  if (typeof input.severity !== "string" || !SEVERITIES.includes(input.severity)) return undefined;
   const timestamp = typeof input.timestamp === "number" && Number.isFinite(input.timestamp) ? input.timestamp : Date.now();
-  const context = input.context === undefined ? undefined : Object.freeze({ ...input.context });
+  const context = input.context === undefined ? undefined : Object.freeze({ ...withNormalisedError(input.context) });
   return Object.freeze({ type: input.type, severity: input.severity, message: input.message, timestamp, context });
 };
 
@@ -96,9 +89,16 @@ const matchesFilter = (event: AppEvent, filter: EventFilter | undefined): boolea
   return true;
 };
 
-export const createEventBus = (): EventBus => {
+const createEventBus = (): EventBus => {
   const listeners = new Map<EventListener, { readonly filter?: EventFilter; readonly replayable: boolean }>();
-  let replayBuffer: AppEvent[] = [];
+  const replayBuffer: AppEvent[] = [];
+
+  const retainForReplay = (event: AppEvent) => {
+    replayBuffer.push(event);
+    while (replayBuffer.length > REPLAY_BUFFER_LIMIT) replayBuffer.shift();
+  };
+
+  const drainReplayBuffer = (): AppEvent[] => replayBuffer.splice(0, replayBuffer.length);
 
   const hasReplayableListener = (): boolean => {
     for (const [, { replayable }] of [...listeners]) {
@@ -121,12 +121,12 @@ export const createEventBus = (): EventBus => {
       logger.warn("Event harness: rejected malformed event", input);
       return undefined;
     }
-    if (!hasReplayableListener()) {
-      replayBuffer.push(event);
-      if (replayBuffer.length > REPLAY_BUFFER_LIMIT) replayBuffer = replayBuffer.slice(-REPLAY_BUFFER_LIMIT);
-    }
-    // Snapshot: a listener that subscribes mid-publish receives later events,
-    // not the one in flight (matching Node's EventEmitter behaviour).
+    // Buffer for future replay-capable surfaces while still delivering live
+    // to whatever is subscribed now (a non-replayable sink must not miss
+    // boot-time events).
+    if (!hasReplayableListener()) retainForReplay(event);
+    // Snapshot the listeners: one that subscribes mid-publish receives later
+    // events, not the one in flight (matching Node's EventEmitter).
     for (const [listener, { filter }] of [...listeners]) {
       if (matchesFilter(event, filter)) dispatch(listener, event);
     }
@@ -137,10 +137,8 @@ export const createEventBus = (): EventBus => {
     if (typeof listener !== "function") throw new TypeError("eventBus.subscribe: listener must be a function");
     const replayable = options?.replayable ?? true;
     listeners.set(listener, { filter, replayable });
-    if (replayable && replayBuffer.length > 0) {
-      const buffered = replayBuffer;
-      replayBuffer = [];
-      for (const event of buffered) {
+    if (replayable) {
+      for (const event of drainReplayBuffer()) {
         if (matchesFilter(event, filter)) dispatch(listener, event);
       }
     }

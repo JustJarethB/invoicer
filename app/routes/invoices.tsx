@@ -54,25 +54,25 @@ export const InvoiceProvider = ({ children }: PropsWithChildren) => {
       saved = await db.save(["invoice", invoiceId], savedInvoice);
     } catch (e) {
       eventBus.publish({
-        type: "payment.failed",
+        type: "payment",
         severity: "error",
         message: "Payment could not be saved",
-        context: { invoiceId, amount, error: e instanceof Error ? e.message : String(e) },
+        context: { invoiceId, amount, action: "failed", error: e },
       });
       return false;
     }
     if (!saved) {
       eventBus.publish({
-        type: "payment.failed",
+        type: "payment",
         severity: "error",
         message: "Payment could not be saved",
-        context: { invoiceId, amount },
+        context: { invoiceId, amount, action: "failed" },
       });
       return false;
     }
     // Single publish point for payment confirmations: the modal must not also
     // publish success, or every payment surfaces twice.
-    eventBus.publish({ type: "payment.recorded", severity: "success", message: "Payment recorded", context: { invoiceId, amount } });
+    eventBus.publish({ type: "payment", severity: "success", message: "Payment recorded", context: { invoiceId, amount, action: "recorded" } });
     setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, payments: [...(inv.payments ?? []), newPayment] } : inv)));
     return true;
   };
@@ -83,23 +83,23 @@ export const InvoiceProvider = ({ children }: PropsWithChildren) => {
       removed = await db.remove(["invoice", invoiceId]);
     } catch (e) {
       eventBus.publish({
-        type: "invoice.delete.failed",
+        type: "invoice",
         severity: "error",
         message: "Invoice could not be deleted",
-        context: { invoiceId, error: e instanceof Error ? e.message : String(e) },
+        context: { invoiceId, action: "delete.failed", error: e },
       });
       return;
     }
     if (!removed) {
       eventBus.publish({
-        type: "invoice.delete.failed",
+        type: "invoice",
         severity: "error",
         message: "Invoice could not be deleted",
-        context: { invoiceId },
+        context: { invoiceId, action: "delete.failed" },
       });
       return;
     }
-    eventBus.publish({ type: "invoice.deleted", severity: "success", message: "Invoice deleted", context: { invoiceId } });
+    eventBus.publish({ type: "invoice", severity: "success", message: "Invoice deleted", context: { invoiceId, action: "deleted" } });
     setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
   };
   useEffect(() => {
@@ -111,10 +111,10 @@ export const InvoiceProvider = ({ children }: PropsWithChildren) => {
         // A corrupt stored value crashes db.get's JSON.parse; without this
         // guard the invoice list silently rendered empty.
         eventBus.publish({
-          type: "invoice.load.failed",
+          type: "invoice",
           severity: "warning",
           message: "Saved invoices could not be loaded",
-          context: { error: e instanceof Error ? e.message : String(e) },
+          context: { action: "load.failed", error: e },
         });
       }
     };
@@ -278,7 +278,7 @@ export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: strin
       if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Payment failed";
-      eventBus.publish({ type: "payment.failed", severity: "error", message, context: { invoiceId } });
+      eventBus.publish({ type: "payment", severity: "error", message, context: { invoiceId, action: "failed" } });
       setError(message);
     } finally {
       setSubmitting(false);

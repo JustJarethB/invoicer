@@ -23,10 +23,10 @@ const matchPartialKeys = (keys: string[]) => {
     const entryNoun = unreadable.length === 1 ? "entry" : "entries";
     const skippedVerb = unreadable.length === 1 ? "was" : "were";
     eventBus.publish({
-      type: "storage.unreadable",
+      type: "storage",
       severity: "warning",
       message: `${unreadable.length} saved ${entryNoun} could not be read and ${skippedVerb} skipped`,
-      context: { keys: unreadable },
+      context: { action: "unreadable", keys: unreadable },
     });
   }
   return result;

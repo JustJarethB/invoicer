@@ -79,13 +79,13 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
     };
     try {
       await db.save(["invoice", id], invoice);
-      eventBus.publish({ type: "invoice.saved", severity: "success", message: "Invoice saved", context: { invoiceId: id } });
+      eventBus.publish({ type: "invoice", severity: "success", message: "Invoice saved", context: { invoiceId: id, action: "saved" } });
     } catch (e) {
       eventBus.publish({
-        type: "invoice.failed",
+        type: "invoice",
         severity: "error",
         message: "Invoice could not be saved",
-        context: { invoiceId: id, error: e instanceof Error ? e.message : String(e) },
+        context: { invoiceId: id, action: "failed", error: e },
       });
     }
   };

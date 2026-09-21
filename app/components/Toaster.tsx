@@ -22,7 +22,7 @@ import { MAX_TOASTS, nextToastId, TOAST_DURATIONS, TOAST_SEVERITIES, type ToastS
  * the keydown bubbles from the button to the toast's own handler, which
  * stops propagation so the same keypress never reaches a document-level
  * Escape listener such as `Modal`'s. A toast can coexist with an open modal
- * (e.g. payment.failed publishes an error toast while the payment modal
+ * (e.g. a payment failure publishes an error toast while the payment modal
  * deliberately stays open), so one Escape press must dismiss only the
  * focused toast. The dismiss button is the toast's tab target; the toast div
  * itself stays out of the tab order (an unnamed generic tab stop is an
@@ -144,7 +144,7 @@ const ToastItem = ({ onDismiss, toast }: ToastItemProps) => {
         if (event.key === "Escape") {
           // Dismissing a toast must not also trigger document-level Escape
           // listeners (Modal closes on Escape at document level), and the two
-          // can be open at the same time (payment.failed keeps its modal
+          // can be open at the same time (a failed payment keeps its modal
           // open while surfacing an error toast).
           event.stopPropagation();
           onDismiss(toast.id);

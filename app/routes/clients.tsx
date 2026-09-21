@@ -28,10 +28,10 @@ export default () => {
         // A corrupt stored value crashes db.get's JSON.parse; without this
         // guard the client list silently rendered empty.
         eventBus.publish({
-          type: "client.load.failed",
+          type: "client",
           severity: "warning",
           message: "Saved clients could not be loaded",
-          context: { error: e instanceof Error ? e.message : String(e) },
+          context: { action: "load.failed", error: e },
         });
       }
     };
@@ -52,28 +52,28 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
   const saveDB = async (key: string, client: Client) => {
     try {
       await saveClient(key, client);
-      eventBus.publish({ type: "client.saved", severity: "success", message: "Client saved", context: { clientId: key } });
+      eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
       refreshCache();
     } catch (e) {
       eventBus.publish({
-        type: "client.failed",
+        type: "client",
         severity: "error",
         message: "Client could not be saved",
-        context: { clientId: key, error: e instanceof Error ? e.message : String(e) },
+        context: { clientId: key, action: "failed", error: e },
       });
     }
   };
   const removeDB = async (key: string) => {
     try {
       await deleteClient(key);
-      eventBus.publish({ type: "client.deleted", severity: "success", message: "Client deleted", context: { clientId: key } });
+      eventBus.publish({ type: "client", severity: "success", message: "Client deleted", context: { clientId: key, action: "deleted" } });
       refreshCache();
     } catch (e) {
       eventBus.publish({
-        type: "client.delete.failed",
+        type: "client",
         severity: "error",
         message: "Client could not be deleted",
-        context: { clientId: key, error: e instanceof Error ? e.message : String(e) },
+        context: { clientId: key, action: "delete.failed", error: e },
       });
     }
   };

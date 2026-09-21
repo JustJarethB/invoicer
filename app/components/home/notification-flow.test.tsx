@@ -7,7 +7,7 @@ import { ImageInput, TextInput } from "~/components/Inputs";
 import { db } from "~/db";
 import { getClients } from "~/data/client";
 import { paymentStatusOf, type PaymentSummary } from "~/data/invoice";
-import { type AppEvent, eventBus } from "~/utils/events";
+import { type AppEvent, type AppEventType, eventBus } from "~/utils/events";
 import Invoices, { InvoiceProvider, PaymentModal } from "~/routes/invoices";
 
 // The call sites publish through the app-wide singleton, which buffers
@@ -24,7 +24,10 @@ const listenForEvents = () => {
   received.length = 0; // drain any replayed history
 };
 
-const eventsOfType = (type: string) => received.filter((event) => event.type === type);
+// Events carry a domain-key type; the dotted qualifier moved into
+// context.action, so assertions filter on the pair.
+const eventsOfType = (type: AppEventType, action?: string) =>
+  received.filter((event) => event.type === type && (action === undefined || event.context?.action === action));
 
 afterEach(() => {
   unsubscribe();
@@ -73,7 +76,7 @@ describe("notification call sites", () => {
       expect(received).toHaveLength(0);
       expect(screen.getByText("Enter a non-zero amount")).toBeInTheDocument();
       expect(onClose).not.toHaveBeenCalled();
-      expect(eventsOfType("payment.recorded")).toHaveLength(0);
+      expect(eventsOfType("payment", "recorded")).toHaveLength(0);
     });
 
     it("publishes payment.recorded exactly once after the save resolves", async () => {
@@ -91,12 +94,12 @@ describe("notification call sites", () => {
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
       await vi.waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2000 });
-      await vi.waitFor(() => expect(eventsOfType("payment.recorded")).toHaveLength(1), { timeout: 2000 });
+      await vi.waitFor(() => expect(eventsOfType("payment", "recorded")).toHaveLength(1), { timeout: 2000 });
       // Settle past db.save's 100ms simulated delay; no second publish may arrive.
       await new Promise((resolve) => setTimeout(resolve, 150));
-      expect(eventsOfType("payment.recorded")).toHaveLength(1);
-      expect(eventsOfType("payment.recorded")[0].severity).toBe("success");
-      expect(eventsOfType("payment.recorded")[0].context).toMatchObject({ invoiceId: "inv-1", amount: 10 });
+      expect(eventsOfType("payment", "recorded")).toHaveLength(1);
+      expect(eventsOfType("payment", "recorded")[0].severity).toBe("success");
+      expect(eventsOfType("payment", "recorded")[0].context).toMatchObject({ invoiceId: "inv-1", amount: 10 });
     });
 
     it("publishes payment.failed instead of success when persisting the payment rejects", async () => {
@@ -115,10 +118,10 @@ describe("notification call sites", () => {
       await userEvent.type(screen.getByRole("textbox"), "10");
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
-      await vi.waitFor(() => expect(eventsOfType("payment.failed")).toHaveLength(1), { timeout: 2000 });
-      expect(eventsOfType("payment.failed")[0].severity).toBe("error");
+      await vi.waitFor(() => expect(eventsOfType("payment", "failed")).toHaveLength(1), { timeout: 2000 });
+      expect(eventsOfType("payment", "failed")[0].severity).toBe("error");
       expect(onClose).not.toHaveBeenCalled();
-      expect(eventsOfType("payment.recorded")).toHaveLength(0);
+      expect(eventsOfType("payment", "recorded")).toHaveLength(0);
     });
 
     it("publishes payment.failed and keeps the modal open when the save reports failure", async () => {
@@ -132,10 +135,10 @@ describe("notification call sites", () => {
       await userEvent.type(screen.getByRole("textbox"), "10");
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
-      await vi.waitFor(() => expect(eventsOfType("payment.failed")).toHaveLength(1), { timeout: 2000 });
-      expect(eventsOfType("payment.failed")[0].severity).toBe("error");
+      await vi.waitFor(() => expect(eventsOfType("payment", "failed")).toHaveLength(1), { timeout: 2000 });
+      expect(eventsOfType("payment", "failed")[0].severity).toBe("error");
       expect(onClose).not.toHaveBeenCalled();
-      expect(eventsOfType("payment.recorded")).toHaveLength(0);
+      expect(eventsOfType("payment", "recorded")).toHaveLength(0);
     });
 
     it("disables the Record control while the save is in flight and records the payment once", async () => {
@@ -159,9 +162,9 @@ describe("notification call sites", () => {
 
       resolveSave(true);
       await vi.waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2000 });
-      await vi.waitFor(() => expect(eventsOfType("payment.recorded")).toHaveLength(1), { timeout: 2000 });
+      await vi.waitFor(() => expect(eventsOfType("payment", "recorded")).toHaveLength(1), { timeout: 2000 });
       await new Promise((resolve) => setTimeout(resolve, 150));
-      expect(eventsOfType("payment.recorded")).toHaveLength(1);
+      expect(eventsOfType("payment", "recorded")).toHaveLength(1);
     });
   });
 
@@ -182,11 +185,11 @@ describe("notification call sites", () => {
       await screen.findByText("inv-1");
       await userEvent.click(screen.getByRole("button", { name: "Delete invoice inv-1" }));
 
-      expect(eventsOfType("invoice.deleted")).toHaveLength(0);
+      expect(eventsOfType("invoice", "deleted")).toHaveLength(0);
       expect(screen.getByText("inv-1")).toBeInTheDocument();
 
       resolveRemove(true);
-      await vi.waitFor(() => expect(eventsOfType("invoice.deleted")).toHaveLength(1));
+      await vi.waitFor(() => expect(eventsOfType("invoice", "deleted")).toHaveLength(1));
       expect(screen.queryByText("inv-1")).not.toBeInTheDocument();
     });
 
@@ -205,10 +208,10 @@ describe("notification call sites", () => {
       await userEvent.click(screen.getByRole("button", { name: "Delete invoice inv-1" }));
 
       resolveRemove(false);
-      await vi.waitFor(() => expect(eventsOfType("invoice.delete.failed")).toHaveLength(1));
-      expect(eventsOfType("invoice.delete.failed")[0].severity).toBe("error");
+      await vi.waitFor(() => expect(eventsOfType("invoice", "delete.failed")).toHaveLength(1));
+      expect(eventsOfType("invoice", "delete.failed")[0].severity).toBe("error");
       expect(screen.getByText("inv-1")).toBeInTheDocument();
-      expect(eventsOfType("invoice.deleted")).toHaveLength(0);
+      expect(eventsOfType("invoice", "deleted")).toHaveLength(0);
     });
   });
 
@@ -228,8 +231,8 @@ describe("notification call sites", () => {
       });
       // The publish rides the save's own promise chain (two 100ms simulated
       // delays), so it can land after getClients already sees the data.
-      await vi.waitFor(() => expect(eventsOfType("client.saved")).toHaveLength(1));
-      expect(eventsOfType("client.saved")[0].severity).toBe("success");
+      await vi.waitFor(() => expect(eventsOfType("client", "saved")).toHaveLength(1));
+      expect(eventsOfType("client", "saved")[0].severity).toBe("success");
       expect(onClose).toHaveBeenCalled();
     });
 
@@ -245,11 +248,11 @@ describe("notification call sites", () => {
       await userEvent.type(screen.getByPlaceholderText("Display Name"), "Acme Co");
       await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
-      await vi.waitFor(() => expect(eventsOfType("client.failed")).toHaveLength(1));
-      expect(eventsOfType("client.failed")[0].severity).toBe("error");
+      await vi.waitFor(() => expect(eventsOfType("client", "failed")).toHaveLength(1));
+      expect(eventsOfType("client", "failed")[0].severity).toBe("error");
       expect(onClose).not.toHaveBeenCalled();
       expect(onSaved).not.toHaveBeenCalled();
-      expect(eventsOfType("client.saved")).toHaveLength(0);
+      expect(eventsOfType("client", "saved")).toHaveLength(0);
     });
   });
 
@@ -269,8 +272,8 @@ describe("notification call sites", () => {
 
       await userEvent.type(screen.getByRole("textbox"), "y");
 
-      await vi.waitFor(() => expect(eventsOfType("autosave.failed")).toHaveLength(1));
-      expect(eventsOfType("autosave.failed")[0].severity).toBe("warning");
+      await vi.waitFor(() => expect(eventsOfType("autosave", "failed")).toHaveLength(1));
+      expect(eventsOfType("autosave", "failed")[0].severity).toBe("warning");
       await waitFor(() => {
         const icon = document.querySelector("svg.cursor-help");
         expect(icon).not.toHaveClass("animate-spin");
@@ -288,7 +291,7 @@ describe("notification call sites", () => {
       const result = await db.getAll<{ id: string }>(["invoice"]);
 
       expect(result).toHaveLength(0);
-      const unreadable = eventsOfType("storage.unreadable");
+      const unreadable = eventsOfType("storage", "unreadable");
       expect(unreadable).toHaveLength(1);
       expect(unreadable[0].severity).toBe("warning");
       expect(unreadable[0].message).toContain("1");
@@ -305,7 +308,7 @@ describe("notification call sites", () => {
 
       fireEvent.change(input);
 
-      const unselected = eventsOfType("image.unselected");
+      const unselected = eventsOfType("image", "unselected");
       expect(unselected).toHaveLength(1);
       expect(unselected[0].severity).toBe("debug");
     });

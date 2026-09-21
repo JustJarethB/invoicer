@@ -20,10 +20,10 @@ export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }:
       await db.save([name], data);
     } catch (e) {
       eventBus.publish({
-        type: "autosave.failed",
+        type: "autosave",
         severity: "warning",
         message: "Changes could not be saved automatically",
-        context: { form: name, error: e instanceof Error ? e.message : String(e) },
+        context: { form: name, action: "failed", error: e },
       });
     } finally {
       setIsSaving(false);

@@ -32,15 +32,15 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
         phone: "",
       };
       await saveClient(id, client);
-      eventBus.publish({ type: "client.saved", severity: "success", message: "Client saved", context: { clientId: id } });
+      eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: id, action: "saved" } });
       onSaved();
       onClose();
     } catch (e) {
       eventBus.publish({
-        type: "client.failed",
+        type: "client",
         severity: "error",
         message: "Client could not be saved",
-        context: { error: e instanceof Error ? e.message : String(e) },
+        context: { action: "failed", error: e },
       });
     }
   };
