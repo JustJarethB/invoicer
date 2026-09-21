@@ -4,6 +4,14 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { Toaster } from "./components/Toaster";
 import { ThemeProvider } from "./components/ThemeSelector";
+import { registerEventLogging } from "./utils/eventLogging";
+
+// Boot-time log sink: publishers publish once and the console mirrors every
+// event from this single subscription. Module scope so the sink is live
+// before route loaders run (db.getAll can surface storage events at boot).
+// Guarded for SSR — this module also evaluates on the server, where the
+// sink has no console worth feeding.
+if (typeof window !== "undefined") registerEventLogging();
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

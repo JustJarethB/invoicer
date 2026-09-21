@@ -1,5 +1,4 @@
 import { eventBus } from "~/utils/events";
-import { logger } from "~/utils/logger";
 
 const matchPartialKeys = (keys: string[]) => {
   const unreadable: string[] = [];
@@ -17,11 +16,12 @@ const matchPartialKeys = (keys: string[]) => {
       }
     });
   if (unreadable.length > 0) {
-    // One aggregated diagnostics line + one harness event per scan, however
-    // many keys are corrupt — a corrupt store must not flood either sink.
+    // One aggregated event per scan, however many keys are corrupt — the
+    // corrupt store must not flood the harness. The console mirror is the
+    // boot log sink subscribed to the bus (eventLogging), not a second
+    // publisher here.
     const entryNoun = unreadable.length === 1 ? "entry" : "entries";
     const skippedVerb = unreadable.length === 1 ? "was" : "were";
-    logger.error("Failed to parse localStorage keys:", unreadable);
     eventBus.publish({
       type: "storage.unreadable",
       severity: "warning",
