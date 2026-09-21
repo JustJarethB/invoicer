@@ -1,10 +1,8 @@
 import { type AppEvent, type EventBus, type EventSeverity, eventBus, type Unsubscribe } from "~/utils/events";
 import { logger } from "~/utils/logger";
 
-// One row per severity (coding-practices §2.1): the log sink mirrors the
-// harness's severity vocabulary onto consola's method names, 1:1. consola's
-// prod level (1) still passes `warn` through, so storage diagnostics keep
-// their production visibility.
+// consola's prod level (1) passes `warn` through, so warning-severity
+// diagnostics keep their production visibility.
 const logBySeverity: Record<EventSeverity, (message: string, context?: unknown) => void> = {
   debug: (message, context) => logger.debug(message, context),
   info: (message, context) => logger.info(message, context),
