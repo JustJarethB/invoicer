@@ -19,11 +19,13 @@ const matchPartialKeys = (keys: string[]) => {
   if (unreadable.length > 0) {
     // One aggregated diagnostics line + one harness event per scan, however
     // many keys are corrupt — a corrupt store must not flood either sink.
+    const entryNoun = unreadable.length === 1 ? "entry" : "entries";
+    const skippedVerb = unreadable.length === 1 ? "was" : "were";
     logger.error("Failed to parse localStorage keys:", unreadable);
     eventBus.publish({
       type: "storage.unreadable",
       severity: "warning",
-      message: `${unreadable.length} saved entries could not be read and were skipped`,
+      message: `${unreadable.length} saved ${entryNoun} could not be read and ${skippedVerb} skipped`,
       context: { keys: unreadable },
     });
   }
