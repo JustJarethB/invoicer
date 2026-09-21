@@ -36,10 +36,6 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
       onSaved();
       onClose();
     } catch (e) {
-      // Save failed: keep the modal open (pre-existing behaviour — the
-      // rejection already skipped onSaved/onClose) and surface the failure.
-      // The detached-form-ref guard also routes here instead of escaping as
-      // an unhandled rejection.
       eventBus.publish({
         type: "client.failed",
         severity: "error",
