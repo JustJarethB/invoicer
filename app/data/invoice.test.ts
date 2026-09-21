@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Invoice, invoiceTotal, type LineItem, linePrice, type Payment, paymentStatusOf } from "./invoice";
-
-const line = (overrides: Partial<LineItem>): LineItem => ({ uuid: "l1", ...overrides });
+import { type Invoice, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
+import { makeInvoice, makeLineItem, makePayment } from "./testFixtures";
 
 describe("linePrice", () => {
   it("calculates a service line total from quantity and unit price", () => {
@@ -37,19 +36,14 @@ describe("linePrice", () => {
 describe("invoiceTotal", () => {
   it("sums line prices of an invoice", () => {
     const invoice = {
-      lineItems: [line({ qty: 2, unitPrice: 150, type: "0" }), line({ uuid: "l2", qty: 1, unitPrice: 25, type: "3" })],
+      lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" }), makeLineItem({ uuid: "l2", qty: 1, unitPrice: 25, type: "3" })],
     };
     expect(invoiceTotal(invoice)).toBe(275);
   });
 });
 
 describe("paymentStatusOf", () => {
-  const makeInvoice = (lineItems: LineItem[], payments: Payment[]): Pick<Invoice, "lineItems" | "payments"> => ({
-    lineItems,
-    payments,
-  });
-
-  const due300 = makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], []);
+  const due300 = makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [] });
 
   it("reports unpaid when no payments exist", () => {
     const summary = paymentStatusOf(due300);
@@ -65,27 +59,26 @@ describe("paymentStatusOf", () => {
   });
 
   it("reports partial when some but not all is paid", () => {
-    const summary = paymentStatusOf(makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [{ amount: 100, date: "2026-01-01" }]));
+    const summary = paymentStatusOf(
+      makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [makePayment()] })
+    );
     expect(summary.paymentStatus).toBe("partial");
     expect(summary.due).toBe(200);
   });
 
   it("reports paid when total paid equals total due", () => {
     const summary = paymentStatusOf(
-      makeInvoice(
-        [line({ qty: 2, unitPrice: 150, type: "0" })],
-        [
-          { amount: 100, date: "2026-01-01" },
-          { amount: 200, date: "2026-01-02" },
-        ]
-      )
+      makeInvoice({
+        lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })],
+        payments: [makePayment(), makePayment({ amount: 200, date: "2026-01-02" })],
+      })
     );
     expect(summary.paymentStatus).toBe("paid");
     expect(summary.due).toBe(0);
   });
 
   it("reports overpaid when payments exceed the total", () => {
-    const summary = paymentStatusOf(makeInvoice([line({ qty: 2, unitPrice: 150, type: "0" })], [{ amount: 400, date: "2026-01-01" }]));
+    const summary = paymentStatusOf(makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [makePayment({ amount: 400 })] }));
     expect(summary.paymentStatus).toBe("overpaid");
     expect(summary.due).toBe(-100);
   });
