@@ -10,11 +10,13 @@ import { logger } from "~/utils/logger";
  * subscribe without publishers changing.
  *
  * Pre-subscriber policy — QUEUE AND REPLAY. Events published while no
- * subscriber exists are retained in a bounded replay buffer (oldest dropped
- * past the limit). When the first subscriber attaches, buffered events are
- * replayed to it (through its filter, oldest first) and the buffer is
- * cleared; from then on events are delivered live. When every subscriber
- * unsubscribes, buffering re-arms. Rationale: Invoicer boots with client
+ * replay-capable subscriber exists are retained in a bounded replay buffer
+ * (oldest dropped past the limit). When the first replay-capable subscriber
+ * attaches, buffered events are replayed to it (through its filter, oldest
+ * first) and the buffer is cleared; from then on events are delivered live.
+ * Buffering re-arms whenever no replay-capable subscriber remains. Sinks
+ * registered with `replayable: false` (the boot-time log sink) receive live
+ * events but never drain the buffer. Rationale: Invoicer boots with client
  * loaders that can surface events (storage parse failures, save
  * confirmations) before any UI surface has mounted, and those events are
  * worth showing once a surface exists. Late subscribers after the first do
@@ -57,9 +59,14 @@ export type EventListener = (event: AppEvent) => void;
 
 export type Unsubscribe = () => void;
 
+export type SubscribeOptions = {
+  /** Sinks that must not consume or clear the replay buffer opt out here. */
+  readonly replayable?: boolean;
+};
+
 export type EventBus = {
   publish: (input: AppEventInput) => AppEvent | undefined;
-  subscribe: (listener: EventListener, filter?: EventFilter) => Unsubscribe;
+  subscribe: (listener: EventListener, filter?: EventFilter, options?: SubscribeOptions) => Unsubscribe;
 };
 
 /** Events retained while no subscriber exists; oldest are dropped past this. */
@@ -90,8 +97,15 @@ const matchesFilter = (event: AppEvent, filter: EventFilter | undefined): boolea
 };
 
 export const createEventBus = (): EventBus => {
-  const listeners = new Map<EventListener, EventFilter | undefined>();
+  const listeners = new Map<EventListener, { readonly filter?: EventFilter; readonly replayable: boolean }>();
   let replayBuffer: AppEvent[] = [];
+
+  const hasReplayableListener = (): boolean => {
+    for (const [, { replayable }] of [...listeners]) {
+      if (replayable) return true;
+    }
+    return false;
+  };
 
   const dispatch = (listener: EventListener, event: AppEvent) => {
     try {
@@ -107,23 +121,23 @@ export const createEventBus = (): EventBus => {
       logger.warn("Event harness: rejected malformed event", input);
       return undefined;
     }
-    if (listeners.size === 0) {
+    if (!hasReplayableListener()) {
       replayBuffer.push(event);
       if (replayBuffer.length > REPLAY_BUFFER_LIMIT) replayBuffer = replayBuffer.slice(-REPLAY_BUFFER_LIMIT);
-      return event;
     }
     // Snapshot: a listener that subscribes mid-publish receives later events,
     // not the one in flight (matching Node's EventEmitter behaviour).
-    for (const [listener, filter] of [...listeners]) {
+    for (const [listener, { filter }] of [...listeners]) {
       if (matchesFilter(event, filter)) dispatch(listener, event);
     }
     return event;
   };
 
-  const subscribe = (listener: EventListener, filter?: EventFilter): Unsubscribe => {
+  const subscribe = (listener: EventListener, filter?: EventFilter, options?: SubscribeOptions): Unsubscribe => {
     if (typeof listener !== "function") throw new TypeError("eventBus.subscribe: listener must be a function");
-    listeners.set(listener, filter);
-    if (replayBuffer.length > 0) {
+    const replayable = options?.replayable ?? true;
+    listeners.set(listener, { filter, replayable });
+    if (replayable && replayBuffer.length > 0) {
       const buffered = replayBuffer;
       replayBuffer = [];
       for (const event of buffered) {

@@ -314,4 +314,58 @@ describe("createEventBus", () => {
       expect(received).toHaveLength(0);
     });
   });
+
+  describe("replayable sink option", () => {
+    it("delivers live events to a non-replayable listener", () => {
+      const bus = createEventBus();
+      const sink: AppEvent[] = [];
+      bus.subscribe((event) => sink.push(event), undefined, { replayable: false });
+
+      bus.publish(makeEvent({ message: "live" }));
+
+      expect(sink.map((e) => e.message)).toEqual(["live"]);
+    });
+
+    it("a non-replayable listener does not consume buffered events", () => {
+      const bus = createEventBus();
+      bus.publish(makeEvent({ message: "early" }));
+
+      const sink: AppEvent[] = [];
+      bus.subscribe((event) => sink.push(event), undefined, { replayable: false });
+      expect(sink).toHaveLength(0);
+
+      const surface: AppEvent[] = [];
+      bus.subscribe((event) => surface.push(event));
+      expect(surface.map((e) => e.message)).toEqual(["early"]);
+      expect(sink).toHaveLength(0);
+    });
+
+    it("buffering stays armed while only a non-replayable listener is subscribed", () => {
+      const bus = createEventBus();
+      const sink: AppEvent[] = [];
+      bus.subscribe((event) => sink.push(event), undefined, { replayable: false });
+
+      bus.publish(makeEvent({ message: "boot-event" }));
+
+      expect(sink.map((e) => e.message)).toEqual(["boot-event"]);
+      const surface: AppEvent[] = [];
+      bus.subscribe((event) => surface.push(event));
+      expect(surface.map((e) => e.message)).toEqual(["boot-event"]);
+    });
+
+    it("re-arms buffering after the last replay-capable listener unsubscribes", () => {
+      const bus = createEventBus();
+      const sink: AppEvent[] = [];
+      bus.subscribe((event) => sink.push(event), undefined, { replayable: false });
+      const stop = bus.subscribe((event) => sink.push(event));
+
+      stop();
+      bus.publish(makeEvent({ message: "while-orphaned" }));
+
+      expect(sink.map((e) => e.message)).toEqual(["while-orphaned"]);
+      const late: AppEvent[] = [];
+      bus.subscribe((event) => late.push(event));
+      expect(late.map((e) => e.message)).toEqual(["while-orphaned"]);
+    });
+  });
 });
