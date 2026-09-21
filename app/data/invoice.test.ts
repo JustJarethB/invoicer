@@ -59,9 +59,7 @@ describe("paymentStatusOf", () => {
   });
 
   it("reports partial when some but not all is paid", () => {
-    const summary = paymentStatusOf(
-      makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [makePayment()] })
-    );
+    const summary = paymentStatusOf(makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [makePayment()] }));
     expect(summary.paymentStatus).toBe("partial");
     expect(summary.due).toBe(200);
   });
@@ -78,7 +76,9 @@ describe("paymentStatusOf", () => {
   });
 
   it("reports overpaid when payments exceed the total", () => {
-    const summary = paymentStatusOf(makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [makePayment({ amount: 400 })] }));
+    const summary = paymentStatusOf(
+      makeInvoice({ lineItems: [makeLineItem({ qty: 2, unitPrice: 150, type: "0" })], payments: [makePayment({ amount: 400 })] })
+    );
     expect(summary.paymentStatus).toBe("overpaid");
     expect(summary.due).toBe(-100);
   });
