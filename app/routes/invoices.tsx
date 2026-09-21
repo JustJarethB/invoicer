@@ -18,22 +18,22 @@ export function meta() {
 
 type InvoiceContext = {
   invoices: Invoice[];
-  makePayment: (invoiceId: Invoice["id"], amount: number) => void;
-  deleteInvoice: (invoiceID: Invoice["id"]) => void;
+  makePayment: (invoiceId: Invoice["id"], amount: number) => Promise<boolean>;
+  deleteInvoice: (invoiceID: Invoice["id"]) => Promise<void>;
 };
 const InvoiceContext = createContext<InvoiceContext>({
   invoices: [],
-  makePayment: function (): void {
+  makePayment: async (): Promise<boolean> => {
     throw new Error("Function not implemented.");
   },
-  deleteInvoice: function (): void {
+  deleteInvoice: async (): Promise<void> => {
     throw new Error("Function not implemented");
   },
 });
 
 export const InvoiceProvider = ({ children }: PropsWithChildren) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const makePayment = (invoiceId: string, amount: number) => {
+  const makePayment = async (invoiceId: string, amount: number): Promise<boolean> => {
     if (!isValidPaymentAmount(amount)) {
       throw new Error(`Payment rejected: invalid amount ${amount} for invoice ${invoiceId}`);
     }
@@ -48,39 +48,58 @@ export const InvoiceProvider = ({ children }: PropsWithChildren) => {
     if (!invoice) {
       throw new Error(`Invoice with id ${invoiceId} not found`);
     }
-    const newInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
-    db.save(["invoice", invoiceId], newInvoice)
-      .then(() => {
-        // Single publish point for payment confirmations: PaymentModal must
-        // not publish success too, or every payment would surface twice.
-        // Publish only once the save resolves — a rejected save must not
-        // surface as a success confirmation.
-        eventBus.publish({ type: "payment.recorded", severity: "success", message: "Payment recorded", context: { invoiceId, amount } });
-      })
-      .catch((e: unknown) => {
-        eventBus.publish({
-          type: "payment.failed",
-          severity: "error",
-          message: "Payment could not be saved",
-          context: { invoiceId, amount, error: e instanceof Error ? e.message : String(e) },
-        });
+    const savedInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
+    let saved: boolean;
+    try {
+      saved = await db.save(["invoice", invoiceId], savedInvoice);
+    } catch (e) {
+      eventBus.publish({
+        type: "payment.failed",
+        severity: "error",
+        message: "Payment could not be saved",
+        context: { invoiceId, amount, error: e instanceof Error ? e.message : String(e) },
       });
-    setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? newInvoice : inv)));
+      return false;
+    }
+    if (!saved) {
+      eventBus.publish({
+        type: "payment.failed",
+        severity: "error",
+        message: "Payment could not be saved",
+        context: { invoiceId, amount },
+      });
+      return false;
+    }
+    // Single publish point for payment confirmations: the modal must not also
+    // publish success, or every payment surfaces twice.
+    eventBus.publish({ type: "payment.recorded", severity: "success", message: "Payment recorded", context: { invoiceId, amount } });
+    setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, payments: [...(inv.payments ?? []), newPayment] } : inv)));
+    return true;
   };
 
-  const deleteInvoice = (invoiceId: string) => {
-    db.remove(["invoice", invoiceId])
-      .then(() => {
-        eventBus.publish({ type: "invoice.deleted", severity: "success", message: "Invoice deleted", context: { invoiceId } });
-      })
-      .catch((e: unknown) => {
-        eventBus.publish({
-          type: "invoice.delete.failed",
-          severity: "error",
-          message: "Invoice could not be deleted",
-          context: { invoiceId, error: e instanceof Error ? e.message : String(e) },
-        });
+  const deleteInvoice = async (invoiceId: string): Promise<void> => {
+    let removed: boolean;
+    try {
+      removed = await db.remove(["invoice", invoiceId]);
+    } catch (e) {
+      eventBus.publish({
+        type: "invoice.delete.failed",
+        severity: "error",
+        message: "Invoice could not be deleted",
+        context: { invoiceId, error: e instanceof Error ? e.message : String(e) },
       });
+      return;
+    }
+    if (!removed) {
+      eventBus.publish({
+        type: "invoice.delete.failed",
+        severity: "error",
+        message: "Invoice could not be deleted",
+        context: { invoiceId },
+      });
+      return;
+    }
+    eventBus.publish({ type: "invoice.deleted", severity: "success", message: "Invoice deleted", context: { invoiceId } });
     setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
   };
   useEffect(() => {
@@ -168,7 +187,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
       onClick={() => mobile && setOpen((o) => !o)}
     >
       <td className="flex justify-end gap-2 grid-cols-1">
-        <Button icon outline color="danger" size="sm" onClick={() => handleDelete()}>
+        <Button icon outline color="danger" size="sm" aria-label={`Delete invoice ${id}`} onClick={() => handleDelete()}>
           <TrashIcon className="size-5" />
         </Button>
         <Button
@@ -246,8 +265,10 @@ export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: strin
   const makePayment = useMakePayment();
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return;
     if (amount === undefined || !isValidPaymentAmount(amount)) {
       // Validation errors map to severity "error" per the notification card.
       // The inline red text is pre-existing UI and stays (behaviour preserved).
@@ -255,13 +276,15 @@ export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: strin
       setError("Enter a non-zero amount");
       return;
     }
+    setSubmitting(true);
     try {
-      makePayment(invoiceId, amount);
-      onClose();
+      if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Payment failed";
       eventBus.publish({ type: "payment.failed", severity: "error", message, context: { invoiceId } });
       setError(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -290,7 +313,7 @@ export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: strin
         <Button color="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button color="success" onClick={submit}>
+        <Button color="success" onClick={submit} disabled={submitting}>
           Record
         </Button>
       </div>

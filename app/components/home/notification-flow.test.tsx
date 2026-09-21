@@ -8,7 +8,7 @@ import { db } from "~/db";
 import { getClients } from "~/data/client";
 import { paymentStatusOf, type PaymentSummary } from "~/data/invoice";
 import { type AppEvent, eventBus } from "~/utils/events";
-import { InvoiceProvider, PaymentModal } from "~/routes/invoices";
+import Invoices, { InvoiceProvider, PaymentModal } from "~/routes/invoices";
 
 // The call sites publish through the app-wide singleton, which buffers
 // pre-subscriber events and replays them to the first subscriber. Each test
@@ -93,7 +93,7 @@ describe("notification call sites", () => {
       await userEvent.type(screen.getByRole("textbox"), "10");
       await userEvent.click(screen.getByRole("button", { name: /record/i }));
 
-      expect(onClose).toHaveBeenCalled();
+      await vi.waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2000 });
       await vi.waitFor(() => expect(eventsOfType("payment.recorded")).toHaveLength(1), { timeout: 2000 });
       // Settle past db.save's 100ms simulated delay; no second publish may arrive.
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -120,7 +120,98 @@ describe("notification call sites", () => {
 
       await vi.waitFor(() => expect(eventsOfType("payment.failed")).toHaveLength(1), { timeout: 2000 });
       expect(eventsOfType("payment.failed")[0].severity).toBe("error");
+      expect(onClose).not.toHaveBeenCalled();
       expect(eventsOfType("payment.recorded")).toHaveLength(0);
+    });
+
+    it("publishes payment.failed and keeps the modal open when the save reports failure", async () => {
+      listenForEvents();
+      seedInvoice();
+      vi.spyOn(db, "save").mockResolvedValue(false);
+      const onClose = vi.fn();
+      renderPaymentModal(onClose);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await userEvent.type(screen.getByRole("textbox"), "10");
+      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+
+      await vi.waitFor(() => expect(eventsOfType("payment.failed")).toHaveLength(1), { timeout: 2000 });
+      expect(eventsOfType("payment.failed")[0].severity).toBe("error");
+      expect(onClose).not.toHaveBeenCalled();
+      expect(eventsOfType("payment.recorded")).toHaveLength(0);
+    });
+
+    it("disables the Record control while the save is in flight and records the payment once", async () => {
+      listenForEvents();
+      seedInvoice();
+      let resolveSave: (saved: boolean) => void = () => {};
+      vi.spyOn(db, "save").mockImplementation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolveSave = resolve;
+          })
+      );
+      const onClose = vi.fn();
+      renderPaymentModal(onClose);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await userEvent.type(screen.getByRole("textbox"), "10");
+      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+
+      expect(screen.getByRole("button", { name: /record/i })).toBeDisabled();
+
+      resolveSave(true);
+      await vi.waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2000 });
+      await vi.waitFor(() => expect(eventsOfType("payment.recorded")).toHaveLength(1), { timeout: 2000 });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(eventsOfType("payment.recorded")).toHaveLength(1);
+    });
+  });
+
+  describe("InvoiceTable", () => {
+    const renderInvoiceTable = () => render(<Invoices />);
+
+    it("removes the row and publishes invoice.deleted only after the remove succeeds", async () => {
+      listenForEvents();
+      seedInvoice();
+      let resolveRemove: (removed: boolean) => void = () => {};
+      vi.spyOn(db, "remove").mockImplementation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolveRemove = resolve;
+          })
+      );
+      renderInvoiceTable();
+      await screen.findByText("inv-1");
+      await userEvent.click(screen.getByRole("button", { name: "Delete invoice inv-1" }));
+
+      expect(eventsOfType("invoice.deleted")).toHaveLength(0);
+      expect(screen.getByText("inv-1")).toBeInTheDocument();
+
+      resolveRemove(true);
+      await vi.waitFor(() => expect(eventsOfType("invoice.deleted")).toHaveLength(1));
+      expect(screen.queryByText("inv-1")).not.toBeInTheDocument();
+    });
+
+    it("publishes invoice.delete.failed and keeps the row when the remove reports failure", async () => {
+      listenForEvents();
+      seedInvoice();
+      let resolveRemove: (removed: boolean) => void = () => {};
+      vi.spyOn(db, "remove").mockImplementation(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolveRemove = resolve;
+          })
+      );
+      renderInvoiceTable();
+      await screen.findByText("inv-1");
+      await userEvent.click(screen.getByRole("button", { name: "Delete invoice inv-1" }));
+
+      resolveRemove(false);
+      await vi.waitFor(() => expect(eventsOfType("invoice.delete.failed")).toHaveLength(1));
+      expect(eventsOfType("invoice.delete.failed")[0].severity).toBe("error");
+      expect(screen.getByText("inv-1")).toBeInTheDocument();
+      expect(eventsOfType("invoice.deleted")).toHaveLength(0);
     });
   });
 
