@@ -19,9 +19,6 @@ export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }:
     try {
       await db.save([name], data);
     } catch (e) {
-      // Silent failure today: a rejected save left the spinner spinning and
-      // the user uninformed. Publish a recoverable-issue warning; the form
-      // stays dirty either way.
       eventBus.publish({
         type: "autosave.failed",
         severity: "warning",
