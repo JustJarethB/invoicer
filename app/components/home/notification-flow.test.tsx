@@ -7,6 +7,7 @@ import { ImageInput, TextInput } from "~/components/Inputs";
 import { db } from "~/db";
 import { getClients } from "~/data/client";
 import { paymentStatusOf, type PaymentSummary } from "~/data/invoice";
+import { makeInvoice } from "~/data/testFixtures";
 import { type AppEvent, type AppEventType, eventBus } from "~/utils/events";
 import Invoices, { InvoiceProvider, PaymentModal } from "~/routes/invoices";
 
@@ -36,19 +37,7 @@ afterEach(() => {
 });
 
 const seedInvoice = () => {
-  localStorage.setItem(
-    JSON.stringify(["invoice", "inv-1"]),
-    JSON.stringify({
-      id: "inv-1",
-      date: "2026-01-01",
-      purchaseOrder: "PO-1",
-      logo: { url: "" },
-      from: { name: "", streetAddress: "", city: "", county: "", postCode: "" },
-      to: { name: "Buyer", streetAddress: "", city: "", county: "", postCode: "" },
-      lineItems: [{ uuid: "l1", type: "0", qty: 2, unitPrice: 50 }],
-      payments: [],
-    })
-  );
+  localStorage.setItem(JSON.stringify(["invoice", "inv-1"]), JSON.stringify(makeInvoice()));
 };
 
 const summary: PaymentSummary = paymentStatusOf({
