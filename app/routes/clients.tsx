@@ -5,7 +5,7 @@ import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
-import { eventBus, publishError } from "~/utils/events";
+import { eventBus, rethrowError } from "~/utils/events";
 import { formJsonAddress } from "~/data/address";
 import { randomUUID } from "~/utils/uuid";
 
@@ -55,7 +55,8 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
       eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
       refreshCache();
     } catch (e) {
-      publishError(eventBus, { type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, e);
+      // Fire-and-forget caller: rethrows to the global rejection catcher, which sees this value already published (exactly-once).
+      rethrowError(eventBus, { type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, e);
     }
   };
   const removeDB = async (key: string) => {
@@ -64,7 +65,7 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
       eventBus.publish({ type: "client", severity: "success", message: "Client deleted", context: { clientId: key, action: "deleted" } });
       refreshCache();
     } catch (e) {
-      publishError(eventBus, { type: "client", message: "Client could not be deleted", context: { clientId: key, action: "delete.failed" } }, e);
+      rethrowError(eventBus, { type: "client", message: "Client could not be deleted", context: { clientId: key, action: "delete.failed" } }, e);
     }
   };
   const { address } = client;
