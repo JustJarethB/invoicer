@@ -1,5 +1,6 @@
 import { TrashIcon } from "@heroicons/react/24/outline";
 import * as outline from "@heroicons/react/24/outline";
+import { isRouteErrorResponse, useRouteError } from "react-router";
 import { createContext, type PropsWithChildren, useContext, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Status } from "~/components/home/Status";
@@ -8,9 +9,10 @@ import { NumberInput } from "~/components/Inputs";
 import { type Invoice, type Payment, paymentStatusOf, type PaymentSummary } from "~/data/invoice";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
+import type { Route } from "./+types/invoices";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
 import { formatCurrency } from "~/utils/formatCurrency";
-import { eventBus } from "~/utils/events";
+import { errorMessage, eventBus, hasBeenPublished, publishError, rethrowError } from "~/utils/events";
 
 export function meta() {
   return [{ title: "Invoices" }];
@@ -46,7 +48,7 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     };
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) {
-      throw new Error(`Invoice with id ${invoiceId} not found`);
+      rethrowError(eventBus, { type: "payment", context: { invoiceId, action: "failed" } }, new Error(`Invoice with id ${invoiceId} not found`));
     }
     const savedInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
     let saved: boolean;
@@ -278,7 +280,10 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
       if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Payment failed";
-      eventBus.publish({ type: "payment", severity: "error", message, context: { invoiceId, action: "failed" } });
+      // rethrowError sites are already published; the catch stays a safety net.
+      if (!hasBeenPublished(e)) {
+        eventBus.publish({ type: "payment", severity: "error", message, context: { invoiceId, action: "failed" } });
+      }
       setError(message);
     } finally {
       setSubmitting(false);
@@ -317,3 +322,32 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
     </Modal>
   );
 };
+
+/**
+ * Route-level error boundary (React Router framework mode). React Router
+ * delivers the error through useRouteError (the prop is the framework-mode
+ * fallback). The publish is deferred with queueMicrotask — bus listeners such
+ * as Toaster may call setState, which is illegal in another component's
+ * render — then the boundary rethrows so the root boundary (root.tsx) renders
+ * the fallback. Client-only publish: the server's bus has no consumer, so SSR
+ * render failures stay on the SSR error path.
+ */
+export function ErrorBoundary({ error: routeError }: Partial<Route.ErrorBoundaryProps> = {}) {
+  const error = useRouteError() ?? routeError;
+  // Neither delivery channel carried an error: nothing to capture, nothing to delegate.
+  if (error === undefined) return null;
+  if (typeof window !== "undefined") {
+    queueMicrotask(() =>
+      publishError(
+        eventBus,
+        {
+          type: "invoice",
+          message: isRouteErrorResponse(error) ? error.statusText || `HTTP ${error.status}` : errorMessage(error),
+          context: { action: "route-error", boundary: "invoices" },
+        },
+        error
+      )
+    );
+  }
+  throw error;
+}
