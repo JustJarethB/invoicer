@@ -55,8 +55,9 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     try {
       saved = await db.save(["invoice", invoiceId], savedInvoice);
     } catch (e) {
-      publishError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
-      return false;
+      // Rethrows to the parental catch (PaymentModal.submit): its publishError
+      // safety net finds this value published and adds nothing (exactly-once).
+      rethrowError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
     }
     if (!saved) {
       eventBus.publish({
@@ -79,8 +80,10 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     try {
       removed = await db.remove(["invoice", invoiceId]);
     } catch (e) {
-      publishError(eventBus, { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } }, e);
-      return;
+      // Rethrows to the parental boundary: the caller is fire-and-forget, so
+      // the rethrown error floats to the global rejection catcher, which sees
+      // this value already published and adds nothing (exactly-once).
+      rethrowError(eventBus, { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } }, e);
     }
     if (!removed) {
       eventBus.publish({
