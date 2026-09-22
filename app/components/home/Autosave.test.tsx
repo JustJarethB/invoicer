@@ -22,8 +22,7 @@ const listenForEvents = () => {
 
 // Events carry a domain-key type; the dotted qualifier lives in
 // context.action, so assertions filter on the pair.
-const failedWarnings = () =>
-  received.filter((event) => event.type === "autosave" && event.context?.action === "failed");
+const failedWarnings = () => received.filter((event) => event.type === "autosave" && event.context?.action === "failed");
 
 afterEach(() => {
   unsubscribe();
