@@ -53,6 +53,9 @@ describe("Autosave", () => {
 
     await userEvent.type(input, "b");
     await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    // Flush the mocked rejection's microtask chain before this negative
+    // assertion, so it cannot pass before the catch has had its chance.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(failedWarnings()).toHaveLength(1);
 
     // A successful save publishes nothing and re-arms the warning.
