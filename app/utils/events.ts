@@ -65,29 +65,43 @@ const REPLAY_BUFFER_LIMIT = 100;
 /** Extract a display message from an unknown caught value. */
 export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
-/** Caught values already published by rethrowError, so parental catches and boundaries do not publish them twice. */
+/** Caught values already published, so parental catches and boundaries do not publish them twice. */
 const publishedErrors = new WeakSet<object>();
 
-/** True when rethrowError already published this caught value to the bus. */
+/** True when this caught value was already published to the bus. */
 export const hasBeenPublished = (error: unknown): boolean => typeof error === "object" && error !== null && publishedErrors.has(error);
 
 /**
- * Publish a failure to the bus, then rethrow the original error toward the
- * parental boundary (a local catch, or a route ErrorBoundary). Exactly once:
- * a caught value already published — e.g. rethrown into a boundary that
- * publishes — is not published again. The throw is the original object, never
- * a wrapper, so parental catches keep their instanceof/message checks.
+ * Publish a failure to the bus without throwing: severity is always "error",
+ * the message derives from the caught error when not given, and the caught
+ * value is normalised into context.error. Exactly once — an already-published
+ * value is skipped. Callers that must publish while keeping control of the
+ * throw (a route ErrorBoundary deferring the publish, then rethrowing) use
+ * this directly.
  */
-export const rethrowError = (bus: EventBus, event: RethrownEventInput, error: unknown): never => {
-  if (!hasBeenPublished(error)) {
-    const published = bus.publish({
-      ...event,
-      severity: "error",
-      message: event.message ?? errorMessage(error),
-      context: { ...event.context, error },
-    });
-    if (published && typeof error === "object" && error !== null) publishedErrors.add(error);
-  }
+export const publishError = (bus: EventBus, event: RethrownEventInput, error: unknown): AppEvent | undefined => {
+  if (hasBeenPublished(error)) return undefined;
+  const published = bus.publish({
+    ...event,
+    severity: "error",
+    message: event.message ?? errorMessage(error),
+    context: { ...event.context, error },
+  });
+  if (published && typeof error === "object" && error !== null) publishedErrors.add(error);
+  return published;
+};
+
+/**
+ * Publish a failure to the bus, then rethrow the original error toward the
+ * parental boundary (a local catch, or a route ErrorBoundary). The throw is
+ * the original object, never a wrapper, so parental catches keep their
+ * instanceof/message checks.
+ */
+// The binding carries the type annotation: TypeScript applies control-flow
+// narrowing after a never-returning call only when the callee's type is
+// declared, and callers (the invoices.tsx not-found guard) rely on it.
+export const rethrowError: (bus: EventBus, event: RethrownEventInput, error: unknown) => never = (bus, event, error) => {
+  publishError(bus, event, error);
   throw error;
 };
 

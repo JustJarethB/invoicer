@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type AppEvent, type AppEventInput, errorMessage, eventBus, type EventListener, hasBeenPublished, rethrowError } from "./events";
+import { type AppEvent, type AppEventInput, errorMessage, eventBus, type EventListener, hasBeenPublished, publishError, rethrowError } from "./events";
 
 const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
   type: "invoice",
@@ -164,6 +164,21 @@ describe("eventBus", () => {
 
       expect(received[0].message).toBe("42");
       expect(received[0].context).toEqual({ error: "42" });
+    });
+
+    it("publishError publishes without throwing so a boundary can defer the rethrow", () => {
+      subscribe((event) => received.push(event));
+      const error = new Error("route boom");
+
+      const published = publishError(eventBus, { type: "invoice", context: { action: "route-error" } }, error);
+
+      expect(published).toBeDefined();
+      expect(received).toHaveLength(1);
+      expect(received[0].severity).toBe("error");
+      expect(hasBeenPublished(error)).toBe(true);
+      // A repeat call is a no-op, not a throw: the caller owns the rethrow.
+      expect(() => publishError(eventBus, { type: "invoice" }, error)).not.toThrow();
+      expect(received).toHaveLength(1);
     });
 
     it("does not publish twice for the same caught value", () => {
