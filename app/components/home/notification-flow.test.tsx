@@ -6,10 +6,11 @@ import { SaveClientModal } from "~/components/home/SaveClientModal";
 import { ImageInput, TextInput } from "~/components/Inputs";
 import { db } from "~/db";
 import { getClients } from "~/data/client";
-import { paymentStatusOf, type PaymentSummary } from "~/data/invoice";
 import { makeInvoice } from "~/data/testFixtures";
 import { type AppEvent, type AppEventType, eventBus } from "~/utils/events";
-import Invoices, { InvoiceProvider, PaymentModal } from "~/routes/invoices";
+// The flow tests drive the public route surface (<Invoices />); the route
+// file carries no test-only exports.
+import Invoices from "~/routes/invoices";
 
 // The call sites publish through the app-wide singleton, which buffers
 // pre-subscriber events and replays them to the first subscriber. Each test
@@ -40,32 +41,29 @@ const seedInvoice = () => {
   localStorage.setItem(JSON.stringify(["invoice", "inv-1"]), JSON.stringify(makeInvoice()));
 };
 
-const summary: PaymentSummary = paymentStatusOf({
-  lineItems: [{ uuid: "l1", type: "0", qty: 2, unitPrice: 50 }],
-  payments: [],
-});
+const renderInvoices = () => render(<Invoices />);
 
-const renderPaymentModal = (onClose: () => void) =>
-  render(
-    <InvoiceProvider>
-      <PaymentModal invoiceId="inv-1" summary={summary} onClose={onClose} />
-    </InvoiceProvider>
-  );
+// The status control exists only after InvoiceProvider's async db load
+// resolves, so findBy* waits replace the fixed waits a provider-level
+// render needed.
+const openPaymentModal = async () => {
+  await renderInvoices().findByText("inv-1");
+  await userEvent.click(screen.getByRole("button", { name: "Unpaid" }));
+  await screen.findByRole("heading", { name: "Record payment for inv-1" });
+};
 
 describe("notification call sites", () => {
   describe("PaymentModal", () => {
     it("keeps the modal open and shows inline error text on an invalid amount without publishing", async () => {
       listenForEvents();
       seedInvoice();
-      const onClose = vi.fn();
-      renderPaymentModal(onClose);
+      await openPaymentModal();
 
-      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+      await userEvent.click(screen.getByRole("button", { name: "Record" }));
 
       expect(received).toHaveLength(0);
       expect(screen.getByText("Enter a non-zero amount")).toBeInTheDocument();
-      expect(onClose).not.toHaveBeenCalled();
-      expect(eventsOfType("payment", "recorded")).toHaveLength(0);
+      expect(screen.getByRole("heading", { name: "Record payment for inv-1" })).toBeInTheDocument();
     });
 
     it("publishes payment.recorded exactly once after the save resolves", async () => {
@@ -73,16 +71,12 @@ describe("notification call sites", () => {
       // success itself — makePayment is the single publish point.
       listenForEvents();
       seedInvoice();
-      const onClose = vi.fn();
-      renderPaymentModal(onClose);
+      await openPaymentModal();
 
-      // InvoiceProvider loads invoices asynchronously (db simulates 100ms per
-      // read); wait past that so makePayment finds the seeded invoice.
-      await new Promise((resolve) => setTimeout(resolve, 300));
       await userEvent.type(screen.getByRole("textbox"), "10");
-      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+      await userEvent.click(screen.getByRole("button", { name: "Record" }));
 
-      await vi.waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2000 });
+      await vi.waitFor(() => expect(screen.queryByRole("heading", { name: "Record payment for inv-1" })).not.toBeInTheDocument(), { timeout: 2000 });
       await vi.waitFor(() => expect(eventsOfType("payment", "recorded")).toHaveLength(1), { timeout: 2000 });
       // Settle past db.save's 100ms simulated delay; no second publish may arrive.
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -98,18 +92,14 @@ describe("notification call sites", () => {
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
         throw new Error("quota exceeded");
       });
-      const onClose = vi.fn();
-      renderPaymentModal(onClose);
+      await openPaymentModal();
 
-      // Same async-load wait as the success test: without it the click can
-      // race the provider's fetch and hit "invoice not found" instead.
-      await new Promise((resolve) => setTimeout(resolve, 300));
       await userEvent.type(screen.getByRole("textbox"), "10");
-      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+      await userEvent.click(screen.getByRole("button", { name: "Record" }));
 
       await vi.waitFor(() => expect(eventsOfType("payment", "failed")).toHaveLength(1), { timeout: 2000 });
       expect(eventsOfType("payment", "failed")[0].severity).toBe("error");
-      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("heading", { name: "Record payment for inv-1" })).toBeInTheDocument();
       expect(eventsOfType("payment", "recorded")).toHaveLength(0);
     });
 
@@ -117,16 +107,14 @@ describe("notification call sites", () => {
       listenForEvents();
       seedInvoice();
       vi.spyOn(db, "save").mockResolvedValue(false);
-      const onClose = vi.fn();
-      renderPaymentModal(onClose);
+      await openPaymentModal();
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
       await userEvent.type(screen.getByRole("textbox"), "10");
-      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+      await userEvent.click(screen.getByRole("button", { name: "Record" }));
 
       await vi.waitFor(() => expect(eventsOfType("payment", "failed")).toHaveLength(1), { timeout: 2000 });
       expect(eventsOfType("payment", "failed")[0].severity).toBe("error");
-      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByRole("heading", { name: "Record payment for inv-1" })).toBeInTheDocument();
       expect(eventsOfType("payment", "recorded")).toHaveLength(0);
     });
 
@@ -140,17 +128,15 @@ describe("notification call sites", () => {
             resolveSave = resolve;
           })
       );
-      const onClose = vi.fn();
-      renderPaymentModal(onClose);
+      await openPaymentModal();
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
       await userEvent.type(screen.getByRole("textbox"), "10");
-      await userEvent.click(screen.getByRole("button", { name: /record/i }));
+      await userEvent.click(screen.getByRole("button", { name: "Record" }));
 
-      expect(screen.getByRole("button", { name: /record/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Record" })).toBeDisabled();
 
       resolveSave(true);
-      await vi.waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 2000 });
+      await vi.waitFor(() => expect(screen.queryByRole("heading", { name: "Record payment for inv-1" })).not.toBeInTheDocument(), { timeout: 2000 });
       await vi.waitFor(() => expect(eventsOfType("payment", "recorded")).toHaveLength(1), { timeout: 2000 });
       await new Promise((resolve) => setTimeout(resolve, 150));
       expect(eventsOfType("payment", "recorded")).toHaveLength(1);
@@ -158,8 +144,6 @@ describe("notification call sites", () => {
   });
 
   describe("InvoiceTable", () => {
-    const renderInvoiceTable = () => render(<Invoices />);
-
     it("removes the row and publishes invoice.deleted only after the remove succeeds", async () => {
       listenForEvents();
       seedInvoice();
@@ -170,7 +154,7 @@ describe("notification call sites", () => {
             resolveRemove = resolve;
           })
       );
-      renderInvoiceTable();
+      renderInvoices();
       await screen.findByText("inv-1");
       await userEvent.click(screen.getByRole("button", { name: "Delete invoice inv-1" }));
 
@@ -192,7 +176,7 @@ describe("notification call sites", () => {
             resolveRemove = resolve;
           })
       );
-      renderInvoiceTable();
+      renderInvoices();
       await screen.findByText("inv-1");
       await userEvent.click(screen.getByRole("button", { name: "Delete invoice inv-1" }));
 
