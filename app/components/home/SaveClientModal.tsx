@@ -7,7 +7,7 @@ import { type Client, saveClient } from "~/data/client";
 import { addressFromRecord, formJsonAddress } from "~/data/address";
 import { formJson } from "~/utils/formJson";
 import { randomUUID } from "~/utils/uuid";
-import { eventBus } from "~/utils/events";
+import { eventBus, publishError } from "~/utils/events";
 
 /**
  * "Save this address as a client" confirmation. Gathers the extra field a
@@ -36,12 +36,7 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
       onSaved();
       onClose();
     } catch (e) {
-      eventBus.publish({
-        type: "client",
-        severity: "error",
-        message: "Client could not be saved",
-        context: { action: "failed", error: e },
-      });
+      publishError(eventBus, { type: "client", message: "Client could not be saved", context: { action: "failed" } }, e);
     }
   };
 

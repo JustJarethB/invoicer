@@ -5,7 +5,7 @@ import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
-import { eventBus } from "~/utils/events";
+import { eventBus, publishError } from "~/utils/events";
 import { formJsonAddress } from "~/data/address";
 import { randomUUID } from "~/utils/uuid";
 
@@ -55,12 +55,7 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
       eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
       refreshCache();
     } catch (e) {
-      eventBus.publish({
-        type: "client",
-        severity: "error",
-        message: "Client could not be saved",
-        context: { clientId: key, action: "failed", error: e },
-      });
+      publishError(eventBus, { type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, e);
     }
   };
   const removeDB = async (key: string) => {
@@ -69,12 +64,7 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
       eventBus.publish({ type: "client", severity: "success", message: "Client deleted", context: { clientId: key, action: "deleted" } });
       refreshCache();
     } catch (e) {
-      eventBus.publish({
-        type: "client",
-        severity: "error",
-        message: "Client could not be deleted",
-        context: { clientId: key, action: "delete.failed", error: e },
-      });
+      publishError(eventBus, { type: "client", message: "Client could not be deleted", context: { clientId: key, action: "delete.failed" } }, e);
     }
   };
   const { address } = client;
