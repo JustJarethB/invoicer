@@ -267,7 +267,8 @@ describe("notification call sites", () => {
       const unreadable = eventsOfType("storage", "unreadable");
       expect(unreadable).toHaveLength(1);
       expect(unreadable[0].severity).toBe("warning");
-      expect(unreadable[0].message).toContain("1");
+      // Exact copy per the ledger's G7 follow-up: singular-aware pluralisation.
+      expect(unreadable[0].message).toBe("1 saved entry could not be read and was skipped");
     });
   });
 
