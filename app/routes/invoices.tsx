@@ -31,7 +31,7 @@ const InvoiceContext = createContext<InvoiceContext>({
   },
 });
 
-export const InvoiceProvider = ({ children }: PropsWithChildren) => {
+const InvoiceProvider = ({ children }: PropsWithChildren) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const makePayment = async (invoiceId: string, amount: number): Promise<boolean> => {
     if (!isValidPaymentAmount(amount)) {
@@ -261,7 +261,7 @@ const PaidStatus = ({ id, summary }: { id: string; summary: PaymentSummary }) =>
   );
 };
 
-export const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
+const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summary: PaymentSummary; onClose: () => void }) => {
   const makePayment = useMakePayment();
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
