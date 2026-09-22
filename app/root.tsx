@@ -4,15 +4,21 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { Toaster } from "./components/Toaster";
 import { ThemeProvider } from "./components/ThemeSelector";
-import { registerEventLogging } from "./utils/eventLogging";
+import { registerEventLogging, registerGlobalErrorCapture } from "./utils/eventLogging";
 import { errorMessage, eventBus, publishError } from "./utils/events";
 
-// Boot-time log sink: publishers publish once and the console mirrors every
-// event from this single subscription. Module scope so the sink is live
-// before route loaders run (db.getAll can surface storage events at boot).
-// Guarded for SSR — this module also evaluates on the server, where the
-// sink has no console worth feeding.
-if (typeof window !== "undefined") registerEventLogging();
+// Boot-time wiring: publishers publish once and the console mirrors every
+// event from this single subscription. The global rejection capture mounts
+// beside it as the last capture path — an async throw with no local catch
+// escapes every handler catch and every error boundary, so only this
+// window-level listener sees it (G2). Module scope so both are live before
+// route loaders run (db.getAll can surface storage events at boot). Guarded
+// for SSR — this module also evaluates on the server, where neither has a
+// window to attach to.
+if (typeof window !== "undefined") {
+  registerEventLogging();
+  registerGlobalErrorCapture();
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
