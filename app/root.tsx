@@ -1,10 +1,11 @@
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteError } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
 import { Toaster } from "./components/Toaster";
 import { ThemeProvider } from "./components/ThemeSelector";
 import { registerEventLogging } from "./utils/eventLogging";
+import { errorMessage, eventBus, publishError } from "./utils/events";
 
 // Boot-time log sink: publishers publish once and the console mirrors every
 // event from this single subscription. Module scope so the sink is live
@@ -53,7 +54,37 @@ export default function App() {
   );
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+/**
+ * Terminal error boundary (React Router framework mode): publishes the error
+ * to the event bus and renders the fallback. Unlike a route boundary this one
+ * never rethrows — there is no ancestor boundary to delegate to. The publish
+ * defers with queueMicrotask (bus listeners such as Toaster call setState,
+ * which is illegal inside another component's render) and rides publishError,
+ * so a route boundary's already-published error wins the microtask race and
+ * root adds nothing. Navigational 404s skip the publish: they are expected
+ * outcomes, the fallback page is their capture, and a never-auto-dismissing
+ * error toast per mistyped URL is noise. Routes with their own boundary
+ * (invoices) capture their errors first; every other route relies on this
+ * boundary for non-404 failures. Client-only publish: the server's bus has
+ * no consumer, so SSR failures stay on the SSR error path.
+ */
+export function ErrorBoundary({ error: boundaryError }: Partial<Route.ErrorBoundaryProps> = {}) {
+  const error = useRouteError() ?? boundaryError;
+  // Neither delivery channel carried an error: nothing to capture — still
+  // render the fallback below rather than a blank screen.
+  if (typeof window !== "undefined" && error !== undefined && !(isRouteErrorResponse(error) && error.status === 404)) {
+    queueMicrotask(() =>
+      publishError(
+        eventBus,
+        {
+          type: "app",
+          message: isRouteErrorResponse(error) ? error.statusText || `HTTP ${error.status}` : errorMessage(error),
+          context: { action: "route-error", boundary: "root" },
+        },
+        error
+      )
+    );
+  }
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
