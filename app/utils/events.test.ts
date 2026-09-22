@@ -90,6 +90,14 @@ describe("eventBus", () => {
     it("publishing with no listeners does not throw", () => {
       expect(() => eventBus.publish(makeEvent())).not.toThrow();
     });
+
+    it("accepts the app domain key for harness-level events", () => {
+      subscribe((event) => received.push(event));
+
+      eventBus.publish({ type: "app", severity: "error", message: "render exploded", context: { boundary: "root" } });
+
+      expect(received[0].type).toBe("app");
+    });
   });
 
   describe("error normalisation", () => {

@@ -21,8 +21,8 @@ export const SEVERITIES = ["debug", "info", "success", "warning", "error"] as co
 
 export type EventSeverity = (typeof SEVERITIES)[number];
 
-/** Domain keys, not issue names: severity and context carry what happened. */
-export const EVENT_TYPES = ["invoice", "payment", "client", "autosave", "storage", "image"] as const;
+/** Domain keys, not issue names: severity and context carry what happened. `app` carries harness-level failures that belong to no single domain (the root error boundary). */
+export const EVENT_TYPES = ["invoice", "payment", "client", "autosave", "storage", "image", "app"] as const;
 
 export type AppEventType = (typeof EVENT_TYPES)[number];
 
