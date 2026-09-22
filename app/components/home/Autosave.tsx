@@ -1,5 +1,5 @@
 import { ArrowPathIcon } from "@heroicons/react/16/solid";
-import { type PropsWithChildren, useState } from "react";
+import { type PropsWithChildren, useRef, useState } from "react";
 import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
@@ -12,19 +12,29 @@ type Props = {
 
 export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }: PropsWithChildren<Props>) => {
   const [isSaving, setIsSaving] = useState(false);
+  // onChange fires per keystroke, so a persistent save failure would publish
+  // one warning per keystroke and churn the Toaster. Warn once per failure
+  // streak; the next successful save re-arms the warning. Throttled at the
+  // call site per the PR 51 ledger (G5a): the harness gains no coalescing
+  // option, and one Autosave instance backs one form name.
+  const failureWarned = useRef(false);
   const onChange = async (e: React.ChangeEvent<HTMLFormElement>) => {
     const data: Record<string, string> = await formJson(e.currentTarget);
     onChangeParent?.(data);
     setIsSaving(true);
     try {
       await db.save([name], data);
+      failureWarned.current = false;
     } catch (e) {
-      eventBus.publish({
-        type: "autosave",
-        severity: "warning",
-        message: "Changes could not be saved automatically",
-        context: { form: name, action: "failed", error: e },
-      });
+      if (!failureWarned.current) {
+        failureWarned.current = true;
+        eventBus.publish({
+          type: "autosave",
+          severity: "warning",
+          message: "Changes could not be saved automatically",
+          context: { form: name, action: "failed", error: e },
+        });
+      }
     } finally {
       setIsSaving(false);
     }
