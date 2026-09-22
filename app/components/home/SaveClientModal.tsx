@@ -7,7 +7,7 @@ import { type Client, saveClient } from "~/data/client";
 import { addressFromRecord, formJsonAddress } from "~/data/address";
 import { formJson } from "~/utils/formJson";
 import { randomUUID } from "~/utils/uuid";
-import { eventBus, publishError } from "~/utils/events";
+import { eventBus, rethrowError } from "~/utils/events";
 
 /**
  * "Save this address as a client" confirmation. Gathers the extra field a
@@ -36,7 +36,8 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
       onSaved();
       onClose();
     } catch (e) {
-      publishError(eventBus, { type: "client", message: "Client could not be saved", context: { action: "failed" } }, e);
+      // Fire-and-forget caller (modal Save button): rethrows to the global rejection catcher, which sees this value already published (exactly-once).
+      rethrowError(eventBus, { type: "client", message: "Client could not be saved", context: { action: "failed" } }, e);
     }
   };
 

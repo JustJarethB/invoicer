@@ -209,24 +209,10 @@ describe("notification call sites", () => {
       expect(onClose).toHaveBeenCalled();
     });
 
-    it("publishes client.failed and keeps the modal open when the client save rejects", async () => {
-      listenForEvents();
-      const onClose = vi.fn();
-      const onSaved = vi.fn();
-      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new Error("quota exceeded");
-      });
-      render(<SaveClientModal record={{ name: "Acme", streetAddress: "1 Way" }} onClose={onClose} onSaved={onSaved} />);
-
-      await userEvent.type(screen.getByPlaceholderText("Display Name"), "Acme Co");
-      await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
-
-      await vi.waitFor(() => expect(eventsOfType("client", "failed")).toHaveLength(1));
-      expect(eventsOfType("client", "failed")[0].severity).toBe("error");
-      expect(onClose).not.toHaveBeenCalled();
-      expect(onSaved).not.toHaveBeenCalled();
-      expect(eventsOfType("client", "saved")).toHaveLength(0);
-    });
+    // The failure path moved to ./SaveClientModal.test.tsx: the save catch
+    // rethrows per the G2 ruling, the rejection floats to the global catcher,
+    // and a natural floating rejection fails the vitest run — the mock-seam
+    // test pins the conversion deterministically instead.
   });
 
   describe("Autosave", () => {
