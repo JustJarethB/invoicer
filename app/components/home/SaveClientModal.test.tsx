@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SaveClientModal } from "./SaveClientModal";
 import { saveClient } from "~/data/client";
-import { type AppEvent, type EventBus, eventBus, type RethrownEventInput, rethrowError } from "~/utils/events";
+import { type AppEvent, type EventBus, eventBus, rethrowError, type RethrownEventInput } from "~/utils/events";
 
 // The failure path rethrows (the modal Save button discards the rejection, so
 // it floats): the helper is stubbed to forward through the REAL publishError

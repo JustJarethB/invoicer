@@ -99,6 +99,10 @@ describe("notification call sites", () => {
 
       await vi.waitFor(() => expect(eventsOfType("payment", "failed")).toHaveLength(1), { timeout: 2000 });
       expect(eventsOfType("payment", "failed")[0].severity).toBe("error");
+      // The rethrown db failure lands in the modal catch, which now also sets
+      // the inline error text (the one deliberate copy delta of the G2
+      // conversion — previously this path surfaced no inline text).
+      expect(screen.getByText("quota exceeded")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Record payment for inv-1" })).toBeInTheDocument();
       expect(eventsOfType("payment", "recorded")).toHaveLength(0);
     });
@@ -209,10 +213,7 @@ describe("notification call sites", () => {
       expect(onClose).toHaveBeenCalled();
     });
 
-    // The failure path moved to ./SaveClientModal.test.tsx: the save catch
-    // rethrows per the G2 ruling, the rejection floats to the global catcher,
-    // and a natural floating rejection fails the vitest run — the mock-seam
-    // test pins the conversion deterministically instead.
+    // The failure path moved to ./SaveClientModal.test.tsx (the save catch rethrows per the G2 ruling; a natural floating rejection fails the whole vitest run).
   });
 
   describe("Autosave", () => {
