@@ -20,7 +20,7 @@ import { TutorialWizard } from "~/components/TutorialWizard";
 import { HelpTooltip } from "~/components/Tooltip";
 import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
 import { useThemeValue } from "~/components/ThemeSelector";
-import { eventBus, publishError } from "~/utils/events";
+import { eventBus, rethrowError } from "~/utils/events";
 import { addressFromRecord } from "~/data/address";
 
 /** Read the logo url from a form record. */
@@ -81,7 +81,8 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       await db.save(["invoice", id], invoice);
       eventBus.publish({ type: "invoice", severity: "success", message: "Invoice saved", context: { invoiceId: id, action: "saved" } });
     } catch (e) {
-      publishError(eventBus, { type: "invoice", message: "Invoice could not be saved", context: { invoiceId: id, action: "failed" } }, e);
+      // Fire-and-forget caller (Controls save button): rethrows to the global rejection catcher, which sees this value already published (exactly-once).
+      rethrowError(eventBus, { type: "invoice", message: "Invoice could not be saved", context: { invoiceId: id, action: "failed" } }, e);
     }
   };
 
