@@ -12,7 +12,7 @@ import { useMobile } from "~/hooks";
 import type { Route } from "./+types/invoices";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
 import { formatCurrency } from "~/utils/formatCurrency";
-import { errorMessage, eventBus, hasBeenPublished, publishError, rethrowError } from "~/utils/events";
+import { errorMessage, eventBus, publishError, rethrowError } from "~/utils/events";
 
 export function meta() {
   return [{ title: "Invoices" }];
@@ -55,12 +55,7 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     try {
       saved = await db.save(["invoice", invoiceId], savedInvoice);
     } catch (e) {
-      eventBus.publish({
-        type: "payment",
-        severity: "error",
-        message: "Payment could not be saved",
-        context: { invoiceId, amount, action: "failed", error: e },
-      });
+      publishError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
       return false;
     }
     if (!saved) {
@@ -84,12 +79,7 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     try {
       removed = await db.remove(["invoice", invoiceId]);
     } catch (e) {
-      eventBus.publish({
-        type: "invoice",
-        severity: "error",
-        message: "Invoice could not be deleted",
-        context: { invoiceId, action: "delete.failed", error: e },
-      });
+      publishError(eventBus, { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } }, e);
       return;
     }
     if (!removed) {
@@ -279,12 +269,10 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
     try {
       if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Payment failed";
-      // rethrowError sites are already published; the catch stays a safety net.
-      if (!hasBeenPublished(e)) {
-        eventBus.publish({ type: "payment", severity: "error", message, context: { invoiceId, action: "failed" } });
-      }
-      setError(message);
+      // publishError is the safety net: it derives the message, normalises
+      // context.error, and skips already-published values (rethrowError sites).
+      publishError(eventBus, { type: "payment", context: { invoiceId, action: "failed" } }, e);
+      setError(errorMessage(e));
     } finally {
       setSubmitting(false);
     }
