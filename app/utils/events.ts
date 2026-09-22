@@ -37,6 +37,9 @@ export type AppEvent = {
 /** Publish-side input: AppEvent with the harness-stamped timestamp optional. */
 export type AppEventInput = Omit<AppEvent, "timestamp"> & { readonly timestamp?: number };
 
+/** rethrowError's event input: the message may be derived from the caught error. */
+export type RethrownEventInput = Omit<AppEventInput, "message" | "severity"> & { readonly message?: string };
+
 export type EventFilter = {
   readonly types?: readonly AppEventType[];
   readonly severities?: readonly EventSeverity[];
@@ -61,6 +64,32 @@ const REPLAY_BUFFER_LIMIT = 100;
 
 /** Extract a display message from an unknown caught value. */
 export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
+/** Caught values already published by rethrowError, so parental catches and boundaries do not publish them twice. */
+const publishedErrors = new WeakSet<object>();
+
+/** True when rethrowError already published this caught value to the bus. */
+export const hasBeenPublished = (error: unknown): boolean => typeof error === "object" && error !== null && publishedErrors.has(error);
+
+/**
+ * Publish a failure to the bus, then rethrow the original error toward the
+ * parental boundary (a local catch, or a route ErrorBoundary). Exactly once:
+ * a caught value already published — e.g. rethrown into a boundary that
+ * publishes — is not published again. The throw is the original object, never
+ * a wrapper, so parental catches keep their instanceof/message checks.
+ */
+export const rethrowError = (bus: EventBus, event: RethrownEventInput, error: unknown): never => {
+  if (!hasBeenPublished(error)) {
+    const published = bus.publish({
+      ...event,
+      severity: "error",
+      message: event.message ?? errorMessage(error),
+      context: { ...event.context, error },
+    });
+    if (published && typeof error === "object" && error !== null) publishedErrors.add(error);
+  }
+  throw error;
+};
 
 const isEventSeverity = (value: unknown): value is EventSeverity => typeof value === "string" && SEVERITIES.some((s) => s === value);
 

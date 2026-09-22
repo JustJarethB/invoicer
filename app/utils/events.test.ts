@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type AppEvent, type AppEventInput, errorMessage, eventBus, type EventListener } from "./events";
+import { type AppEvent, type AppEventInput, errorMessage, eventBus, type EventListener, hasBeenPublished, rethrowError } from "./events";
 
 const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
   type: "invoice",
@@ -121,6 +121,67 @@ describe("eventBus", () => {
       expect(errorMessage(new Error("boom"))).toBe("boom");
       expect(errorMessage("raw")).toBe("raw");
       expect(errorMessage(42)).toBe("42");
+    });
+  });
+
+  describe("rethrowError", () => {
+    const catchRethrow = (fn: () => never): unknown => {
+      try {
+        fn();
+      } catch (error) {
+        return error;
+      }
+      return undefined;
+    };
+
+    it("publishes an error event with the derived message and rethrows the same error object", () => {
+      subscribe((event) => received.push(event));
+      const error = new Error("quota exceeded");
+
+      const caught = catchRethrow(() => rethrowError(eventBus, { type: "payment", context: { invoiceId: "inv-1", action: "failed" } }, error));
+
+      expect(caught).toBe(error);
+      expect(received).toHaveLength(1);
+      expect(received[0].type).toBe("payment");
+      expect(received[0].severity).toBe("error");
+      expect(received[0].message).toBe("quota exceeded");
+      expect(received[0].context).toEqual({ invoiceId: "inv-1", action: "failed", error: "quota exceeded" });
+    });
+
+    it("keeps an explicit message over the derived one", () => {
+      subscribe((event) => received.push(event));
+
+      catchRethrow(() => rethrowError(eventBus, { type: "invoice", message: "Payment could not be saved" }, new Error("quota exceeded")));
+
+      expect(received[0].message).toBe("Payment could not be saved");
+      expect(received[0].context).toEqual({ error: "quota exceeded" });
+    });
+
+    it("serialises a non-Error caught value", () => {
+      subscribe((event) => received.push(event));
+
+      catchRethrow(() => rethrowError(eventBus, { type: "autosave" }, 42));
+
+      expect(received[0].message).toBe("42");
+      expect(received[0].context).toEqual({ error: "42" });
+    });
+
+    it("does not publish twice for the same caught value", () => {
+      subscribe((event) => received.push(event));
+      const error = new Error("once");
+
+      catchRethrow(() => rethrowError(eventBus, { type: "payment" }, error));
+      expect(hasBeenPublished(error)).toBe(true);
+      catchRethrow(() => rethrowError(eventBus, { type: "payment" }, error));
+
+      expect(received).toHaveLength(1);
+    });
+
+    it("reports only helper-published values as published", () => {
+      expect(hasBeenPublished(new Error("fresh"))).toBe(false);
+      expect(hasBeenPublished("raw")).toBe(false);
+      expect(hasBeenPublished(undefined)).toBe(false);
+      expect(hasBeenPublished(null)).toBe(false);
     });
   });
 
