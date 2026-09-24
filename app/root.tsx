@@ -7,14 +7,6 @@ import { ThemeProvider } from "./components/ThemeSelector";
 import { registerEventLogging, registerGlobalErrorCapture } from "./utils/eventLogging";
 import { errorMessage, eventBus, publishError } from "./utils/events";
 
-// Boot-time wiring: publishers publish once and the console mirrors every
-// event from this single subscription. The global rejection capture mounts
-// beside it as the last capture path — an async throw with no local catch
-// escapes every handler catch and every error boundary, so only this
-// window-level listener sees it (G2). Module scope so both are live before
-// route loaders run (db.getAll can surface storage events at boot). Guarded
-// for SSR — this module also evaluates on the server, where neither has a
-// window to attach to.
 if (typeof window !== "undefined") {
   registerEventLogging();
   registerGlobalErrorCapture();
@@ -60,24 +52,8 @@ export default function App() {
   );
 }
 
-/**
- * Terminal error boundary (React Router framework mode): publishes the error
- * to the event bus and renders the fallback. Unlike a route boundary this one
- * never rethrows — there is no ancestor boundary to delegate to. The publish
- * defers with queueMicrotask (bus listeners such as Toaster call setState,
- * which is illegal inside another component's render) and rides publishError,
- * so a route boundary's already-published error wins the microtask race and
- * root adds nothing. Navigational 404s skip the publish: they are expected
- * outcomes, the fallback page is their capture, and a never-auto-dismissing
- * error toast per mistyped URL is noise. Routes with their own boundary
- * (invoices) capture their errors first; every other route relies on this
- * boundary for non-404 failures. Client-only publish: the server's bus has
- * no consumer, so SSR failures stay on the SSR error path.
- */
 export function ErrorBoundary({ error: boundaryError }: Partial<Route.ErrorBoundaryProps> = {}) {
   const error = useRouteError() ?? boundaryError;
-  // Neither delivery channel carried an error: nothing to capture — still
-  // render the fallback below rather than a blank screen.
   if (typeof window !== "undefined" && error !== undefined && !(isRouteErrorResponse(error) && error.status === 404)) {
     queueMicrotask(() =>
       publishError(

@@ -3,9 +3,6 @@ import { makeClient, makeInvoice, makeLineItem, makePayment } from "./testFixtur
 
 describe("testFixtures", () => {
   it("builds the canonical seed invoice the flow tests store", () => {
-    // The seeded JSON must stay byte-identical to the inline fixture the
-    // notification flow tests used before the shared repository existed, so
-    // fixture adoption cannot change stored-test behaviour.
     expect(JSON.stringify(makeInvoice())).toBe(
       '{"id":"inv-1","date":"2026-01-01","purchaseOrder":"PO-1","logo":{"url":""},"from":{"name":"","streetAddress":"","city":"","county":"","postCode":""},"to":{"name":"Buyer","streetAddress":"","city":"","county":"","postCode":""},"lineItems":[{"uuid":"l1","type":"0","qty":2,"unitPrice":50}],"payments":[]}'
     );

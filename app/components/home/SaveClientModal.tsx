@@ -36,7 +36,6 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
       onSaved();
       onClose();
     } catch (e) {
-      // Fire-and-forget caller (modal Save button): rethrows to the global rejection catcher, which sees this value already published (exactly-once).
       rethrowError(eventBus, { type: "client", message: "Client could not be saved", context: { action: "failed" } }, e);
     }
   };

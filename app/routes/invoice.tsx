@@ -81,7 +81,6 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       await db.save(["invoice", id], invoice);
       eventBus.publish({ type: "invoice", severity: "success", message: "Invoice saved", context: { invoiceId: id, action: "saved" } });
     } catch (e) {
-      // Fire-and-forget caller (Controls save button): rethrows to the global rejection catcher, which sees this value already published (exactly-once).
       rethrowError(eventBus, { type: "invoice", message: "Invoice could not be saved", context: { invoiceId: id, action: "failed" } }, e);
     }
   };

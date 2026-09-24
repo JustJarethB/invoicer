@@ -2,11 +2,6 @@ import { emptyAddress } from "./address";
 import type { Client } from "./client";
 import type { Invoice, LineItem, Payment } from "./invoice";
 
-/**
- * Shared test-data builders (owner review: one global repository for test
- * data instead of per-test inline fixtures). Overrides replace a field
- * wholesale; defaults are the shapes the flow tests have always seeded.
- */
 export const makeLineItem = (overrides: Partial<LineItem> = {}): LineItem => ({ uuid: "l1", ...overrides });
 
 export const makePayment = (overrides: Partial<Payment> = {}): Payment => ({ amount: 100, date: "2026-01-01", ...overrides });

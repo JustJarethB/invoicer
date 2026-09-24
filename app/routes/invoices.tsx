@@ -55,8 +55,6 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     try {
       saved = await db.save(["invoice", invoiceId], savedInvoice);
     } catch (e) {
-      // Rethrows to the parental catch (PaymentModal.submit): its publishError
-      // safety net finds this value published and adds nothing (exactly-once).
       rethrowError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
     }
     if (!saved) {
@@ -68,8 +66,6 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
       });
       return false;
     }
-    // Single publish point for payment confirmations: the modal must not also
-    // publish success, or every payment surfaces twice.
     eventBus.publish({ type: "payment", severity: "success", message: "Payment recorded", context: { invoiceId, amount, action: "recorded" } });
     setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, payments: [...(inv.payments ?? []), newPayment] } : inv)));
     return true;
@@ -80,9 +76,6 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     try {
       removed = await db.remove(["invoice", invoiceId]);
     } catch (e) {
-      // Rethrows to the parental boundary: the caller is fire-and-forget, so
-      // the rethrown error floats to the global rejection catcher, which sees
-      // this value already published and adds nothing (exactly-once).
       rethrowError(eventBus, { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } }, e);
     }
     if (!removed) {
@@ -103,8 +96,6 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
         const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
         setInvoices(fetchedInvoices);
       } catch (e) {
-        // A corrupt stored value crashes db.get's JSON.parse; without this
-        // guard the invoice list silently rendered empty.
         eventBus.publish({
           type: "invoice",
           severity: "warning",
@@ -272,8 +263,6 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
     try {
       if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
-      // publishError is the safety net: it derives the message, normalises
-      // context.error, and skips already-published values (rethrowError sites).
       publishError(eventBus, { type: "payment", context: { invoiceId, action: "failed" } }, e);
       setError(errorMessage(e));
     } finally {
@@ -314,18 +303,8 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
   );
 };
 
-/**
- * Route-level error boundary (React Router framework mode). React Router
- * delivers the error through useRouteError (the prop is the framework-mode
- * fallback). The publish is deferred with queueMicrotask — bus listeners such
- * as Toaster may call setState, which is illegal in another component's
- * render — then the boundary rethrows so the root boundary (root.tsx) renders
- * the fallback. Client-only publish: the server's bus has no consumer, so SSR
- * render failures stay on the SSR error path.
- */
 export function ErrorBoundary({ error: routeError }: Partial<Route.ErrorBoundaryProps> = {}) {
   const error = useRouteError() ?? routeError;
-  // Neither delivery channel carried an error: nothing to capture, nothing to delegate.
   if (error === undefined) return null;
   if (typeof window !== "undefined") {
     queueMicrotask(() =>

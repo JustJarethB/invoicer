@@ -8,10 +8,6 @@ const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
   ...overrides,
 });
 
-// The harness is the app-wide singleton, so tests subscribe through this
-// helper; afterEach unsubscribes every listener from the test and drains
-// anything that buffered while no one was listening — no state leaks
-// between tests.
 const received: AppEvent[] = [];
 const unsubscribers: Array<() => void> = [];
 
@@ -184,7 +180,6 @@ describe("eventBus", () => {
       expect(received).toHaveLength(1);
       expect(received[0].severity).toBe("error");
       expect(hasBeenPublished(error)).toBe(true);
-      // A repeat call is a no-op, not a throw: the caller owns the rethrow.
       expect(() => publishError(eventBus, { type: "invoice" }, error)).not.toThrow();
       expect(received).toHaveLength(1);
     });

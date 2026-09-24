@@ -12,11 +12,6 @@ type Props = {
 
 export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }: PropsWithChildren<Props>) => {
   const [isSaving, setIsSaving] = useState(false);
-  // onChange fires per keystroke, so a persistent save failure would publish
-  // one warning per keystroke and churn the Toaster. Warn once per failure
-  // streak; the next successful save re-arms the warning. Throttled at the
-  // call site per the PR 51 ledger (G5a): the harness gains no coalescing
-  // option, and one Autosave instance backs one form name.
   const failureWarned = useRef(false);
   const onChange = async (e: React.ChangeEvent<HTMLFormElement>) => {
     const data: Record<string, string> = await formJson(e.currentTarget);

@@ -16,10 +16,6 @@ const matchPartialKeys = (keys: string[]) => {
       }
     });
   if (unreadable.length > 0) {
-    // One aggregated event per scan, however many keys are corrupt — the
-    // corrupt store must not flood the harness. The console mirror is the
-    // boot log sink subscribed to the bus (eventLogging), not a second
-    // publisher here.
     const entryNoun = unreadable.length === 1 ? "entry" : "entries";
     const skippedVerb = unreadable.length === 1 ? "was" : "were";
     eventBus.publish({

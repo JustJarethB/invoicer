@@ -15,8 +15,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // The tests run against the app-wide singleton: drop the sink and drain
-  // the replay buffer so nothing leaks into the next test.
   stopSink?.();
   stopSink = undefined;
   eventBus.subscribe(() => {})();
@@ -58,19 +56,11 @@ describe("eventLogging sink", () => {
 
 describe("global error capture", () => {
   const received: AppEvent[] = [];
-  // Held at describe scope and always dropped in afterEach: a failed
-  // assertion must never leak a bus subscriber or a window listener into
-  // the next test.
   let busUnsub: () => void = () => {};
   let stopCapture: (() => void) | undefined;
 
   const unhandledRejections = () => received.filter((event) => event.type === "app" && event.context?.action === "unhandled-rejection");
 
-  // jsdom never delivers a floating rejection to a window listener, and a
-  // natural floating rejection fails the whole vitest run (probe evidence:
-  // window listener saw 0 events; run exited 1 with "Errors: 3"). The
-  // listener is therefore exercised with a synthetic event carrying the
-  // same shape a browser dispatches.
   const dispatchRejection = (reason: unknown) => {
     const event = new Event("unhandledrejection");
     Object.assign(event, { promise: Promise.resolve(), reason });
@@ -108,9 +98,6 @@ describe("global error capture", () => {
     publishError(eventBus, { type: "payment", message: "Payment could not be saved", context: { action: "failed" } }, error);
     expect(received).toHaveLength(1);
 
-    // The same object reaching the window listener is the rethrowError
-    // compose: the WeakSet mark makes the catcher's publish a no-op. The
-    // surviving event is the source publish, explicit message intact.
     dispatchRejection(error);
 
     expect(received).toHaveLength(1);
@@ -123,9 +110,6 @@ describe("global error capture", () => {
     dispatchRejection(new Error("first"));
     expect(unhandledRejections()).toHaveLength(1);
 
-    // Re-registration disposes the previous listener; the stale handle is a
-    // no-op afterwards. One event per dispatch: a leaked first listener
-    // would push this to three.
     const replaced = registerGlobalErrorCapture();
     stopCapture = replaced;
     dispatchRejection(new Error("second"));
@@ -147,8 +131,6 @@ describe("global error capture", () => {
   it("publishes string reasons through errorMessage without marking the WeakSet", () => {
     stopCapture = registerGlobalErrorCapture();
 
-    // Exactly-once is identity-based and cannot apply to primitives: the
-    // WeakSet marks objects only, so a string reason is published fresh.
     dispatchRejection("plain string reason");
 
     const captures = unhandledRejections();
@@ -158,9 +140,6 @@ describe("global error capture", () => {
   });
 
   it("adds no second event for a fire-and-forget client-save failure that reaches the catcher", () => {
-    // Pins the SaveClientModal conversion shape: rethrowError publishes at
-    // the source, the rethrown promise floats unhandled, and the catcher
-    // must not repeat the publish.
     stopCapture = registerGlobalErrorCapture();
 
     const error = new Error("quota exceeded");

@@ -7,10 +7,6 @@ import { Toaster } from "./Toaster";
 import { MAX_TOASTS, TOAST_DURATIONS } from "./toastConfig";
 import { type AppEventInput, eventBus } from "~/utils/events";
 
-// Toast ids come from a module-level counter that intentionally never resets,
-// so tests never assert on ids — they query by message text, region, or
-// data-severity instead.
-
 const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
   type: "invoice",
   severity: "info",
@@ -18,7 +14,6 @@ const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
   ...overrides,
 });
 
-/** Publish inside act: a live publish synchronously dispatches to the mounted listener. */
 const publishInAct = (input: AppEventInput) => {
   act(() => {
     eventBus.publish(input);
@@ -33,9 +28,6 @@ const toastItem = (message: string): HTMLElement => {
 
 describe("Toaster", () => {
   afterEach(() => {
-    // The tests share the app-wide singleton: restore timers, unmount so the
-    // harness registry holds only leftovers, then drain the replay buffer —
-    // no state leaks between tests.
     vi.useRealTimers();
     cleanup();
     eventBus.subscribe(() => {})();
@@ -194,11 +186,6 @@ describe("Toaster", () => {
     const { unmount } = render(<Toaster />);
     unmount();
 
-    // Probe the harness registry through observable behaviour. Publish twice
-    // before any spy subscribes: with a clean registry the events buffer and
-    // are replayed to the spy (2 deliveries); with a leaked Toaster listener
-    // they are delivered live to it instead, so the spy later sees only the
-    // third publish (1 delivery).
     eventBus.publish(makeEvent({ severity: "error", message: "probe-1" }));
     eventBus.publish(makeEvent({ severity: "error", message: "probe-2" }));
 
@@ -220,15 +207,11 @@ describe("Toaster", () => {
     });
 
     expect(screen.getByText("default-bus-boom")).toBeInTheDocument();
-    // Explicit unmount so the singleton bus carries no leaked listener.
     unmount();
   });
 });
 
 describe("Toaster + Modal Escape interplay", () => {
-  // The real scenario: a failed payment publishes an error toast while the
-  // payment modal deliberately stays open. Error toasts never auto-dismiss,
-  // so no fake timers are needed here.
   const mountInterplay = (onModalClose: () => void) => {
     render(
       <Modal title="Payment" onClose={onModalClose}>

@@ -3,44 +3,6 @@ import { type ComponentType, useCallback, useEffect, useRef, useState } from "re
 import { type AppEvent, type EventBus, eventBus } from "~/utils/events";
 import { MAX_TOASTS, nextToastId, TOAST_DURATIONS, TOAST_SEVERITIES, type ToastSeverity } from "./toastConfig";
 
-/**
- * Toast notification surface — a pure event-harness subscriber.
- *
- * The component subscribes to the app-wide bus (or an injected one) with a
- * severity filter that excludes `debug`, and renders one dismissible toast
- * per delivered event. All publish-side behaviour lives with the publishers;
- * this file only consumes.
- *
- * Accessibility: two live regions pre-exist on mount (assertive for
- * error/warning, polite for info/success) because live regions only announce
- * reliably when they exist in the DOM before content is inserted. With no
- * toasts the regions are empty and paint nothing, so e2e snapshots are
- * unaffected. Individual toasts carry no `role` — a nested live region would
- * be an anti-pattern; the container's `aria-live` does the announcing.
- *
- * Keyboard: Escape dismisses the toast whose dismiss button holds focus —
- * the keydown bubbles from the button to the toast's own handler, which
- * stops propagation so the same keypress never reaches a document-level
- * Escape listener such as `Modal`'s. A toast can coexist with an open modal
- * (e.g. a payment failure publishes an error toast while the payment modal
- * deliberately stays open), so one Escape press must dismiss only the
- * focused toast. The dismiss button is the toast's tab target; the toast div
- * itself stays out of the tab order (an unnamed generic tab stop is an
- * accessibility defect).
- *
- * Errors have no auto-dismiss duration and stay until dismissed manually;
- * every other severity auto-dismisses after its configured delay (see
- * toastConfig.ts).
- *
- * Known dev-only quirk: under React StrictMode the double effect-run can
- * consume replayed non-error toasts on the first pass and clear their timers
- * on teardown, so a replayed auto-dismiss toast may linger in dev
- * StrictMode. Production runs the effect once, so replayed toasts get their
- * timers as normal. Do not "fix" this by scheduling timers inside the
- * setState updater — updater side effects are double-invoked under
- * StrictMode; the idempotent-dismiss design here is the correct shape.
- */
-
 export type Toast = {
   id: string;
   severity: ToastSeverity;
@@ -48,7 +10,6 @@ export type Toast = {
 };
 
 export type ToasterProps = {
-  /** Event source to subscribe to; defaults to the app-wide singleton. */
   bus?: EventBus;
 };
 
@@ -62,19 +23,13 @@ export const Toaster = ({ bus = eventBus }: ToasterProps) => {
       clearTimeout(timer);
       timers.current.delete(id);
     }
-    // Idempotent: a timer firing for an already-evicted toast is a no-op.
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   useEffect(() => {
-    // Capture the Map once: the cleanup must close over a stable local, not
-    // `timers.current` (react-hooks/exhaustive-deps).
     const activeTimers = timers.current;
     const onEvent = (event: AppEvent) => {
-      // The subscription filter already restricts delivery to display severities.
       const toast: Toast = { id: nextToastId(), severity: event.severity as ToastSeverity, message: event.message };
-      // Cap-slice inside the updater keeps the stack bounded under event
-      // storms; the oldest toasts are evicted first (FIFO).
       setToasts((prev) => {
         const next = [...prev, toast];
         return next.length > MAX_TOASTS ? next.slice(next.length - MAX_TOASTS) : next;
@@ -142,10 +97,6 @@ const ToastItem = ({ onDismiss, toast }: ToastItemProps) => {
       data-severity={toast.severity}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
-          // Dismissing a toast must not also trigger document-level Escape
-          // listeners (Modal closes on Escape at document level), and the two
-          // can be open at the same time (a failed payment keeps its modal
-          // open while surfacing an error toast).
           event.stopPropagation();
           onDismiss(toast.id);
         }

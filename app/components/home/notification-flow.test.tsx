@@ -8,14 +8,8 @@ import { db } from "~/db";
 import { getClients } from "~/data/client";
 import { makeInvoice } from "~/data/testFixtures";
 import { type AppEvent, type AppEventType, eventBus } from "~/utils/events";
-// The flow tests drive the public route surface (<Invoices />); the route
-// file carries no test-only exports.
 import Invoices from "~/routes/invoices";
 
-// The call sites publish through the app-wide singleton, which buffers
-// pre-subscriber events and replays them to the first subscriber. Each test
-// subscribes first and drains the replay so assertions only see what the
-// test itself triggers.
 const received: AppEvent[] = [];
 let unsubscribe: () => void = () => {};
 
@@ -26,8 +20,6 @@ const listenForEvents = () => {
   received.length = 0; // drain any replayed history
 };
 
-// Events carry a domain-key type; the dotted qualifier moved into
-// context.action, so assertions filter on the pair.
 const eventsOfType = (type: AppEventType, action?: string) =>
   received.filter((event) => event.type === type && (action === undefined || event.context?.action === action));
 
@@ -43,9 +35,6 @@ const seedInvoice = () => {
 
 const renderInvoices = () => render(<Invoices />);
 
-// The status control exists only after InvoiceProvider's async db load
-// resolves, so findBy* waits replace the fixed waits a provider-level
-// render needed.
 const openPaymentModal = async () => {
   await renderInvoices().findByText("inv-1");
   await userEvent.click(screen.getByRole("button", { name: "Unpaid" }));
@@ -67,8 +56,6 @@ describe("notification call sites", () => {
     });
 
     it("publishes payment.recorded exactly once after the save resolves", async () => {
-      // Regression for the double-publish risk: the modal must not publish
-      // success itself — makePayment is the single publish point.
       listenForEvents();
       seedInvoice();
       await openPaymentModal();
@@ -78,7 +65,6 @@ describe("notification call sites", () => {
 
       await vi.waitFor(() => expect(screen.queryByRole("heading", { name: "Record payment for inv-1" })).not.toBeInTheDocument(), { timeout: 2000 });
       await vi.waitFor(() => expect(eventsOfType("payment", "recorded")).toHaveLength(1), { timeout: 2000 });
-      // Settle past db.save's 100ms simulated delay; no second publish may arrive.
       await new Promise((resolve) => setTimeout(resolve, 150));
       expect(eventsOfType("payment", "recorded")).toHaveLength(1);
       expect(eventsOfType("payment", "recorded")[0].severity).toBe("success");
@@ -86,7 +72,6 @@ describe("notification call sites", () => {
     });
 
     it("publishes payment.failed instead of success when persisting the payment rejects", async () => {
-      // A rejected save must never surface as a confirmation.
       listenForEvents();
       seedInvoice();
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -99,9 +84,6 @@ describe("notification call sites", () => {
 
       await vi.waitFor(() => expect(eventsOfType("payment", "failed")).toHaveLength(1), { timeout: 2000 });
       expect(eventsOfType("payment", "failed")[0].severity).toBe("error");
-      // The rethrown db failure lands in the modal catch, which now also sets
-      // the inline error text (the one deliberate copy delta of the G2
-      // conversion — previously this path surfaced no inline text).
       expect(screen.getByText("quota exceeded")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Record payment for inv-1" })).toBeInTheDocument();
       expect(eventsOfType("payment", "recorded")).toHaveLength(0);
@@ -206,20 +188,14 @@ describe("notification call sites", () => {
         expect(clients).toHaveLength(1);
         expect(clients[0].contactName).toBe("Acme Co");
       });
-      // The publish rides the save's own promise chain (two 100ms simulated
-      // delays), so it can land after getClients already sees the data.
       await vi.waitFor(() => expect(eventsOfType("client", "saved")).toHaveLength(1));
       expect(eventsOfType("client", "saved")[0].severity).toBe("success");
       expect(onClose).toHaveBeenCalled();
     });
-
-    // The failure path moved to ./SaveClientModal.test.tsx (the save catch rethrows per the G2 ruling; a natural floating rejection fails the whole vitest run).
   });
 
   describe("Autosave", () => {
     it("publishes autosave.failed as a warning and clears the spinner when the save rejects", async () => {
-      // Silent failure path: without the publish the spinner spun forever and
-      // the user was never told.
       listenForEvents();
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
         throw new Error("quota exceeded");
@@ -243,8 +219,6 @@ describe("notification call sites", () => {
 
   describe("db", () => {
     it("aggregates corrupt localStorage keys into a single storage.unreadable warning", async () => {
-      // One event per scan, however many keys are corrupt — a corrupt store
-      // must not flood the harness.
       listenForEvents();
       localStorage.setItem("not-json", "x");
 
@@ -254,15 +228,12 @@ describe("notification call sites", () => {
       const unreadable = eventsOfType("storage", "unreadable");
       expect(unreadable).toHaveLength(1);
       expect(unreadable[0].severity).toBe("warning");
-      // Exact copy per the ledger's G7 follow-up: singular-aware pluralisation.
       expect(unreadable[0].message).toBe("1 saved entry could not be read and was skipped");
     });
   });
 
   describe("ImageInput", () => {
     it("publishes image.unselected as debug when the file picker is cancelled", () => {
-      // A cancel is routine, not a recoverable issue: debug stays off the
-      // toast severities so no spurious toast appears.
       listenForEvents();
       const { container } = render(<ImageInput name="logo" alt="logo" />);
       const input = container.querySelector('input[type="file"]') as HTMLInputElement;

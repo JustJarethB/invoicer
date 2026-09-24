@@ -25,8 +25,6 @@ export default () => {
       try {
         setClients(await getClients());
       } catch (e) {
-        // A corrupt stored value crashes db.get's JSON.parse; without this
-        // guard the client list silently rendered empty.
         eventBus.publish({
           type: "client",
           severity: "warning",
@@ -55,7 +53,6 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
       eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
       refreshCache();
     } catch (e) {
-      // Fire-and-forget caller: rethrows to the global rejection catcher, which sees this value already published (exactly-once).
       rethrowError(eventBus, { type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, e);
     }
   };

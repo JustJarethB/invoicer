@@ -5,15 +5,6 @@ import { SaveClientModal } from "./SaveClientModal";
 import { saveClient } from "~/data/client";
 import { type AppEvent, type EventBus, eventBus, rethrowError, type RethrownEventInput } from "~/utils/events";
 
-// The failure path rethrows (the modal Save button discards the rejection, so
-// it floats): the helper is stubbed to forward through the REAL publishError
-// and drop the throw, which keeps the bus coverage deterministic without a
-// natural floating rejection in the run (probe-verified: vitest fails the run
-// on any natural float). The full rethrowError + global-catcher compose at
-// this shape is pinned separately in eventLogging.test.ts ("adds no second
-// event for a fire-and-forget client-save failure"). eventBus and
-// publishError stay real so publish assertions run on the singleton the rest
-// of the suite shares.
 vi.mock("~/utils/events", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/events")>();
   return {
@@ -22,8 +13,6 @@ vi.mock("~/utils/events", async (importOriginal) => {
   };
 });
 
-// Persistence seam: mocked, not Storage-spied, so the rejection is an explicit
-// controlled value instead of a throw inside an unawaited promise.
 vi.mock("~/data/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/data/client")>()),
   saveClient: vi.fn(),
@@ -50,10 +39,6 @@ afterEach(() => {
 
 describe("SaveClientModal failure path", () => {
   it("rethrows a rejected save through rethrowError and keeps the modal open", async () => {
-    // The helper is the whole conversion contract: publish the failure with
-    // the explicit copy, then throw toward the global rejection catcher. The
-    // catcher sees the value already published and adds nothing
-    // (identity-based exactly-once, pinned in eventLogging.test.ts).
     const error = new Error("quota exceeded");
     vi.mocked(saveClient).mockRejectedValueOnce(error);
     const onClose = vi.fn();
@@ -66,8 +51,6 @@ describe("SaveClientModal failure path", () => {
     await vi.waitFor(() =>
       expect(rethrowError).toHaveBeenCalledWith(eventBus, { type: "client", message: "Client could not be saved", context: { action: "failed" } }, error)
     );
-    // The publish half stayed real: the bus carries exactly one failure
-    // event, with the explicit copy and the caught value normalised.
     expect(received).toHaveLength(1);
     expect(received[0].type).toBe("client");
     expect(received[0].severity).toBe("error");
