@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { type AppEvent, eventBus, rethrowError } from "~/utils/events";
+import { type AppEvent, eventBus, withErrorReporting } from "~/utils/events";
 import { createRoutesStub, Outlet } from "react-router";
 import { ErrorBoundary } from "../root";
 import { ErrorBoundary as InvoicesErrorBoundary } from "./invoices";
@@ -65,20 +65,16 @@ describe("root error boundary", () => {
     errorSpy.mockRestore();
   });
 
-  it("adds no second publish for an error a handler already published via rethrowError", async () => {
+  it("adds no second publish for an error a handler already reported", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     listenForEvents();
 
     const error = new Error("handler boom");
-    const caught = (() => {
-      try {
-        rethrowError(eventBus, { type: "payment", message: "handler failure" }, error);
-        return undefined;
-      } catch (caught) {
-        return caught;
-      }
-    })();
-    expect(caught).toBe(error);
+    await expect(
+      withErrorReporting({ type: "payment", message: "handler failure" }, async () => {
+        throw error;
+      })
+    ).rejects.toBe(error);
     expect(received).toHaveLength(1);
 
     const HelperThrowing = (): never => {

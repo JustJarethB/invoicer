@@ -20,7 +20,7 @@ test("a floating rejection with no local catch is captured on the event bus", as
   await expect(toast).toHaveAttribute("data-severity", "error");
 });
 
-test("a converted fire-and-forget catch surfaces exactly one error toast", async ({ page }) => {
+test("a reported fire-and-forget operation surfaces exactly one error toast", async ({ page }) => {
   await page.goto("/");
 
   await page.evaluate(() => {
@@ -54,6 +54,9 @@ test("a converted fire-and-forget catch surfaces exactly one error toast", async
 
   const reasons = await page.evaluate(() => (window as typeof window & { __floatReasons?: string[] }).__floatReasons ?? []);
   expect(reasons).toEqual(["quota exceeded (e2e)"]);
+  await expect(page.getByRole("heading", { name: "Save Client" })).toBeVisible();
+  await expect(page.getByTestId("toast-item")).toHaveCount(1);
+  await expect(page.locator('[data-testid="toast-item"][data-severity="success"]')).toHaveCount(0);
 });
 
 test("normal navigation produces no error toasts", async ({ page }) => {

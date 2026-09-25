@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
-import { type AppEvent, eventBus, rethrowError } from "~/utils/events";
+import { type AppEvent, eventBus, withErrorReporting } from "~/utils/events";
 import { ErrorBoundary } from "./invoices";
 
 const received: AppEvent[] = [];
@@ -59,15 +59,11 @@ describe("invoices route error boundary", () => {
     listenForEvents();
 
     const error = new Error("handler boom");
-    const caught = (() => {
-      try {
-        rethrowError(eventBus, { type: "payment", message: "handler failure" }, error);
-        return undefined;
-      } catch (caught) {
-        return caught;
-      }
-    })();
-    expect(caught).toBe(error);
+    await expect(
+      withErrorReporting({ type: "payment", message: "handler failure" }, async () => {
+        throw error;
+      })
+    ).rejects.toBe(error);
     expect(received).toHaveLength(1);
 
     const HelperThrowing = (): never => {

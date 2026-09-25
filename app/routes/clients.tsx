@@ -5,7 +5,7 @@ import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
-import { eventBus, rethrowError } from "~/utils/events";
+import { eventBus, withErrorReporting } from "~/utils/events";
 import { formJsonAddress } from "~/data/address";
 import { randomUUID } from "~/utils/uuid";
 
@@ -48,22 +48,18 @@ export default () => {
 
 const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: () => void }) => {
   const saveDB = async (key: string, client: Client) => {
-    try {
-      await saveClient(key, client);
-      eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
-      refreshCache();
-    } catch (e) {
-      rethrowError(eventBus, { type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, e);
-    }
+    await withErrorReporting({ type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, () =>
+      saveClient(key, client)
+    );
+    eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
+    refreshCache();
   };
   const removeDB = async (key: string) => {
-    try {
-      await deleteClient(key);
-      eventBus.publish({ type: "client", severity: "success", message: "Client deleted", context: { clientId: key, action: "deleted" } });
-      refreshCache();
-    } catch (e) {
-      rethrowError(eventBus, { type: "client", message: "Client could not be deleted", context: { clientId: key, action: "delete.failed" } }, e);
-    }
+    await withErrorReporting({ type: "client", message: "Client could not be deleted", context: { clientId: key, action: "delete.failed" } }, () =>
+      deleteClient(key)
+    );
+    eventBus.publish({ type: "client", severity: "success", message: "Client deleted", context: { clientId: key, action: "deleted" } });
+    refreshCache();
   };
   const { address } = client;
   const [isEditing, setIsEditing] = useState(false);

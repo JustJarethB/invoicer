@@ -18,7 +18,7 @@ export type AppEvent = {
 
 export type AppEventInput = Omit<AppEvent, "timestamp"> & { readonly timestamp?: number };
 
-export type RethrownEventInput = Omit<AppEventInput, "message" | "severity"> & { readonly message?: string };
+type ErrorEventInput = Omit<AppEventInput, "message" | "severity"> & { readonly message?: string };
 
 export type EventFilter = {
   readonly types?: readonly AppEventType[];
@@ -46,7 +46,7 @@ const publishedErrors = new WeakSet<object>();
 
 export const hasBeenPublished = (error: unknown): boolean => typeof error === "object" && error !== null && publishedErrors.has(error);
 
-export const publishError = (bus: EventBus, event: RethrownEventInput, error: unknown): AppEvent | undefined => {
+export const publishError = (bus: EventBus, event: ErrorEventInput, error: unknown): AppEvent | undefined => {
   if (hasBeenPublished(error)) return undefined;
   const published = bus.publish({
     ...event,
@@ -58,9 +58,13 @@ export const publishError = (bus: EventBus, event: RethrownEventInput, error: un
   return published;
 };
 
-export const rethrowError: (bus: EventBus, event: RethrownEventInput, error: unknown) => never = (bus, event, error) => {
-  publishError(bus, event, error);
-  throw error;
+export const withErrorReporting = async <T>(event: ErrorEventInput, operation: () => T | Promise<T>): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error) {
+    publishError(eventBus, event, error);
+    throw error;
+  }
 };
 
 const isEventSeverity = (value: unknown): value is EventSeverity => typeof value === "string" && SEVERITIES.some((s) => s === value);

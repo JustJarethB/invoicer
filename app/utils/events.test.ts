@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type AppEvent, type AppEventInput, errorMessage, eventBus, type EventListener, hasBeenPublished, publishError, rethrowError } from "./events";
+import { type AppEvent, type AppEventInput, errorMessage, eventBus, type EventListener, hasBeenPublished, publishError, withErrorReporting } from "./events";
 
 const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
   type: "invoice",
@@ -128,23 +128,33 @@ describe("eventBus", () => {
     });
   });
 
-  describe("rethrowError", () => {
-    const catchRethrow = (fn: () => never): unknown => {
-      try {
-        fn();
-      } catch (error) {
-        return error;
-      }
-      return undefined;
-    };
+  describe("withErrorReporting", () => {
+    it("returns the operation result without publishing an error", async () => {
+      subscribe((event) => received.push(event));
+      const result = { id: "inv-1" };
+      const operation = vi.fn(async () => result);
 
-    it("publishes an error event with the derived message and rethrows the same error object", () => {
+      await expect(withErrorReporting({ type: "invoice" }, operation)).resolves.toBe(result);
+      expect(operation).toHaveBeenCalledTimes(1);
+      expect(received).toHaveLength(0);
+    });
+
+    it("preserves a false result without treating it as an exception", async () => {
+      subscribe((event) => received.push(event));
+
+      await expect(withErrorReporting({ type: "invoice" }, () => false)).resolves.toBe(false);
+      expect(received).toHaveLength(0);
+    });
+
+    it("publishes an error event with the derived message and rejects with the same error object", async () => {
       subscribe((event) => received.push(event));
       const error = new Error("quota exceeded");
 
-      const caught = catchRethrow(() => rethrowError(eventBus, { type: "payment", context: { invoiceId: "inv-1", action: "failed" } }, error));
-
-      expect(caught).toBe(error);
+      await expect(
+        withErrorReporting({ type: "payment", context: { invoiceId: "inv-1", action: "failed" } }, async () => {
+          throw error;
+        })
+      ).rejects.toBe(error);
       expect(received).toHaveLength(1);
       expect(received[0].type).toBe("payment");
       expect(received[0].severity).toBe("error");
@@ -152,19 +162,28 @@ describe("eventBus", () => {
       expect(received[0].context).toEqual({ invoiceId: "inv-1", action: "failed", error: "quota exceeded" });
     });
 
-    it("keeps an explicit message over the derived one", () => {
+    it("captures a synchronous throw and keeps an explicit message over the derived one", async () => {
       subscribe((event) => received.push(event));
+      const error = new Error("quota exceeded");
 
-      catchRethrow(() => rethrowError(eventBus, { type: "invoice", message: "Payment could not be saved" }, new Error("quota exceeded")));
+      await expect(
+        withErrorReporting({ type: "invoice", message: "Payment could not be saved" }, () => {
+          throw error;
+        })
+      ).rejects.toBe(error);
 
       expect(received[0].message).toBe("Payment could not be saved");
       expect(received[0].context).toEqual({ error: "quota exceeded" });
     });
 
-    it("serialises a non-Error caught value", () => {
+    it("serialises a non-Error caught value without replacing the rejection reason", async () => {
       subscribe((event) => received.push(event));
 
-      catchRethrow(() => rethrowError(eventBus, { type: "autosave" }, 42));
+      await expect(
+        withErrorReporting({ type: "autosave" }, () => {
+          throw 42;
+        })
+      ).rejects.toBe(42);
 
       expect(received[0].message).toBe("42");
       expect(received[0].context).toEqual({ error: "42" });
@@ -184,15 +203,21 @@ describe("eventBus", () => {
       expect(received).toHaveLength(1);
     });
 
-    it("does not publish twice for the same caught value", () => {
+    it("does not publish twice when operations are nested", async () => {
       subscribe((event) => received.push(event));
       const error = new Error("once");
 
-      catchRethrow(() => rethrowError(eventBus, { type: "payment" }, error));
+      await expect(
+        withErrorReporting({ type: "app" }, () =>
+          withErrorReporting({ type: "payment" }, async () => {
+            throw error;
+          })
+        )
+      ).rejects.toBe(error);
       expect(hasBeenPublished(error)).toBe(true);
-      catchRethrow(() => rethrowError(eventBus, { type: "payment" }, error));
 
       expect(received).toHaveLength(1);
+      expect(received[0].type).toBe("payment");
     });
 
     it("reports only helper-published values as published", () => {

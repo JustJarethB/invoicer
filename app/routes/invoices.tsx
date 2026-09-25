@@ -12,7 +12,7 @@ import { useMobile } from "~/hooks";
 import type { Route } from "./+types/invoices";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
 import { formatCurrency } from "~/utils/formatCurrency";
-import { errorMessage, eventBus, publishError, rethrowError } from "~/utils/events";
+import { errorMessage, eventBus, publishError, withErrorReporting } from "~/utils/events";
 
 export function meta() {
   return [{ title: "Invoices" }];
@@ -48,15 +48,10 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     };
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) {
-      rethrowError(eventBus, { type: "payment", context: { invoiceId, action: "failed" } }, new Error(`Invoice with id ${invoiceId} not found`));
+      throw new Error(`Invoice with id ${invoiceId} not found`);
     }
     const savedInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
-    let saved: boolean;
-    try {
-      saved = await db.save(["invoice", invoiceId], savedInvoice);
-    } catch (e) {
-      rethrowError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
-    }
+    const saved = await db.save(["invoice", invoiceId], savedInvoice);
     if (!saved) {
       eventBus.publish({
         type: "payment",
@@ -72,12 +67,10 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
   };
 
   const deleteInvoice = async (invoiceId: string): Promise<void> => {
-    let removed: boolean;
-    try {
-      removed = await db.remove(["invoice", invoiceId]);
-    } catch (e) {
-      rethrowError(eventBus, { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } }, e);
-    }
+    const removed = await withErrorReporting(
+      { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } },
+      () => db.remove(["invoice", invoiceId])
+    );
     if (!removed) {
       eventBus.publish({
         type: "invoice",
@@ -263,7 +256,7 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
     try {
       if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
-      publishError(eventBus, { type: "payment", context: { invoiceId, action: "failed" } }, e);
+      publishError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
       setError(errorMessage(e));
     } finally {
       setSubmitting(false);
