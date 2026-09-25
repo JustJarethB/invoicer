@@ -67,6 +67,12 @@ describe("global error capture", () => {
     window.dispatchEvent(event);
   };
 
+  const dispatchRuntimeError = (error: unknown, message = "") => {
+    const event = new ErrorEvent("error", { error, message, filename: "app.js", lineno: 12, colno: 8, cancelable: true });
+    window.dispatchEvent(event);
+    return event;
+  };
+
   beforeEach(() => {
     busUnsub = eventBus.subscribe((event) => received.push(event));
     received.length = 0; // drain any replayed history
@@ -105,17 +111,90 @@ describe("global error capture", () => {
     expect(received[0].message).toBe("Payment could not be saved");
   });
 
-  it("replaces the previous listener on re-registration", () => {
+  it("publishes synchronous runtime errors with browser source details", () => {
+    stopCapture = registerGlobalErrorCapture();
+
+    dispatchRuntimeError(new Error("uncaught runtime failure"));
+
+    const captures = received.filter((event) => event.type === "app" && event.context?.action === "uncaught-error");
+    expect(captures).toHaveLength(1);
+    expect(captures[0].severity).toBe("error");
+    expect(captures[0].message).toBe("uncaught runtime failure");
+    expect(captures[0].context).toMatchObject({ action: "uncaught-error", boundary: "global", filename: "app.js", line: 12, column: 8 });
+  });
+
+  it("passes the original runtime error to shared identity deduplication", () => {
+    stopCapture = registerGlobalErrorCapture();
+
+    const error = new Error("already reported");
+    publishError(eventBus, { type: "payment", message: "Payment failed", context: { action: "failed" } }, error);
+    dispatchRuntimeError(error);
+
+    expect(received).toHaveLength(1);
+    expect(received[0].type).toBe("payment");
+  });
+
+  it("uses the event message for nullish thrown values and preserves falsy values", () => {
+    stopCapture = registerGlobalErrorCapture();
+
+    dispatchRuntimeError(undefined, "message fallback");
+    dispatchRuntimeError(0, "zero fallback");
+    dispatchRuntimeError(false, "false fallback");
+    dispatchRuntimeError("", "empty fallback");
+
+    const captures = received.filter((event) => event.context?.action === "uncaught-error");
+    expect(captures.map((event) => event.message)).toEqual(["message fallback", "0", "false", "Uncaught browser runtime error"]);
+    expect(captures.map((event) => event.context?.error)).toEqual(["message fallback", "0", "false", ""]);
+  });
+
+  it.each(["", "   "])("reports errors with a blank message (%j) without losing identity", (message) => {
+    stopCapture = registerGlobalErrorCapture();
+    const error = new Error(message);
+
+    dispatchRuntimeError(error);
+    dispatchRuntimeError(error);
+
+    expect(received).toHaveLength(1);
+    expect(received[0].message).toBe("Uncaught browser runtime error");
+    expect(received[0].context?.error).toBe(message);
+  });
+
+  it("ignores non-runtime error events and does not suppress browser diagnostics", () => {
+    stopCapture = registerGlobalErrorCapture();
+
+    const resourceError = new Event("error", { cancelable: true });
+    window.dispatchEvent(resourceError);
+    const runtimeError = dispatchRuntimeError(new Error("visible diagnostic"));
+
+    expect(received.filter((event) => event.context?.action === "uncaught-error")).toHaveLength(1);
+    expect(resourceError.defaultPrevented).toBe(false);
+    expect(runtimeError.defaultPrevented).toBe(false);
+  });
+
+  it("replaces and cleans up both global listeners", () => {
     stopCapture = registerGlobalErrorCapture();
     dispatchRejection(new Error("first"));
+    dispatchRuntimeError(new Error("first runtime"));
     expect(unhandledRejections()).toHaveLength(1);
+    expect(received.filter((event) => event.context?.action === "uncaught-error")).toHaveLength(1);
 
     const replaced = registerGlobalErrorCapture();
+    stopCapture();
+    stopCapture();
     stopCapture = replaced;
     dispatchRejection(new Error("second"));
+    dispatchRuntimeError(new Error("second runtime"));
 
     expect(unhandledRejections()).toHaveLength(2);
     expect(unhandledRejections()[1].message).toBe("second");
+    expect(received.filter((event) => event.context?.action === "uncaught-error")).toHaveLength(2);
+
+    replaced();
+    replaced();
+    dispatchRejection(new Error("after cleanup"));
+    dispatchRuntimeError(undefined, "after cleanup runtime");
+    expect(unhandledRejections()).toHaveLength(2);
+    expect(received.filter((event) => event.context?.action === "uncaught-error")).toHaveLength(2);
   });
 
   it("returns a callable no-op unsubscribe without a window", () => {

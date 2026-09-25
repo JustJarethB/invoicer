@@ -26,21 +26,26 @@ without changing control flow. It suppresses repeat reports of the same object
 through a shared WeakSet. Primitive rejection values cannot be deduplicated by
 that WeakSet. A reused Error object is reported only once, even across operations.
 
-## React boundaries and uncaught rejections
+## React boundaries and global browser failures
 
 React Router error boundaries catch loader, action and render failures. They do
-not catch async event-handler failures. A rejected operation reaches an awaited
-caller's catch, or the browser's `unhandledrejection` listener when nobody awaits
-it. The global listener reports otherwise unreported errors under the `app`
-domain. It does not prevent the browser's default console diagnostics.
+not catch event-handler failures. A rejected operation reaches an
+awaited caller's catch, or the browser's `unhandledrejection` listener when
+nobody awaits it. An uncaught synchronous browser runtime error reaches the
+window `error` listener. The listener accepts runtime `ErrorEvent` instances and
+ignores resource-load error events. Both global listeners report otherwise
+unreported errors under the `app` domain. They do not prevent the browser's
+default console diagnostics.
 
 Route boundaries defer reporting with `queueMicrotask` because event subscribers
 can update React state. The invoices boundary rethrows to the root boundary,
 which renders the fallback. Shared error identity prevents duplicate reports.
 The root boundary does not publish navigational 404s.
 
-Unwrapped synchronous event-handler errors are outside these capture paths.
-The global listener also has no rate limit for distinct errors.
+Global capture applies only to uncaught runtime errors and unhandled rejections
+that the browser exposes after application initialization. It does not capture
+swallowed errors, failures before initialization, or details redacted by the
+browser. The global listener has no rate limit for distinct errors.
 
 ## Verification
 
@@ -48,7 +53,9 @@ The utility tests cover results, synchronous throws, rejections, error identity,
 and nested reporting. Component tests cover recovery and success-only UI updates.
 
 jsdom does not deliver floating rejections to `window.unhandledrejection`.
-`eventLogging.test.ts` therefore dispatches synthetic rejection events.
-`e2e/flows/global-rejection-capture.spec.ts` tests real browser delivery, one error
-toast and an open modal after a failed client save, no success toast on failure,
-and clean navigation. It uses real components and only mocks storage failure.
+`eventLogging.test.ts` therefore dispatches synthetic browser events.
+`e2e/flows/global-rejection-capture.spec.ts` tests real browser delivery for both
+global paths. It proves one error toast and a browser `pageerror` for an actual
+throwing event handler. The file also covers an open modal after a failed client
+save, no success toast on failure, and clean navigation. It uses real components
+and only mocks storage failure.

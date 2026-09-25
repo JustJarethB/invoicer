@@ -1,4 +1,4 @@
-import { type AppEvent, type EventBus, eventBus, type EventSeverity, publishError, type Unsubscribe } from "~/utils/events";
+import { type AppEvent, errorMessage, type EventBus, eventBus, type EventSeverity, publishError, type Unsubscribe } from "~/utils/events";
 import { logger } from "~/utils/logger";
 
 const logBySeverity: Record<EventSeverity, (message: string, context?: unknown) => void> = {
@@ -14,7 +14,7 @@ const logEvent = (event: AppEvent): void => {
 };
 
 let logSink: Unsubscribe | undefined;
-let rejectionCapture: Unsubscribe | undefined;
+let globalErrorCapture: Unsubscribe | undefined;
 
 export const registerEventLogging = (bus: EventBus = eventBus): Unsubscribe => {
   logSink?.();
@@ -25,20 +25,41 @@ export const registerEventLogging = (bus: EventBus = eventBus): Unsubscribe => {
 export const registerGlobalErrorCapture = (bus: EventBus = eventBus): Unsubscribe => {
   if (typeof window === "undefined") return () => {};
   const target = window;
-  rejectionCapture?.();
-  rejectionCapture = undefined;
-  const listener = (event: PromiseRejectionEvent): void => {
+  globalErrorCapture?.();
+  globalErrorCapture = undefined;
+  const rejectionListener = (event: PromiseRejectionEvent): void => {
     publishError(bus, { type: "app", context: { action: "unhandled-rejection", boundary: "global" } }, event.reason);
+  };
+  const runtimeErrorListener = (event: ErrorEvent): void => {
+    if (!(event instanceof ErrorEvent)) return;
+    const capturedError = event.error ?? event.message;
+    publishError(
+      bus,
+      {
+        type: "app",
+        message: errorMessage(capturedError).trim() || "Uncaught browser runtime error",
+        context: {
+          action: "uncaught-error",
+          boundary: "global",
+          ...(event.filename ? { filename: event.filename } : {}),
+          ...(event.lineno !== 0 ? { line: event.lineno } : {}),
+          ...(event.colno !== 0 ? { column: event.colno } : {}),
+        },
+      },
+      capturedError
+    );
   };
   let active = true;
   const unsubscribe = (): void => {
     if (!active) return;
     active = false;
-    target.removeEventListener("unhandledrejection", listener);
-    if (rejectionCapture === unsubscribe) rejectionCapture = undefined;
+    target.removeEventListener("unhandledrejection", rejectionListener);
+    target.removeEventListener("error", runtimeErrorListener);
+    if (globalErrorCapture === unsubscribe) globalErrorCapture = undefined;
   };
-  target.addEventListener("unhandledrejection", listener);
-  rejectionCapture = unsubscribe;
+  target.addEventListener("unhandledrejection", rejectionListener);
+  target.addEventListener("error", runtimeErrorListener);
+  globalErrorCapture = unsubscribe;
   return unsubscribe;
 };
 
@@ -46,7 +67,7 @@ if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     logSink?.();
     logSink = undefined;
-    rejectionCapture?.();
-    rejectionCapture = undefined;
+    globalErrorCapture?.();
+    globalErrorCapture = undefined;
   });
 }

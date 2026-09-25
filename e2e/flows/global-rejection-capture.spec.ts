@@ -20,6 +20,30 @@ test("a floating rejection with no local catch is captured on the event bus", as
   await expect(toast).toHaveAttribute("data-severity", "error");
 });
 
+test("an uncaught synchronous event-handler error is captured and reaches the browser diagnostics", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => document.documentElement.hasAttribute("data-theme"));
+  const browserErrors: string[] = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+
+  await page.evaluate(() => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Trigger runtime error";
+    button.addEventListener("click", () => {
+      throw new Error("e2e synchronous marker");
+    });
+    document.body.append(button);
+  });
+
+  await page.getByRole("button", { name: "Trigger runtime error" }).click();
+
+  const toast = page.getByTestId("toast-item").filter({ hasText: "e2e synchronous marker" });
+  await expect(toast).toHaveCount(1);
+  await expect(toast).toHaveAttribute("data-severity", "error");
+  await expect.poll(() => browserErrors).toContain("e2e synchronous marker");
+});
+
 test("a reported fire-and-forget operation surfaces exactly one error toast", async ({ page }) => {
   await page.goto("/");
 
