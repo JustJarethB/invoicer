@@ -1,7 +1,7 @@
 import { type ComponentPropsWithoutRef, type PropsWithChildren, useEffect, useRef, useState } from "react";
 import "./index.css";
-import { logger } from "~/utils/logger";
 import { parseCurrency } from "~/utils/parseCurrency";
+import { eventBus } from "~/utils/events";
 
 const Prefix = ({ children }: PropsWithChildren) => {
   if (!children) return null;
@@ -221,7 +221,10 @@ export const ImageInput = ({
 
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return logger.warn("No file selected");
+    if (!file) {
+      eventBus.publish({ type: "image", severity: "debug", message: "No image file selected", context: { action: "unselected" } });
+      return;
+    }
     releasePreviewImage();
     const objectUrl = URL.createObjectURL(file);
     objectUrlRef.current = objectUrl;

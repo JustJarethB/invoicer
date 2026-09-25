@@ -1,5 +1,6 @@
 import { TrashIcon } from "@heroicons/react/24/outline";
 import * as outline from "@heroicons/react/24/outline";
+import { isRouteErrorResponse, useRouteError } from "react-router";
 import { createContext, type PropsWithChildren, useContext, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Status } from "~/components/home/Status";
@@ -8,8 +9,10 @@ import { NumberInput } from "~/components/Inputs";
 import { type Invoice, type Payment, paymentStatusOf, type PaymentSummary } from "~/data/invoice";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
+import type { Route } from "./+types/invoices";
 import { isValidPaymentAmount } from "../utils/isValidPaymentAmount";
 import { formatCurrency } from "~/utils/formatCurrency";
+import { errorMessage, eventBus, publishError, withErrorReporting } from "~/utils/events";
 
 export function meta() {
   return [{ title: "Invoices" }];
@@ -17,22 +20,22 @@ export function meta() {
 
 type InvoiceContext = {
   invoices: Invoice[];
-  makePayment: (invoiceId: Invoice["id"], amount: number) => void;
-  deleteInvoice: (invoiceID: Invoice["id"]) => void;
+  makePayment: (invoiceId: Invoice["id"], amount: number) => Promise<boolean>;
+  deleteInvoice: (invoiceID: Invoice["id"]) => Promise<void>;
 };
 const InvoiceContext = createContext<InvoiceContext>({
   invoices: [],
-  makePayment: function (): void {
+  makePayment: async (): Promise<boolean> => {
     throw new Error("Function not implemented.");
   },
-  deleteInvoice: function (): void {
+  deleteInvoice: async (): Promise<void> => {
     throw new Error("Function not implemented");
   },
 });
 
 const InvoiceProvider = ({ children }: PropsWithChildren) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const makePayment = (invoiceId: string, amount: number) => {
+  const makePayment = async (invoiceId: string, amount: number): Promise<boolean> => {
     if (!isValidPaymentAmount(amount)) {
       throw new Error(`Payment rejected: invalid amount ${amount} for invoice ${invoiceId}`);
     }
@@ -47,19 +50,52 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
     if (!invoice) {
       throw new Error(`Invoice with id ${invoiceId} not found`);
     }
-    const newInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
-    db.save(["invoice", invoiceId], newInvoice);
-    setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? newInvoice : inv)));
+    const savedInvoice = { ...invoice, payments: [...(invoice.payments ?? []), newPayment] };
+    const saved = await db.save(["invoice", invoiceId], savedInvoice);
+    if (!saved) {
+      eventBus.publish({
+        type: "payment",
+        severity: "error",
+        message: "Payment could not be saved",
+        context: { invoiceId, amount, action: "failed" },
+      });
+      return false;
+    }
+    eventBus.publish({ type: "payment", severity: "success", message: "Payment recorded", context: { invoiceId, amount, action: "recorded" } });
+    setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, payments: [...(inv.payments ?? []), newPayment] } : inv)));
+    return true;
   };
 
-  const deleteInvoice = (invoiceId: string) => {
-    db.remove(["invoice", invoiceId]);
+  const deleteInvoice = async (invoiceId: string): Promise<void> => {
+    const removed = await withErrorReporting(
+      { type: "invoice", message: "Invoice could not be deleted", context: { invoiceId, action: "delete.failed" } },
+      () => db.remove(["invoice", invoiceId])
+    );
+    if (!removed) {
+      eventBus.publish({
+        type: "invoice",
+        severity: "error",
+        message: "Invoice could not be deleted",
+        context: { invoiceId, action: "delete.failed" },
+      });
+      return;
+    }
+    eventBus.publish({ type: "invoice", severity: "success", message: "Invoice deleted", context: { invoiceId, action: "deleted" } });
     setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
   };
   useEffect(() => {
     const fetchInvoices = async () => {
-      const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
-      setInvoices(fetchedInvoices);
+      try {
+        const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
+        setInvoices(fetchedInvoices);
+      } catch (e) {
+        eventBus.publish({
+          type: "invoice",
+          severity: "warning",
+          message: "Saved invoices could not be loaded",
+          context: { action: "load.failed", error: e },
+        });
+      }
     };
     fetchInvoices();
   }, []);
@@ -130,7 +166,7 @@ const InvoiceRow = ({ id }: { id: string }) => {
       onClick={() => mobile && setOpen((o) => !o)}
     >
       <td className="flex justify-end gap-2 grid-cols-1">
-        <Button icon outline color="danger" size="sm" onClick={() => handleDelete()}>
+        <Button icon outline color="danger" size="sm" aria-label={`Delete invoice ${id}`} onClick={() => handleDelete()}>
           <TrashIcon className="size-5" />
         </Button>
         <Button
@@ -208,17 +244,22 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
   const makePayment = useMakePayment();
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return;
     if (amount === undefined || !isValidPaymentAmount(amount)) {
       setError("Enter a non-zero amount");
       return;
     }
+    setSubmitting(true);
     try {
-      makePayment(invoiceId, amount);
-      onClose();
+      if (await makePayment(invoiceId, amount)) onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment failed");
+      publishError(eventBus, { type: "payment", message: "Payment could not be saved", context: { invoiceId, amount, action: "failed" } }, e);
+      setError(errorMessage(e));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -247,10 +288,29 @@ const PaymentModal = ({ invoiceId, onClose, summary }: { invoiceId: string; summ
         <Button color="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button color="success" onClick={submit}>
+        <Button color="success" onClick={submit} disabled={submitting}>
           Record
         </Button>
       </div>
     </Modal>
   );
 };
+
+export function ErrorBoundary({ error: routeError }: Partial<Route.ErrorBoundaryProps> = {}) {
+  const error = useRouteError() ?? routeError;
+  if (error === undefined) return null;
+  if (typeof window !== "undefined") {
+    queueMicrotask(() =>
+      publishError(
+        eventBus,
+        {
+          type: "invoice",
+          message: isRouteErrorResponse(error) ? error.statusText || `HTTP ${error.status}` : errorMessage(error),
+          context: { action: "route-error", boundary: "invoices" },
+        },
+        error
+      )
+    );
+  }
+  throw error;
+}

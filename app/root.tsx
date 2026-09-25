@@ -1,8 +1,16 @@
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteError } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { Toaster } from "./components/Toaster";
 import { ThemeProvider } from "./components/ThemeSelector";
+import { registerEventLogging, registerGlobalErrorCapture } from "./utils/eventLogging";
+import { errorMessage, eventBus, publishError } from "./utils/events";
+
+if (typeof window !== "undefined") {
+  registerEventLogging();
+  registerGlobalErrorCapture();
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -28,6 +36,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <Toaster />
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -43,7 +52,21 @@ export default function App() {
   );
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+export function ErrorBoundary({ error: boundaryError }: Partial<Route.ErrorBoundaryProps> = {}) {
+  const error = useRouteError() ?? boundaryError;
+  if (typeof window !== "undefined" && error !== undefined && !(isRouteErrorResponse(error) && error.status === 404)) {
+    queueMicrotask(() =>
+      publishError(
+        eventBus,
+        {
+          type: "app",
+          message: isRouteErrorResponse(error) ? error.statusText || `HTTP ${error.status}` : errorMessage(error),
+          context: { action: "route-error", boundary: "root" },
+        },
+        error
+      )
+    );
+  }
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;

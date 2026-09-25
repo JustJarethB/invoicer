@@ -1,8 +1,9 @@
 import { ArrowPathIcon } from "@heroicons/react/16/solid";
-import { type PropsWithChildren, useState } from "react";
+import { type PropsWithChildren, useRef, useState } from "react";
 import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
+import { eventBus } from "~/utils/events";
 type Props = {
   name: string;
   hideIcon?: boolean;
@@ -11,12 +12,27 @@ type Props = {
 
 export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }: PropsWithChildren<Props>) => {
   const [isSaving, setIsSaving] = useState(false);
+  const failureWarned = useRef(false);
   const onChange = async (e: React.ChangeEvent<HTMLFormElement>) => {
     const data: Record<string, string> = await formJson(e.currentTarget);
     onChangeParent?.(data);
     setIsSaving(true);
-    await db.save([name], data);
-    setIsSaving(false);
+    try {
+      await db.save([name], data);
+      failureWarned.current = false;
+    } catch (e) {
+      if (!failureWarned.current) {
+        failureWarned.current = true;
+        eventBus.publish({
+          type: "autosave",
+          severity: "warning",
+          message: "Changes could not be saved automatically",
+          context: { form: name, action: "failed", error: e },
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
     <form onChange={onChange} className="relative">

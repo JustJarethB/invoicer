@@ -5,6 +5,7 @@ import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
+import { eventBus, withErrorReporting } from "~/utils/events";
 import { formJsonAddress } from "~/data/address";
 import { randomUUID } from "~/utils/uuid";
 
@@ -21,8 +22,16 @@ export default () => {
   }, []);
   useEffect(() => {
     const loadClients = async () => {
-      const clientsData = await getClients();
-      setClients(clientsData);
+      try {
+        setClients(await getClients());
+      } catch (e) {
+        eventBus.publish({
+          type: "client",
+          severity: "warning",
+          message: "Saved clients could not be loaded",
+          context: { action: "load.failed", error: e },
+        });
+      }
     };
     loadClients();
   }, [setClients, cacheBuster]);
@@ -39,11 +48,17 @@ export default () => {
 
 const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: () => void }) => {
   const saveDB = async (key: string, client: Client) => {
-    await saveClient(key, client);
+    await withErrorReporting({ type: "client", message: "Client could not be saved", context: { clientId: key, action: "failed" } }, () =>
+      saveClient(key, client)
+    );
+    eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: key, action: "saved" } });
     refreshCache();
   };
   const removeDB = async (key: string) => {
-    await deleteClient(key);
+    await withErrorReporting({ type: "client", message: "Client could not be deleted", context: { clientId: key, action: "delete.failed" } }, () =>
+      deleteClient(key)
+    );
+    eventBus.publish({ type: "client", severity: "success", message: "Client deleted", context: { clientId: key, action: "deleted" } });
     refreshCache();
   };
   const { address } = client;

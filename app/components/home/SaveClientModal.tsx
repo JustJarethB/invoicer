@@ -7,6 +7,7 @@ import { type Client, saveClient } from "~/data/client";
 import { addressFromRecord, formJsonAddress } from "~/data/address";
 import { formJson } from "~/utils/formJson";
 import { randomUUID } from "~/utils/uuid";
+import { eventBus, withErrorReporting } from "~/utils/events";
 
 /**
  * "Save this address as a client" confirmation. Gathers the extra field a
@@ -19,20 +20,22 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
   const formAddressRef = useRef<HTMLFormElement>(null);
   const address = addressFromRecord(record);
 
-  const save = async () => {
-    if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
-    const id = randomUUID();
-    const client: Client = {
-      id,
-      ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
-      address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
-      email: "",
-      phone: "",
-    };
-    await saveClient(id, client);
-    onSaved();
-    onClose();
-  };
+  const save = () =>
+    withErrorReporting({ type: "client", message: "Client could not be saved", context: { action: "failed" } }, async () => {
+      if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
+      const id = randomUUID();
+      const client: Client = {
+        id,
+        ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
+        address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
+        email: "",
+        phone: "",
+      };
+      await saveClient(id, client);
+      eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: id, action: "saved" } });
+      onSaved();
+      onClose();
+    });
 
   return (
     <Modal onClose={onClose} title="Save Client">

@@ -1,0 +1,252 @@
+import { act, cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { Modal } from "./Modal";
+import { Toaster } from "./Toaster";
+import { MAX_TOASTS, TOAST_DURATIONS } from "./toastConfig";
+import { type AppEventInput, eventBus } from "~/utils/events";
+
+const makeEvent = (overrides: Partial<AppEventInput> = {}): AppEventInput => ({
+  type: "invoice",
+  severity: "info",
+  message: "Hello",
+  ...overrides,
+});
+
+const publishInAct = (input: AppEventInput) => {
+  act(() => {
+    eventBus.publish(input);
+  });
+};
+
+const toastItem = (message: string): HTMLElement => {
+  const item = screen.getByText(message).closest<HTMLElement>("[data-testid='toast-item']");
+  if (!item) throw new Error(`No toast item found for message: ${message}`);
+  return item;
+};
+
+describe("Toaster", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+    eventBus.subscribe(() => {})();
+  });
+
+  it("renders empty live regions and no toasts when nothing was published", () => {
+    render(<Toaster />);
+
+    expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("toast-region-polite")).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("toast-item")).toBeNull();
+  });
+
+  it("shows a published error toast in the assertive region and never auto-dismisses it", () => {
+    vi.useFakeTimers();
+    render(<Toaster />);
+
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
+
+    const item = toastItem("Boom");
+    expect(item).toHaveAttribute("data-severity", "error");
+    expect(item.closest("[aria-live='assertive']")).not.toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByText("Boom")).toBeInTheDocument();
+  });
+
+  it("auto-dismisses success, info, and warning at their configured durations", () => {
+    vi.useFakeTimers();
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "success", message: "saved" }));
+    publishInAct(makeEvent({ severity: "info", message: "loaded" }));
+    publishInAct(makeEvent({ severity: "warning", message: "stale" }));
+
+    const successMs = TOAST_DURATIONS.success ?? 0;
+    const infoMs = TOAST_DURATIONS.info ?? 0;
+    const warningMs = TOAST_DURATIONS.warning ?? 0;
+
+    act(() => {
+      vi.advanceTimersByTime(successMs);
+    });
+    expect(screen.queryByText("saved")).toBeNull();
+    expect(screen.getByText("loaded")).toBeInTheDocument();
+    expect(screen.getByText("stale")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(infoMs - successMs);
+    });
+    expect(screen.queryByText("loaded")).toBeNull();
+    expect(screen.getByText("stale")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(warningMs - infoMs);
+    });
+    expect(screen.queryByText("stale")).toBeNull();
+    expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
+  });
+
+  it("stacks multiple simultaneous events across the polite and assertive regions", () => {
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "e-msg" }));
+    publishInAct(makeEvent({ severity: "warning", message: "w-msg" }));
+    publishInAct(makeEvent({ severity: "info", message: "i-msg" }));
+    publishInAct(makeEvent({ severity: "success", message: "s-msg" }));
+
+    const assertive = screen.getByTestId("toast-region-assertive");
+    const polite = screen.getByTestId("toast-region-polite");
+    expect(within(assertive).getByText("e-msg")).toBeInTheDocument();
+    expect(within(assertive).getByText("w-msg")).toBeInTheDocument();
+    expect(within(polite).getByText("i-msg")).toBeInTheDocument();
+    expect(within(polite).getByText("s-msg")).toBeInTheDocument();
+    expect(screen.getAllByTestId("toast-item")).toHaveLength(4);
+  });
+
+  it("dismisses a toast via its dismiss button", async () => {
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
+
+    await userEvent.click(within(toastItem("Boom")).getByRole("button", { name: /dismiss/i }));
+
+    expect(screen.queryByText("Boom")).toBeNull();
+    expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
+  });
+
+  it("dismisses a focused toast on Escape", async () => {
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
+
+    await userEvent.tab();
+    expect(within(toastItem("Boom")).getByRole("button", { name: /dismiss/i })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByText("Boom")).toBeNull();
+  });
+
+  it("ignores debug-severity events but keeps the subscription healthy", () => {
+    render(<Toaster />);
+
+    publishInAct(makeEvent({ severity: "debug", message: "noise" }));
+    expect(screen.queryByText("noise")).toBeNull();
+
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
+    expect(screen.getByText("Boom")).toBeInTheDocument();
+  });
+
+  it("renders pre-subscriber events replayed by the harness, filtered by severity", () => {
+    eventBus.publish(makeEvent({ severity: "error", message: "early-error" }));
+    eventBus.publish(makeEvent({ severity: "success", message: "early-success" }));
+    eventBus.publish(makeEvent({ severity: "debug", message: "early-noise" }));
+
+    render(<Toaster />);
+
+    expect(screen.getByText("early-error")).toBeInTheDocument();
+    expect(screen.getByText("early-success")).toBeInTheDocument();
+    expect(screen.queryByText("early-noise")).toBeNull();
+  });
+
+  it("renders exactly one toast for one publish under StrictMode double-subscribe", () => {
+    render(
+      <StrictMode>
+        <Toaster />
+      </StrictMode>
+    );
+
+    publishInAct(makeEvent({ severity: "info", message: "once" }));
+
+    expect(screen.getAllByText("once")).toHaveLength(1);
+  });
+
+  it("evicts the oldest toasts once the stack exceeds MAX_TOASTS", () => {
+    render(<Toaster />);
+
+    for (let i = 0; i <= MAX_TOASTS + 1; i++) {
+      publishInAct(makeEvent({ severity: "error", message: `m${i}` }));
+    }
+
+    expect(screen.getAllByTestId("toast-item")).toHaveLength(MAX_TOASTS);
+    expect(screen.queryByText("m0")).toBeNull();
+    expect(screen.queryByText("m1")).toBeNull();
+    expect(screen.getByText(`m${MAX_TOASTS + 1}`)).toBeInTheDocument();
+  });
+
+  it("renders nothing after unmount and does not throw on later publishes", () => {
+    const { unmount } = render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "Boom" }));
+    expect(screen.getByText("Boom")).toBeInTheDocument();
+
+    unmount();
+    expect(screen.queryByText("Boom")).toBeNull();
+    expect(() => publishInAct(makeEvent({ severity: "error", message: "after" }))).not.toThrow();
+  });
+
+  it("removes its listener on unmount (no leak in the harness registry)", () => {
+    const { unmount } = render(<Toaster />);
+    unmount();
+
+    eventBus.publish(makeEvent({ severity: "error", message: "probe-1" }));
+    eventBus.publish(makeEvent({ severity: "error", message: "probe-2" }));
+
+    const spy = vi.fn();
+    const stopSpy = eventBus.subscribe(spy);
+    act(() => {
+      eventBus.publish(makeEvent({ severity: "error", message: "probe-3" }));
+    });
+
+    expect(spy).toHaveBeenCalledTimes(3);
+    stopSpy();
+  });
+
+  it("consumes the default app-wide bus", () => {
+    const { unmount } = render(<Toaster />);
+
+    act(() => {
+      eventBus.publish(makeEvent({ severity: "error", message: "default-bus-boom" }));
+    });
+
+    expect(screen.getByText("default-bus-boom")).toBeInTheDocument();
+    unmount();
+  });
+});
+
+describe("Toaster + Modal Escape interplay", () => {
+  const mountInterplay = (onModalClose: () => void) => {
+    render(
+      <Modal title="Payment" onClose={onModalClose}>
+        Payment details
+      </Modal>
+    );
+    render(<Toaster />);
+    publishInAct(makeEvent({ severity: "error", message: "payment.failed" }));
+  };
+
+  it("dismisses a focused toast on Escape without closing an open Modal", async () => {
+    const onModalClose = vi.fn();
+    mountInterplay(onModalClose);
+
+    const dismiss = within(toastItem("payment.failed")).getByRole("button", { name: "Dismiss error message" });
+    dismiss.focus();
+    expect(dismiss).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByText("payment.failed")).toBeNull();
+    expect(screen.getByTestId("toast-region-assertive")).toBeEmptyDOMElement();
+    expect(onModalClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Payment")).toBeInTheDocument();
+  });
+
+  it("still closes the Modal on Escape when focus is outside any toast, leaving the toast untouched", async () => {
+    const onModalClose = vi.fn();
+    mountInterplay(onModalClose);
+
+    expect(document.activeElement).toBe(document.body);
+    await userEvent.keyboard("{Escape}");
+
+    expect(onModalClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("payment.failed")).toBeInTheDocument();
+    expect(screen.getByText("Payment")).toBeInTheDocument();
+  });
+});

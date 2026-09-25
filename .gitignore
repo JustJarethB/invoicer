@@ -13,3 +13,4 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 /e2e/snapshots/**/*.png
+vite.config.ts.timestamp-*.mjs

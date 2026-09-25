@@ -1,7 +1,8 @@
-import { logger } from "~/utils/logger";
+import { eventBus } from "~/utils/events";
 
 const matchPartialKeys = (keys: string[]) => {
-  return Array(localStorage.length)
+  const unreadable: string[] = [];
+  const result = Array(localStorage.length)
     .fill(0)
     .map((_, i) => localStorage.key(i))
     .filter((key): key is NonNullable<typeof key> => {
@@ -9,11 +10,22 @@ const matchPartialKeys = (keys: string[]) => {
       try {
         const parsedKey = JSON.parse(key);
         return keys.every((k) => parsedKey.includes(k));
-      } catch (e) {
-        logger.error("Failed to parse localStorage key:", key, e);
+      } catch {
+        unreadable.push(key);
         return false;
       }
     });
+  if (unreadable.length > 0) {
+    const entryNoun = unreadable.length === 1 ? "entry" : "entries";
+    const skippedVerb = unreadable.length === 1 ? "was" : "were";
+    eventBus.publish({
+      type: "storage",
+      severity: "warning",
+      message: `${unreadable.length} saved ${entryNoun} could not be read and ${skippedVerb} skipped`,
+      context: { action: "unreadable", keys: unreadable },
+    });
+  }
+  return result;
 };
 const save = async <T>(keys: string[], data: T) => {
   if (typeof localStorage === "undefined") return false;
