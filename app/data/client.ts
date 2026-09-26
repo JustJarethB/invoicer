@@ -11,25 +11,63 @@ export const NULL_CLIENT: Client = {
   phone: "",
 };
 
+/**
+ * Read the client-key index, distinguishing "absent" from "invalid".
+ *
+ * `db.get` returns null for both cases, but a corrupt (invalid) index blob
+ * must not be treated as "no clients saved": the next write would overwrite
+ * the index with only the new key and permanently orphan every previously
+ * saved client. On an invalid blob the index is rebuilt from the
+ * `["clients", id]` records actually present in localStorage — the same
+ * partial-key scan db.getAll uses — so the index can never silently drop
+ * reachable clients again.
+ */
+const readClientKeys = async (): Promise<{ keys: string[]; present: boolean }> => {
+  const keys = await db.get(["clientKeys"]);
+  if (keys !== null) {
+    return { keys, present: true };
+  }
+  const raw = localStorage.getItem(JSON.stringify(["clientKeys"]));
+  if (raw === null) {
+    // Genuine first write: the index has never existed.
+    return { keys: [], present: false };
+  }
+  // A blob exists but failed its schema: rebuild the index from the client
+  // records on disk so a corrupt index cannot orphan saved clients.
+  logger.error("clientKeys index failed validation; rebuilding it from stored client records.");
+  const clients = await db.getAll(["clients"]);
+  const rebuilt = clients.map((client) => client.id).filter((id) => id !== "");
+  return { keys: rebuilt, present: true };
+};
+
 export const saveClient = async (key: string, client: Client) => {
-  const data = (await db.get(["clientKeys"])) ?? [];
+  const { keys } = await readClientKeys();
   await db.save(["clients", key], client);
-  await db.save(["clientKeys"], Array.from(new Set([...data, key])));
+  await db.save(["clientKeys"], Array.from(new Set([...keys, key])));
 };
 export const deleteClient = async (key: string) => {
-  const data = (await db.get(["clientKeys"])) ?? [];
+  const { keys } = await readClientKeys();
   await db.save(
     ["clientKeys"],
-    data.filter((item) => item !== key)
+    keys.filter((item) => item !== key)
   );
   await db.remove(["clients", key]);
 };
 
 export const getClients = async (): Promise<Client[]> => {
-  const keys = (await db.get(["clientKeys"])) ?? [];
+  const { keys } = await readClientKeys();
   const clients = await Promise.all(
     keys.map(async (key) => {
-      return (await db.get(["clients", key])) ?? NULL_CLIENT;
+      const client = await db.get(["clients", key]);
+      // A key whose record is missing must stay identifiable: dropping to
+      // NULL_CLIENT erases the id, which makes the UI card unrenderable and
+      // collides with other empty-id cards (audit G5). Fall back to a shell
+      // that keeps the key's id.
+      if (client === null) {
+        logger.warn(`Stored client record for key ${key} is missing; returning a placeholder with the key's id.`);
+        return { ...NULL_CLIENT, id: key };
+      }
+      return client;
     })
   );
   logger.debug("Loaded clients:", clients);

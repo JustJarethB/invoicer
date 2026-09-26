@@ -1,7 +1,10 @@
 import { logger } from "~/utils/logger";
 import { eventBus } from "~/utils/events";
-import { parseAddress, parseClient, parseClientKeys, parseInvoice, parseLogo, parsePaymentDetails, parseStringArray } from "~/data/schemas";
+import { booleanSchema, parseAddress, parseClient, parseClientKeys, parseInvoice, parseLogo, parsePaymentDetails, parseStringArray } from "~/data/schemas";
 import { z } from "zod/mini";
+
+/** `z.safeParse` over the persisted-boolean schema (the showTutorial flag). */
+const booleanValidator = (data: unknown) => z.safeParse(booleanSchema, data);
 
 /**
  * Registry mapping a domain key's first segment to the validator for every
@@ -28,7 +31,7 @@ const recordValidators = {
   invoice: parseInvoice,
   logo: parseLogo,
   "payment-details": parsePaymentDetails,
-  showTutorial: (data: unknown) => z.safeParse(z.boolean(), data),
+  showTutorial: booleanValidator,
 } as const;
 
 type DomainKeys = keyof typeof recordValidators;
@@ -158,7 +161,7 @@ const getAll = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<Arr
     if (!key.success) continue;
     const [first, ...rest] = key.data;
     if (first !== domain) continue;
-    reads.push(await get([domain, ...rest] as [K, ...string[]]));
+    reads.push(await get([domain, ...rest]));
   }
   return reads.filter((item) => item !== null);
 };

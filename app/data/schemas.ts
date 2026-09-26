@@ -102,7 +102,7 @@ export type PaymentDetails = z.output<typeof paymentDetailsSchema>;
  * `paymentStatusOf` already defends with `?? []`. This resolves the
  * required-by-type / optional-by-implementation mismatch flagged in the audit.
  */
-const invoiceSchema = z.object({
+export const invoiceSchema = z.object({
   date: z.string(),
   from: addressSchema,
   id: z.string(),
@@ -175,9 +175,6 @@ export const parsePaymentDetails = (data: unknown) => z.safeParse(paymentDetails
 
 /** Parse a persisted logo record. */
 export const parseLogo = (data: unknown) => z.safeParse(logoSchema, data);
-
-/** Parse an autosaved form blob (field name -> string value). */
-export const parseRecord = (data: unknown) => z.safeParse(recordSchema, data);
 
 /** Parse the clients-page contact form payload (unknown fields are stripped). */
 export const parseClientForm = (data: unknown) => z.safeParse(clientFormSchema, data);

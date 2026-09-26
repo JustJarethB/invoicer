@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Modal } from "../Modal";
 import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
@@ -19,30 +19,40 @@ import { eventBus, withErrorReporting } from "~/utils/events";
 export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<string, string>; onClose: () => void; onSaved: () => void }) => {
   const formMetaRef = useRef<HTMLFormElement>(null);
   const formAddressRef = useRef<HTMLFormElement>(null);
-  // ManualSave only passes on fields the To-panel rendered; a record missing
-  // an address field fails the schema and falls back to an empty address.
+  // ManualSave only passes on fields the To-panel rendered; addressSchema
+  // DEFAULTS the fields a record is missing, so a partial record pre-fills
+  // with "" rather than being rejected — the fallback is the empty address.
   const address = addressFromRecord(record) ?? emptyAddress();
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [saveDisabled, setSaveDisabled] = useState(false);
 
-  const save = () =>
-    withErrorReporting({ type: "client", message: "Client could not be saved", context: { action: "failed" } }, async () => {
-      if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
-      const parsed = parseClientNameForm(await formJson(formMetaRef.current));
-      if (!parsed.success) {
-        throw new Error("SaveClientModal: contact name is missing or invalid");
-      }
-      const id = randomUUID();
-      const client: Client = {
-        id,
-        ...parsed.data,
-        address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
-        email: "",
-        phone: "",
-      };
-      await saveClient(id, client);
-      eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: id, action: "saved" } });
-      onSaved();
-      onClose();
-    });
+  const save = async () => {
+    if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
+    const parsed = parseClientNameForm(await formJson(formMetaRef.current));
+    if (!parsed.success) {
+      // User-visible outcome, not a dead throw: an empty display name is a
+      // recoverable input error, so the modal stays open with a message.
+      setNameError("Enter a display name to save this client.");
+      return;
+    }
+    const id = randomUUID();
+    const client: Client = {
+      id,
+      ...parsed.data,
+      address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
+      email: "",
+      phone: "",
+    };
+    setSaveDisabled(true);
+    try {
+      await withErrorReporting({ type: "client", message: "Client could not be saved", context: { action: "failed" } }, () => saveClient(id, client));
+    } finally {
+      setSaveDisabled(false);
+    }
+    eventBus.publish({ type: "client", severity: "success", message: "Client saved", context: { clientId: id, action: "saved" } });
+    onSaved();
+    onClose();
+  };
 
   return (
     <Modal onClose={onClose} title="Save Client">
@@ -52,11 +62,12 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
       <form ref={formAddressRef}>
         <AddressPanel title="" address={address} />
       </form>
+      {nameError && <p className="mt-2 text-sm text-red-500">{nameError}</p>}
       <div className="flex items-center justify-between">
         <Button color="secondary" className="mt-4" onClick={onClose}>
           Cancel
         </Button>
-        <Button color="primary" className="mt-4" onClick={save}>
+        <Button color="primary" className="mt-4" onClick={save} disabled={saveDisabled}>
           Save
         </Button>
       </div>
