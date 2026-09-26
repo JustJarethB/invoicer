@@ -33,6 +33,48 @@ describe("db", () => {
     expect((await db.get(["invoice", "no-logo"]))?.logo).toEqual({ url: "" });
   });
 
+  it("loads numeric strings from a legacy invoice as numbers", async () => {
+    const legacy = {
+      ...makeInvoice("legacy-numbers"),
+      lineItems: [{ uuid: "l1", type: "0", qty: "2", unitPrice: "150.25", vatRate: "20" }],
+      payments: [{ date: "2026-01-02", amount: "12.50" }],
+    };
+    const key = JSON.stringify(["invoice", "legacy-numbers"]);
+    localStorage.setItem(key, JSON.stringify(legacy));
+
+    const loaded = await db.get(["invoice", "legacy-numbers"]);
+    expect(loaded?.lineItems[0]).toMatchObject({ qty: 2, unitPrice: 150.25, vatRate: 20 });
+    expect(loaded?.payments?.[0].amount).toBe(12.5);
+    expect((await db.getAll(["invoice"])).map((invoice) => invoice.id)).toContain("legacy-numbers");
+    expect(JSON.parse(localStorage.getItem(key) ?? "null")).toEqual(legacy);
+    if (!loaded) throw new Error("Legacy invoice did not load");
+    expect(await db.save(["invoice", "legacy-numbers"], loaded)).toBe(true);
+    expect(JSON.parse(localStorage.getItem(key) ?? "null").lineItems[0].qty).toBe(2);
+  });
+
+  it("treats blank legacy optional numbers as absent, not zero", async () => {
+    const legacy = {
+      ...makeInvoice("blank-numbers"),
+      lineItems: [{ uuid: "l1", type: "0", qty: "", unitPrice: "   ", vatRate: "" }],
+    };
+    localStorage.setItem(JSON.stringify(["invoice", "blank-numbers"]), JSON.stringify(legacy));
+    expect((await db.get(["invoice", "blank-numbers"]))?.lineItems[0]).toMatchObject({
+      uuid: "l1",
+      type: "0",
+      qty: undefined,
+      unitPrice: undefined,
+      vatRate: undefined,
+    });
+  });
+
+  it("does not coerce malformed or non-finite numeric text", async () => {
+    for (const text of ["£12", "12oops", "Infinity", "1e309", "  "]) {
+      const invoice = { ...makeInvoice(text), payments: [{ date: "2026-01-02", amount: text }] };
+      localStorage.setItem(JSON.stringify(["invoice", text]), JSON.stringify(invoice));
+      expect(await db.get(["invoice", text])).toBeNull();
+    }
+  });
+
   it("returns null for a missing key", async () => {
     // Callers rely on this to fall back to defaults (e.g. NULL_CLIENT or empty payment details).
     const result = await db.get(["invoice", "missing"]);

@@ -166,13 +166,40 @@ export type ClientNameForm = z.output<typeof clientNameFormSchema>;
  */
 const legacyInvoiceLogoSchema = z.object({ logo: z.object({ url: z.object({ url: z._default(z.string(), "") }) }) });
 
-/** Parse a persisted invoice record, including the earlier double-wrapped logo. */
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** Convert only complete, finite numeric strings. Invalid text stays invalid. */
+const legacyNumber = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+  const text = value.trim();
+  if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)) return value;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : value;
+};
+
+const legacyOptionalNumber = (value: unknown): unknown => (typeof value === "string" && value.trim() === "" ? undefined : legacyNumber(value));
+
+/** Parse a persisted invoice record, including legacy logo and numeric fields. */
 export const parseInvoice = (data: unknown) => {
-  const legacy = z.safeParse(legacyInvoiceLogoSchema, data);
-  if (legacy.success && typeof data === "object" && data !== null) {
-    return z.safeParse(invoiceSchema, { ...data, logo: legacy.data.logo.url });
-  }
-  return z.safeParse(invoiceSchema, data);
+  if (!isRecord(data)) return z.safeParse(invoiceSchema, data);
+  const legacyLogo = z.safeParse(legacyInvoiceLogoSchema, data);
+  const normalized = {
+    ...data,
+    ...(legacyLogo.success ? { logo: legacyLogo.data.logo.url } : {}),
+    ...(Array.isArray(data.lineItems)
+      ? {
+          lineItems: data.lineItems.map((item: unknown) =>
+            isRecord(item)
+              ? { ...item, qty: legacyOptionalNumber(item.qty), unitPrice: legacyOptionalNumber(item.unitPrice), vatRate: legacyOptionalNumber(item.vatRate) }
+              : item
+          ),
+        }
+      : {}),
+    ...(Array.isArray(data.payments)
+      ? { payments: data.payments.map((payment: unknown) => (isRecord(payment) ? { ...payment, amount: legacyNumber(payment.amount) } : payment)) }
+      : {}),
+  };
+  return z.safeParse(invoiceSchema, normalized);
 };
 
 /** Parse a persisted client record. */
