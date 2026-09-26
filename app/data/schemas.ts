@@ -145,7 +145,11 @@ export type ClientForm = z.output<typeof clientFormSchema>;
 
 /** SaveClientModal only collects the display name. */
 export const clientNameFormSchema = z.object({
-  contactName: z.string(),
+  // zod/mini's z.refine returns a $ZodCheck (not a schema), so it attaches via
+  // .check() rather than z.pipe: z.pipe(z.string(), z.refine(...)) parses
+  // correctly at runtime but fails typecheck. An all-whitespace name is still
+  // empty to the user, hence the trim.
+  contactName: z.string().check(z.refine((value) => value.trim().length > 0, "Display name is required")),
 });
 
 export type ClientNameForm = z.output<typeof clientNameFormSchema>;

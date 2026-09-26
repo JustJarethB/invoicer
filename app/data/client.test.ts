@@ -62,11 +62,11 @@ describe("client data layer", () => {
     expect(ghost?.contactName).toBe("");
   });
 
-  it("rebuilds a corrupt clientKeys index from stored client records on save", async () => {
+  it("rebuilds a corrupt clientKeys index from stored client keys on save", async () => {
     // A corrupt index blob must not read as "no clients saved": the next save
     // would overwrite the index with only the new key and permanently orphan
     // every previously saved client. saveClient rebuilds the index from the
-    // client records on disk instead.
+    // client storage keys on disk instead.
     await saveClient("client-1", makeClient("client-1", "Alpha"));
     await saveClient("client-2", makeClient("client-2", "Beta"));
     localStorage.setItem(JSON.stringify(["clientKeys"]), "{corrupt");
@@ -77,7 +77,7 @@ describe("client data layer", () => {
     expect(clients.map((c) => c.contactName).sort()).toEqual(["Alpha", "Beta", "Gamma"]);
   });
 
-  it("rebuilds a corrupt clientKeys index from stored client records on delete", async () => {
+  it("rebuilds a corrupt clientKeys index from stored client keys on delete", async () => {
     // deleteClient writes the filtered index too, so it must also start from
     // the rebuilt index, not from an empty list.
     await saveClient("client-1", makeClient("client-1", "Alpha"));
@@ -98,9 +98,27 @@ describe("client data layer", () => {
     expect(keys).toEqual(["client-1"]);
   });
 
-  it("keeps an index whose stored record is missing (rebuild keeps the key)", async () => {
-    // The rebuild scans client records; a key whose record is missing must
-    // not vanish from the index just because its record is gone.
+  it("keeps a key whose stored record is unreadable (rebuild keeps the key)", async () => {
+    // The rebuild scans localStorage keys, not records: a key whose record is
+    // unreadable must survive a rebuild so the placeholder path can still
+    // surface it. (The ghost is created by corrupting the record VALUE, which
+    // keeps its storage key; a record removed via db.remove takes its key
+    // along — nothing remains to rebuild from, see the test below.)
+    await saveClient("client-1", makeClient("client-1", "Alpha"));
+    await saveClient("client-2", makeClient("client-2", "Beta"));
+    localStorage.setItem(JSON.stringify(["clients", "client-1"]), "{corrupt");
+    localStorage.setItem(JSON.stringify(["clientKeys"]), "{corrupt");
+
+    await saveClient("client-3", makeClient("client-3", "Gamma"));
+
+    const clients = await getClients();
+    expect(clients.map((c) => c.id).sort()).toEqual(["client-1", "client-2", "client-3"]);
+  });
+
+  it("does not resurrect a client whose record and storage key are both gone", async () => {
+    // db.remove deletes the storage key itself. After a corrupt-index rebuild
+    // nothing references the removed client, so it stays deleted — the rebuild
+    // cannot invent keys that no longer exist anywhere.
     await saveClient("client-1", makeClient("client-1", "Alpha"));
     await saveClient("client-2", makeClient("client-2", "Beta"));
     await db.remove(["clients", "client-1"]);
