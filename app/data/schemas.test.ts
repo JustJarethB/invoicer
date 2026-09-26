@@ -102,6 +102,14 @@ describe("clientFormSchema", () => {
     // string and persisted it; validation now surfaces it.
     expect(clientFormSchema.safeParse({ contactName: "Acme", phone: "123" }).success).toBe(false);
   });
+
+  it("rejects an empty or whitespace-only contactName", () => {
+    // Same rule as the SaveClientModal boundary: the clients page form is
+    // guarded by the input's required attribute, but the schema must not
+    // accept an empty display name on its own terms.
+    expect(clientFormSchema.safeParse({ contactName: "", email: "a@b.test", phone: "123" }).success).toBe(false);
+    expect(clientFormSchema.safeParse({ contactName: "  ", email: "a@b.test", phone: "123" }).success).toBe(false);
+  });
 });
 
 describe("parseChargeTypeId", () => {
@@ -130,9 +138,11 @@ describe("parseClientNameForm", () => {
   });
 
   it("rejects an empty or whitespace-only contactName", () => {
-    // The SaveClientModal name form is the only client-name boundary; an
+    // The SaveClientModal name form is one client-name boundary; an
     // empty display name must not parse or the modal would persist a
-    // nameless client.
+    // nameless client. The clients-page clientFormSchema applies the same
+    // rule (its caller throws on invalid input), so an empty name cannot
+    // pass through either boundary.
     expect(parseClientNameForm({ contactName: "" }).success).toBe(false);
     expect(parseClientNameForm({ contactName: "  " }).success).toBe(false);
   });

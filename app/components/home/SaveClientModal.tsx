@@ -57,7 +57,7 @@ export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<s
   return (
     <Modal onClose={onClose} title="Save Client">
       <form ref={formMetaRef}>
-        <TextInput name="contactName" className="font-bold text-xl" placeholder="Display Name" />
+        <TextInput name="contactName" className="font-bold text-xl" placeholder="Display Name" onChange={() => setNameError(null)} />
       </form>
       <form ref={formAddressRef}>
         <AddressPanel title="" address={address} />
