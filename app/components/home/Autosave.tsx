@@ -4,8 +4,12 @@ import { TooltipWrapper } from "../Tooltip";
 import { db } from "~/db";
 import { formJson } from "~/utils/formJson";
 import { eventBus } from "~/utils/events";
+
+/** The domain keys Autosave may persist to; each has a schema in ~/data/schemas. */
+export type AutosaveDomain = "from-address" | "payment-details" | "logo";
+
 type Props = {
-  name: string;
+  name: AutosaveDomain;
   hideIcon?: boolean;
   onChange?: (newState: Record<string, string>) => void;
 };
@@ -18,7 +22,8 @@ export const Autosave = ({ children, hideIcon, name, onChange: onChangeParent }:
     onChangeParent?.(data);
     setIsSaving(true);
     try {
-      await db.save([name], data);
+      const saved = await db.saveForm(name, data);
+      if (!saved) throw new Error("Autosave validation failed");
       failureWarned.current = false;
     } catch (e) {
       if (!failureWarned.current) {

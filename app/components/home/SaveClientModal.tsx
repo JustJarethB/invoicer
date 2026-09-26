@@ -4,8 +4,9 @@ import { AddressPanel } from "./AddressPanel";
 import { TextInput } from "../Inputs";
 import { Button } from "./Button";
 import { type Client, saveClient } from "~/data/client";
-import { addressFromRecord, formJsonAddress } from "~/data/address";
+import { addressFromRecord, emptyAddress, formJsonAddress } from "~/data/address";
 import { formJson } from "~/utils/formJson";
+import { parseClientNameForm } from "~/data/schemas";
 import { randomUUID } from "~/utils/uuid";
 import { eventBus, withErrorReporting } from "~/utils/events";
 
@@ -18,15 +19,21 @@ import { eventBus, withErrorReporting } from "~/utils/events";
 export const SaveClientModal = ({ onClose, onSaved, record }: { record: Record<string, string>; onClose: () => void; onSaved: () => void }) => {
   const formMetaRef = useRef<HTMLFormElement>(null);
   const formAddressRef = useRef<HTMLFormElement>(null);
-  const address = addressFromRecord(record);
+  // ManualSave only passes on fields the To-panel rendered; a record missing
+  // an address field fails the schema and falls back to an empty address.
+  const address = addressFromRecord(record) ?? emptyAddress();
 
   const save = () =>
     withErrorReporting({ type: "client", message: "Client could not be saved", context: { action: "failed" } }, async () => {
       if (!formMetaRef.current) throw new Error("SaveClientModal: form ref is not attached");
+      const parsed = parseClientNameForm(await formJson(formMetaRef.current));
+      if (!parsed.success) {
+        throw new Error("SaveClientModal: contact name is missing or invalid");
+      }
       const id = randomUUID();
       const client: Client = {
         id,
-        ...(await formJson<Pick<Client, "contactName">>(formMetaRef.current)),
+        ...parsed.data,
         address: formAddressRef.current ? formJsonAddress(formAddressRef.current) : address,
         email: "",
         phone: "",
