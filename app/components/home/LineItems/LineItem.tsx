@@ -1,7 +1,9 @@
 import { DateInput, NumberInput, SelectInput, TextInput } from "~/components/Inputs";
-import { chargeTypes, type LineItem as LineItemType, linePrice } from "~/data/invoice";
+import { chargeTypes, linePrice } from "~/data/invoice";
+import { parseChargeTypeId } from "~/data/schemas";
 import { useDeleteLineItem, useLineItem, useSetLineItem } from "./LineItemProvider";
 import { formatCurrency } from "~/utils/formatCurrency";
+import { logger } from "~/utils/logger";
 import { Button } from "../Button";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 const defaultOuterCellClasses = "p-1";
@@ -43,7 +45,16 @@ export const LineItem = ({ id }: { id: string }) => {
           options={lineTypeOptions}
           className={defaultInnerCellClasses}
           value={item.type}
-          onChange={(v) => onChange({ type: v as LineItemType["type"] })}
+          onChange={(v) => {
+            // The select emits raw strings; only ids in the charge-type union
+            // may enter LineItem.type (audit E1).
+            const parsed = parseChargeTypeId(v);
+            if (parsed.success) {
+              onChange({ type: parsed.data });
+            } else {
+              logger.warn(`Ignored unknown charge type "${v}" from line-item select`);
+            }
+          }}
         />
       </div>
       <div className={defaultOuterCellClasses}>

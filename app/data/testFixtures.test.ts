@@ -3,9 +3,16 @@ import { makeClient, makeInvoice, makeLineItem, makePayment } from "./testFixtur
 
 describe("testFixtures", () => {
   it("builds the canonical seed invoice the flow tests store", () => {
-    expect(JSON.stringify(makeInvoice())).toBe(
-      '{"id":"inv-1","date":"2026-01-01","purchaseOrder":"PO-1","logo":{"url":""},"from":{"name":"","streetAddress":"","city":"","county":"","postCode":""},"to":{"name":"Buyer","streetAddress":"","city":"","county":"","postCode":""},"lineItems":[{"uuid":"l1","type":"0","qty":2,"unitPrice":50}],"payments":[]}'
-    );
+    expect(makeInvoice()).toEqual({
+      date: "2026-01-01",
+      from: { city: "", county: "", name: "", postCode: "", streetAddress: "" },
+      id: "inv-1",
+      lineItems: [{ qty: 2, type: "0", unitPrice: 50, uuid: "l1" }],
+      logo: { url: "" },
+      payments: [],
+      purchaseOrder: "PO-1",
+      to: { city: "", county: "", name: "Buyer", postCode: "", streetAddress: "" },
+    });
   });
 
   it("applies invoice overrides on top of the defaults", () => {

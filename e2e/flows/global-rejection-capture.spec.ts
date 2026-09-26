@@ -67,6 +67,7 @@ test("a reported fire-and-forget operation surfaces exactly one error toast", as
   });
 
   const dialog = page.getByRole("heading", { name: "Save Client" }).locator("..");
+  await dialog.getByPlaceholder("Display Name").fill("E2E client");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
   const toast = page.getByTestId("toast-item").filter({ hasText: "Client could not be saved" });
