@@ -201,7 +201,7 @@ describe("notification call sites", () => {
         throw new Error("quota exceeded");
       });
       render(
-        <Autosave name="test-form">
+        <Autosave name="from-address">
           <TextInput name="field" defaultValue="" onChange={() => {}} />
         </Autosave>
       );
@@ -222,7 +222,7 @@ describe("notification call sites", () => {
       listenForEvents();
       localStorage.setItem("not-json", "x");
 
-      const result = await db.getAll<{ id: string }>(["invoice"]);
+      const result = await db.getAll(["invoice"]);
 
       expect(result).toHaveLength(0);
       const unreadable = eventsOfType("storage", "unreadable");
