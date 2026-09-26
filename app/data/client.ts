@@ -42,16 +42,20 @@ const readClientKeys = async (): Promise<string[]> => {
 
 export const saveClient = async (key: string, client: Client) => {
   const keys = await readClientKeys();
-  await db.save(["clients", key], client);
-  await db.save(["clientKeys"], Array.from(new Set([...keys, key])));
+  if (!(await db.save(["clients", key], client))) throw new Error("Client could not be saved");
+  if (!(await db.save(["clientKeys"], Array.from(new Set([...keys, key]))))) throw new Error("Client index could not be saved");
 };
 export const deleteClient = async (key: string) => {
   const keys = await readClientKeys();
-  await db.save(
-    ["clientKeys"],
-    keys.filter((item) => item !== key)
-  );
-  await db.remove(["clients", key]);
+  if (
+    !(await db.save(
+      ["clientKeys"],
+      keys.filter((item) => item !== key)
+    ))
+  ) {
+    throw new Error("Client index could not be saved");
+  }
+  if (!(await db.remove(["clients", key]))) throw new Error("Client could not be deleted");
 };
 
 export const getClients = async (): Promise<Client[]> => {

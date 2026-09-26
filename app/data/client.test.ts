@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { db } from "../db";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "./client";
 import { emptyAddress } from "./address";
@@ -17,6 +17,17 @@ describe("client data layer", () => {
     await saveClient("client-1", makeClient("client-1", "Alice"));
     const keys = await db.get(["clientKeys"]);
     expect(keys).toContain("client-1");
+  });
+
+  it("does not claim a client was saved or index it after validation rejects the write", async () => {
+    const save = vi.spyOn(db, "save").mockResolvedValueOnce(false);
+    try {
+      await expect(saveClient("rejected", makeClient("rejected", "Alice"))).rejects.toThrow("Client could not be saved");
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(await db.get(["clientKeys"])).toBeNull();
+    } finally {
+      save.mockRestore();
+    }
   });
 
   it("returns all saved clients via getClients", async () => {
@@ -46,6 +57,17 @@ describe("client data layer", () => {
 
     const client = await db.get(["clients", "client-1"]);
     expect(client).toBeNull();
+  });
+
+  it("leaves a client intact if updating its index is rejected before delete", async () => {
+    await saveClient("client-1", makeClient("client-1", "Alice"));
+    const save = vi.spyOn(db, "save").mockResolvedValueOnce(false);
+    try {
+      await expect(deleteClient("client-1")).rejects.toThrow("Client index could not be saved");
+      expect((await db.get(["clients", "client-1"]))?.contactName).toBe("Alice");
+    } finally {
+      save.mockRestore();
+    }
   });
 
   it("returns a placeholder that keeps the id when a stored client record is missing", async () => {

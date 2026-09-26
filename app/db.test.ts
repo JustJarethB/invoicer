@@ -22,6 +22,17 @@ describe("db", () => {
     expect(result).toEqual(makeInvoice("123"));
   });
 
+  it("loads invoices written by the earlier editor with its double-wrapped logo", async () => {
+    // The old editor constructed logo: { url: logo } where logo was already
+    // the autosaved { url: string } record. Validate without losing the invoice.
+    const legacy = { ...makeInvoice("legacy"), logo: { url: { url: "data:image/png;base64,aGVsbG8=" } } };
+    localStorage.setItem(JSON.stringify(["invoice", "legacy"]), JSON.stringify(legacy));
+    expect((await db.get(["invoice", "legacy"]))?.logo).toEqual({ url: "data:image/png;base64,aGVsbG8=" });
+    expect((await db.getAll(["invoice"])).map((invoice) => invoice.id)).toContain("legacy");
+    localStorage.setItem(JSON.stringify(["invoice", "no-logo"]), JSON.stringify({ ...legacy, id: "no-logo", logo: { url: {} } }));
+    expect((await db.get(["invoice", "no-logo"]))?.logo).toEqual({ url: "" });
+  });
+
   it("returns null for a missing key", async () => {
     // Callers rely on this to fall back to defaults (e.g. NULL_CLIENT or empty payment details).
     const result = await db.get(["invoice", "missing"]);

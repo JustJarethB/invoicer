@@ -81,9 +81,13 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       purchaseOrder,
       to,
     };
-    await withErrorReporting({ type: "invoice", message: "Invoice could not be saved", context: { invoiceId: id, action: "failed" } }, () =>
+    const saved = await withErrorReporting({ type: "invoice", message: "Invoice could not be saved", context: { invoiceId: id, action: "failed" } }, () =>
       db.save(["invoice", id], invoice)
     );
+    if (!saved) {
+      eventBus.publish({ type: "invoice", severity: "error", message: "Invoice could not be saved", context: { invoiceId: id, action: "failed" } });
+      return;
+    }
     eventBus.publish({ type: "invoice", severity: "success", message: "Invoice saved", context: { invoiceId: id, action: "saved" } });
   };
 

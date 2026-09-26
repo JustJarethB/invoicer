@@ -159,8 +159,21 @@ export type ClientNameForm = z.output<typeof clientNameFormSchema>;
 // callers branch on `success` and tests can inspect `error` details.
 // ---------------------------------------------------------------------------
 
-/** Parse a persisted invoice record. */
-export const parseInvoice = (data: unknown) => z.safeParse(invoiceSchema, data);
+/**
+ * The earlier editor saved `logo: { url: logo }` although `logo` was already
+ * `{ url: string }`. Unwrap only this known legacy shape at the read boundary;
+ * all other invoice fields still go through the full schema.
+ */
+const legacyInvoiceLogoSchema = z.object({ logo: z.object({ url: z.object({ url: z._default(z.string(), "") }) }) });
+
+/** Parse a persisted invoice record, including the earlier double-wrapped logo. */
+export const parseInvoice = (data: unknown) => {
+  const legacy = z.safeParse(legacyInvoiceLogoSchema, data);
+  if (legacy.success && typeof data === "object" && data !== null) {
+    return z.safeParse(invoiceSchema, { ...data, logo: legacy.data.logo.url });
+  }
+  return z.safeParse(invoiceSchema, data);
+};
 
 /** Parse a persisted client record. */
 export const parseClient = (data: unknown) => z.safeParse(clientSchema, data);
