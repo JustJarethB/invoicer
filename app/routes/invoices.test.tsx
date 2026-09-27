@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createRoutesStub } from "react-router";
+import { db } from "~/db";
+import { ownerEmptyInvoiceFixture } from "~/data/testFixtures";
 import { type AppEvent, eventBus, withErrorReporting } from "~/utils/events";
-import { ErrorBoundary } from "./invoices";
+import Invoices, { ErrorBoundary } from "./invoices";
 
 const received: AppEvent[] = [];
 let unsubscribe: () => void = () => {};
@@ -78,5 +80,15 @@ describe("invoices route error boundary", () => {
     expect(received[0].message).toBe("handler failure");
 
     errorSpy.mockRestore();
+  });
+});
+
+describe("invoices route", () => {
+  it("lists the migrated owner empty-invoice fixture", async () => {
+    localStorage.setItem(JSON.stringify(["invoice", ownerEmptyInvoiceFixture.id]), JSON.stringify(ownerEmptyInvoiceFixture));
+    render(<Invoices />);
+
+    await screen.findByText(ownerEmptyInvoiceFixture.id);
+    expect((await db.getAll(["invoice"])).map((invoice) => invoice.id)).toContain(ownerEmptyInvoiceFixture.id);
   });
 });

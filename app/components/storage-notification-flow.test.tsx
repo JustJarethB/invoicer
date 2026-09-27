@@ -4,6 +4,7 @@ import { Toaster } from "./Toaster";
 import { db } from "~/db";
 import { emptyAddress } from "~/data/address";
 import type { Invoice } from "~/data/invoice";
+import { ownerEmptyInvoiceFixture } from "~/data/testFixtures";
 import { eventBus } from "~/utils/events";
 
 const makeInvoice = (id: string): Invoice => ({
@@ -30,6 +31,18 @@ afterEach(() => {
 });
 
 describe("storage failures through Toaster", () => {
+  it("does not toast when the owner empty-invoice fixture is migrated", async () => {
+    render(<Toaster />);
+    localStorage.setItem(JSON.stringify(["invoice", ownerEmptyInvoiceFixture.id]), JSON.stringify(ownerEmptyInvoiceFixture));
+
+    await expect(read(() => db.get(["invoice", ownerEmptyInvoiceFixture.id]))).resolves.toMatchObject({
+      id: ownerEmptyInvoiceFixture.id,
+      logo: { url: "" },
+    });
+
+    expect(screen.queryByTestId("toast-item")).toBeNull();
+  });
+
   it("shows one toast when an individual read contains invalid JSON", async () => {
     render(<Toaster />);
     localStorage.setItem(JSON.stringify(["invoice", "corrupt"]), "{not json");

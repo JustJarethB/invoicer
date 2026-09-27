@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { db } from "./db";
 import { emptyAddress } from "./data/address";
 import type { Invoice } from "./data/invoice";
+import { ownerEmptyInvoiceFixture } from "./data/testFixtures";
 
 const makeInvoice = (id: string): Invoice => ({
   date: "2026-01-01",
@@ -15,6 +16,32 @@ const makeInvoice = (id: string): Invoice => ({
 });
 
 describe("db", () => {
+  it("keeps the owner empty-invoice fixture visible beside valid and corrupt records", async () => {
+    const ownerKey = JSON.stringify(["invoice", ownerEmptyInvoiceFixture.id]);
+    const corruptKey = JSON.stringify(["invoice", "corrupt-neighbour"]);
+    localStorage.setItem(ownerKey, JSON.stringify(ownerEmptyInvoiceFixture));
+    localStorage.setItem(corruptKey, "{not json");
+    await db.save(["invoice", "valid-neighbour"], makeInvoice("valid-neighbour"));
+
+    const loaded = await db.get(["invoice", ownerEmptyInvoiceFixture.id]);
+    expect(loaded).toEqual({
+      ...ownerEmptyInvoiceFixture,
+      from: emptyAddress(),
+      lineItems: [{ qty: undefined, unitPrice: undefined, uuid: "89eac997-5d56-438e-9f28-dbfa98db3a2b", vatRate: undefined }],
+      logo: { url: "" },
+      payment: { bankName: "", emailAddress: "", info: "", number: "", phoneNumber: "", sortCode: "", terms: "", type: "" },
+      to: emptyAddress(),
+    });
+    expect(JSON.parse(localStorage.getItem(ownerKey) ?? "null")).toEqual(ownerEmptyInvoiceFixture);
+    expect((await db.getAll(["invoice"])).map((invoice) => invoice.id)).toEqual([ownerEmptyInvoiceFixture.id, "valid-neighbour"]);
+    expect(localStorage.getItem(corruptKey)).toBe("{not json");
+
+    if (!loaded) throw new Error("Owner fixture did not load");
+    expect(await db.save(["invoice", ownerEmptyInvoiceFixture.id], loaded)).toBe(true);
+    expect(await db.get(["invoice", ownerEmptyInvoiceFixture.id])).toEqual(loaded);
+    expect(JSON.parse(localStorage.getItem(ownerKey) ?? "null")).toEqual(loaded);
+  });
+
   it("saves and retrieves a value by key", async () => {
     // localStorage is the persistence layer for the whole app; round-trips must be reliable.
     await db.save(["invoice", "123"], makeInvoice("123"));

@@ -7,8 +7,10 @@ import {
   type LineItem,
   parseChargeTypeId,
   parseClientNameForm,
+  parseInvoice,
   paymentDetailsSchema,
 } from "./schemas";
+import { ownerEmptyInvoiceFixture } from "./testFixtures";
 
 const validAddress = { city: "Town", county: "Shire", name: "Acme", postCode: "PC1 1AA", streetAddress: "1 St" };
 
@@ -43,6 +45,23 @@ describe("addressSchema", () => {
 });
 
 describe("invoiceSchema", () => {
+  it("parseInvoice normalizes the exact owner empty-invoice fixture", () => {
+    // The existing persistence migration accepts this legacy fixture. Keep this
+    // regression instead of broadening canonical invoice validation.
+    const result = parseInvoice(ownerEmptyInvoiceFixture);
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw result.error;
+    expect(result.data).toEqual({
+      ...ownerEmptyInvoiceFixture,
+      from: { city: "", county: "", name: "", postCode: "", streetAddress: "" },
+      lineItems: [{ qty: undefined, unitPrice: undefined, uuid: "89eac997-5d56-438e-9f28-dbfa98db3a2b", vatRate: undefined }],
+      logo: { url: "" },
+      payment: { bankName: "", emailAddress: "", info: "", number: "", phoneNumber: "", sortCode: "", terms: "", type: "" },
+      to: { city: "", county: "", name: "", postCode: "", streetAddress: "" },
+    });
+  });
+
   it("accepts a full invoice", () => {
     expect(invoiceSchema.safeParse(validInvoice()).success).toBe(true);
   });
