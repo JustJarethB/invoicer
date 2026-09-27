@@ -39,6 +39,25 @@ type DomainKeys = keyof typeof recordValidators;
 /** The validated record type a domain key reads back as. */
 export type RecordOf<K extends DomainKeys> = Extract<ReturnType<(typeof recordValidators)[K]>, { success: true }>["data"];
 
+type ReadResult<T> = {
+  readonly value: T | null;
+  readonly failed: boolean;
+};
+
+const storageRecordName = (domain: DomainKeys): string => (domain === "invoice" ? "invoice" : "saved data");
+
+const publishReadFailure = (domain: DomainKeys, count: number, skipped = false) => {
+  const recordName = storageRecordName(domain);
+  const recordNoun = count === 1 ? recordName : `${recordName}s`;
+  const wasVerb = count === 1 ? "was" : "were";
+  eventBus.publish({
+    type: "storage",
+    severity: "warning",
+    message: skipped ? `${count} saved ${recordNoun} could not be read and ${wasVerb} skipped` : `A saved ${recordName} could not be read`,
+    context: { action: "read.failed", count, domain },
+  });
+};
+
 /**
  * Single correlation point between a key's domain segment and its validator.
  * The registry's `as const` shape guarantees `recordValidators[K]` returns
@@ -130,25 +149,33 @@ const saveForm = async (domain: "from-address" | "payment-details" | "logo", rec
  * the JSON is unparseable, the domain has no registered validator, or the
  * value does not match its domain schema.
  */
-const get = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<RecordOf<K> | null> => {
-  if (typeof localStorage === "undefined") return null;
+const read = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<ReadResult<RecordOf<K>>> => {
+  if (typeof localStorage === "undefined") return { failed: false, value: null };
   const data = localStorage.getItem(JSON.stringify(keys));
-  if (!data) return null;
+  if (!data) return { failed: false, value: null };
   let parsed: unknown;
   try {
     parsed = JSON.parse(data);
   } catch (e) {
     logger.error(`Stored data for ${JSON.stringify(keys)} is not valid JSON:`, e);
-    return null;
+    return { failed: true, value: null };
   }
-  return readValidated(keys[0], keys, parsed);
+  const value = readValidated(keys[0], keys, parsed);
+  return { failed: value === null, value };
+};
+
+const get = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<RecordOf<K> | null> => {
+  const result = await read(keys);
+  if (result.failed) publishReadFailure(keys[0], 1);
+  return result.value;
 };
 
 const getAll = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<Array<RecordOf<K>>> => {
   if (typeof localStorage === "undefined") return [];
   const domain = keys[0];
   const keyStrings = matchPartialKeys(keys).sort();
-  const reads: Array<RecordOf<K> | null> = [];
+  const reads: Array<RecordOf<K>> = [];
+  let failedReads = 0;
   for (const keyStr of keyStrings) {
     let parsedKey: unknown;
     try {
@@ -161,9 +188,15 @@ const getAll = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<Arr
     if (!key.success) continue;
     const [first, ...rest] = key.data;
     if (first !== domain) continue;
-    reads.push(await get([domain, ...rest]));
+    const result = await read([domain, ...rest]);
+    if (result.failed) {
+      failedReads++;
+      continue;
+    }
+    if (result.value !== null) reads.push(result.value);
   }
-  return reads.filter((item) => item !== null);
+  if (failedReads > 0) publishReadFailure(domain, failedReads, true);
+  return reads;
 };
 
 /**

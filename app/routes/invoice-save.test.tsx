@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRoutesStub } from "react-router";
+import { Toaster } from "~/components/Toaster";
 import Home, { clientLoader } from "./invoice";
 import { db } from "~/db";
 import { type AppEvent, eventBus } from "~/utils/events";
@@ -17,7 +18,12 @@ const renderHome = async () => {
     { ...match, data: loaderData, id: "routes/invoice" as const },
   ] satisfies Parameters<typeof Home>[0]["matches"];
   const Stub = createRoutesStub([{ path: "/", Component: () => <Home loaderData={loaderData} params={{}} matches={matches} /> }]);
-  return render(<Stub initialEntries={["/"]} />);
+  return render(
+    <>
+      <Toaster />
+      <Stub initialEntries={["/"]} />
+    </>
+  );
 };
 
 afterEach(() => {
@@ -35,6 +41,8 @@ describe("invoice save from the editor", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     await waitFor(() => expect(received.some((event) => event.type === "invoice" && event.context?.action === "failed")).toBe(true));
     expect(received.some((event) => event.type === "invoice" && event.context?.action === "saved")).toBe(false);
+    expect(screen.getByText("Invoice could not be saved")).toBeInTheDocument();
+    expect(screen.queryByText("Invoice saved")).toBeNull();
   });
 
   it("persists a new invoice and reloads it through the validated database", async () => {
