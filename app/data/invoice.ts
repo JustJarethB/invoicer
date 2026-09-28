@@ -1,4 +1,4 @@
-import type { Address, ChargeTypeId, Invoice, LineItem, Payment } from "./schemas";
+import type { ChargeTypeId, Invoice, LineItem, Payment } from "./schemas";
 
 /**
  * Charge types describe how a line contributes to the invoice total.
@@ -67,5 +67,3 @@ export const paymentStatusOf = (invoice: Pick<Invoice, "lineItems" | "payments">
     totalPaid > totalDue ? "overpaid" : totalPaid > 0 && totalPaid < totalDue ? "partial" : totalPaid === totalDue ? "paid" : "unpaid";
   return { due: totalDue - totalPaid, paymentStatus, totalDue, totalPaid };
 };
-
-export type { Address };
