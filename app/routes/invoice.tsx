@@ -43,16 +43,7 @@ export function meta({}: Route.MetaArgs) {
 
 export async function clientLoader() {
   const from: Address = (await db.get(["from-address"])) ?? NULL_CLIENT.address;
-  const payment: PaymentDetails = (await db.get(["payment-details"])) ?? {
-    bankName: "",
-    emailAddress: "",
-    info: "",
-    number: "",
-    phoneNumber: "",
-    sortCode: "",
-    terms: "",
-    type: "",
-  };
+  const payment: PaymentDetails = (await db.get(["payment-details"])) ?? paymentDetailsFromRecord({});
   const clients: Client[] = await getClients();
   const logo: Logo | null = await db.get(["logo"]);
   return { clients, from, logo, payment };
