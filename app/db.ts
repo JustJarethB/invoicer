@@ -88,6 +88,19 @@ const matchPartialKeys = (keys: string[]) => {
   return result;
 };
 
+/** Parse one stored `[domain, ...ids]` key string; null when invalid (logged). */
+const parseStoredKey = (keyStr: string): string[] | null => {
+  let parsedKey: unknown;
+  try {
+    parsedKey = JSON.parse(keyStr);
+  } catch (e) {
+    logger.error("Failed to parse localStorage key:", keyStr, e);
+    return null;
+  }
+  const key = parseStringArray(parsedKey);
+  return key.success ? key.data : null;
+};
+
 /**
  * Validate a record against its domain schema and serialise it. Returns the
  * JSON string to persist, or null when the data fails validation — the caller
@@ -158,16 +171,9 @@ const getAll = async <K extends DomainKeys>(keys: [K, ...string[]]): Promise<Arr
   const records: Array<RecordOf<K>> = [];
   let corruptReads = 0;
   for (const keyStr of keyStrings) {
-    let parsedKey: unknown;
-    try {
-      parsedKey = JSON.parse(keyStr);
-    } catch (e) {
-      logger.error("Failed to parse localStorage key:", keyStr, e);
-      continue;
-    }
-    const key = parseStringArray(parsedKey);
-    if (!key.success) continue;
-    const [first, ...rest] = key.data;
+    const segments = parseStoredKey(keyStr);
+    if (segments === null) continue;
+    const [first, ...rest] = segments;
     if (first !== domain) continue;
     const result = await read([domain, ...rest]);
     if (result.corrupt) corruptReads++;
@@ -189,16 +195,9 @@ const storedIds = async <K extends DomainKeys>(domain: K): Promise<string[]> => 
   if (typeof localStorage === "undefined") return [];
   const ids: string[] = [];
   for (const keyStr of matchPartialKeys([domain]).sort()) {
-    let parsedKey: unknown;
-    try {
-      parsedKey = JSON.parse(keyStr);
-    } catch (e) {
-      logger.error("Failed to parse localStorage key:", keyStr, e);
-      continue;
-    }
-    const key = parseStringArray(parsedKey);
-    if (!key.success) continue;
-    const [first, ...rest] = key.data;
+    const segments = parseStoredKey(keyStr);
+    if (segments === null) continue;
+    const [first, ...rest] = segments;
     if (first !== domain || rest.length !== 1) continue;
     // An empty id segment is never written by production callers and would
     // collide with NULL_CLIENT's "" id, so it is skipped.
