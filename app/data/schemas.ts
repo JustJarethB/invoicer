@@ -160,8 +160,11 @@ export const clientNameFormSchema = z.object({
 export type ClientNameForm = z.output<typeof clientNameFormSchema>;
 
 // ---------------------------------------------------------------------------
-// Parsers — one per data boundary. Each returns zod's safeParse result so
-// callers branch on `success` and tests can inspect `error` details.
+// Parsers — one per data boundary. Helpers here return zod's safeParse
+// result so db.ts branches on `success` and tests can inspect `error`
+// details; the same shape lets UI boundaries surface a recoverable message.
+// Extractors that must throw on invalid input live in their domain modules
+// and call z.parse directly, so the parse itself throws.
 // ---------------------------------------------------------------------------
 
 /**
@@ -221,9 +224,6 @@ export const parsePaymentDetails = (data: unknown) => z.safeParse(paymentDetails
 
 /** Parse a persisted logo record. */
 export const parseLogo = (data: unknown) => z.safeParse(logoSchema, data);
-
-/** Parse the clients-page contact form payload (unknown fields are stripped). */
-export const parseClientForm = (data: unknown) => z.safeParse(clientFormSchema, data);
 
 /** Parse the SaveClientModal name form payload. */
 export const parseClientNameForm = (data: unknown) => z.safeParse(clientNameFormSchema, data);

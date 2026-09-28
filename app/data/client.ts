@@ -1,7 +1,8 @@
+import { z } from "zod/mini";
 import { db } from "~/db";
 import { emptyAddress } from "./address";
 import { logger } from "~/utils/logger";
-import { type Client, parseClientForm } from "./schemas";
+import { type Client, clientFormSchema } from "./schemas";
 
 export const NULL_CLIENT: Client = {
   address: emptyAddress(),
@@ -78,13 +79,7 @@ export const getClients = async (): Promise<Client[]> => {
   return clients;
 };
 
-/** Validate a clients-page contact form record; throws on invalid input. */
-export const clientFromForm = (record: Record<string, string>) => {
-  const parsed = parseClientForm(record);
-  if (!parsed.success) {
-    throw new Error("Client form is missing a required field (contactName, email, phone)");
-  }
-  return parsed.data;
-};
+/** Validate a clients-page contact form record; the parse throws on invalid input. */
+export const clientFromForm = (record: Record<string, string>) => z.parse(clientFormSchema, record);
 
 export type { Client };

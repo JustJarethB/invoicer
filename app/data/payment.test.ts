@@ -34,9 +34,10 @@ describe("paymentDetailsFromRecord", () => {
   it("throws when a record fails its schema, so drift is loud rather than silent", () => {
     // paymentDetailsSchema defaults every field, so any well-formed string
     // record parses. Only schema drift (a field type changing) can reach the
-    // throw; this pins the fail-loud contract. The drifted record arrives as
-    // raw JSON (as storage would deliver it), so the test needs no cast.
+    // throw; this pins the fail-loud contract: the parse itself throws a
+    // zod error naming the drifted field. The drifted record arrives as raw
+    // JSON (as storage would deliver it), so the test needs no cast.
     const drifted = JSON.parse('{"bankName":1}');
-    expect(() => paymentDetailsFromRecord(drifted)).toThrow("Payment details form does not match its schema");
+    expect(() => paymentDetailsFromRecord(drifted)).toThrow(/bankName/);
   });
 });

@@ -93,16 +93,15 @@ describe("formJson", () => {
     }
   });
 
-  it("feeds a schema parser: a valid record parses, an invalid one fails", async () => {
-    const { parseClientForm } = await import("~/data/schemas");
+  it("feeds a schema parser: a valid record parses, an invalid one throws", async () => {
+    const { clientFromForm } = await import("~/data/client");
     const good = buildForm({ contactName: "Acme", email: "hello@acme.test", phone: "123" });
-    const parsedGood = parseClientForm(await formJson(good));
-    expect(parsedGood.success).toBe(true);
+    expect(clientFromForm(await formJson(good))).toEqual({ contactName: "Acme", email: "hello@acme.test", phone: "123" });
 
-    // A form missing the email field must now fail validation instead of
+    // A form missing the email field must now throw at the parse instead of
     // producing `email: undefined` typed as string.
     const bad = buildForm({ contactName: "Acme" });
-    const parsedBad = parseClientForm(await formJson(bad));
-    expect(parsedBad.success).toBe(false);
+    const badRecord = await formJson(bad);
+    expect(() => clientFromForm(badRecord)).toThrow(/email/);
   });
 });

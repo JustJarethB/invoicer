@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { db } from "../db";
-import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "./client";
+import { type Client, clientFromForm, deleteClient, getClients, NULL_CLIENT, saveClient } from "./client";
 import { emptyAddress } from "./address";
 
 describe("client data layer", () => {
@@ -150,5 +150,21 @@ describe("client data layer", () => {
 
     const clients = await getClients();
     expect(clients.map((c) => c.id).sort()).toEqual(["client-2", "client-3"]);
+  });
+});
+
+describe("clientFromForm", () => {
+  it("returns the contact fields, stripping unknown record fields", () => {
+    expect(clientFromForm({ contactName: "Acme", email: "a@b.test", phone: "123", rogue: "ignored" })).toEqual({
+      contactName: "Acme",
+      email: "a@b.test",
+      phone: "123",
+    });
+  });
+
+  it("throws at the parse when a required contact field is missing", () => {
+    // A form payload missing email used to throw a hand-written message at
+    // the call site; the parse itself now throws a zod error naming the path.
+    expect(() => clientFromForm({ contactName: "Acme", phone: "123" })).toThrow(/email/);
   });
 });
