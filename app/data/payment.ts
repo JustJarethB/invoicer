@@ -1,5 +1,4 @@
-import type { PaymentDetails } from "./schemas";
-import type { FormRecord } from "./schemas";
+import { type FormRecord, type PaymentDetails, parsePaymentDetails } from "./schemas";
 
 /**
  * PaymentDetails is derived from the zod schema in `~/data/schemas` and
@@ -7,14 +6,14 @@ import type { FormRecord } from "./schemas";
  */
 export type { PaymentDetails };
 
-/** Build PaymentDetails from a form record, defaulting absent fields to empty. */
-export const paymentDetailsFromRecord = (record: FormRecord): PaymentDetails => ({
-  bankName: record.bankName ?? "",
-  emailAddress: record.emailAddress ?? "",
-  info: record.info ?? "",
-  number: record.number ?? "",
-  phoneNumber: record.phoneNumber ?? "",
-  sortCode: record.sortCode ?? "",
-  terms: record.terms ?? "",
-  type: record.type ?? "",
-});
+/**
+ * Build PaymentDetails from a form record. The schema owns the empty-string
+ * defaults, so this is a plain parse. It always succeeds for formJson output
+ * (every field is a defaulted string) and throws on schema drift, mirroring
+ * clientFromForm.
+ */
+export const paymentDetailsFromRecord = (record: FormRecord): PaymentDetails => {
+  const parsed = parsePaymentDetails(record);
+  if (!parsed.success) throw new Error("Payment details form does not match its schema");
+  return parsed.data;
+};

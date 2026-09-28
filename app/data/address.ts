@@ -1,5 +1,4 @@
-import { type Address, addressSchema, type FormRecord } from "./schemas";
-import { z } from "zod/mini";
+import { type Address, type FormRecord, parseAddress } from "./schemas";
 
 /**
  * Address is derived from the zod schema in `~/data/schemas` and re-exported
@@ -22,7 +21,7 @@ export const emptyAddress = (): Address => ({
  * decides the fallback, not a cast).
  */
 export const addressFromRecord = (record: FormRecord): Address | null => {
-  const parsed = z.safeParse(addressSchema, record);
+  const parsed = parseAddress(record);
   return parsed.success ? parsed.data : null;
 };
 
@@ -42,6 +41,5 @@ export const formJsonAddress = (form: HTMLFormElement): Address => {
     const value: FormDataEntryValue | null = fd.get(field);
     record[field] = typeof value === "string" ? value : "";
   }
-  const parsed = z.safeParse(addressSchema, record);
-  return parsed.success ? parsed.data : emptyAddress();
+  return addressFromRecord(record) ?? emptyAddress();
 };
