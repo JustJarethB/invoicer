@@ -1,4 +1,4 @@
-import { type FormRecord, type PaymentDetails, parsePaymentDetails } from "./schemas";
+import { type FormRecord, parsePaymentDetails, type PaymentDetails } from "./schemas";
 
 /**
  * PaymentDetails is derived from the zod schema in `~/data/schemas` and
