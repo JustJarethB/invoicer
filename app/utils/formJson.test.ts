@@ -64,9 +64,8 @@ describe("formJson", () => {
     }
   });
 
-  it("keeps string values unchanged when no processor matches", async () => {
-    // The implementation has no processors beyond 'base64', so arbitrary strings
-    // should pass through untouched.
+  it("keeps string values unchanged", async () => {
+    // Arbitrary strings pass through untouched; only Blob fields are converted.
     const form = buildForm({ unknown: "plain value" });
     const data = await formJson(form);
 

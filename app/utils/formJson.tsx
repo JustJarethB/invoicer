@@ -1,30 +1,25 @@
-const processors = {
-  base64: async (value: Blob) => {
-    const reader = new FileReader();
-    return new Promise<string>((resolve, reject) => {
-      reader.onloadend = () => {
-        const base64 = reader.result;
-        if (typeof base64 !== "string") {
-          reject(new Error("FileReader result is not a string"));
-        } else {
-          resolve(base64);
-        }
-      };
-      reader.onerror = () => reject(new Error("Error reading file"));
-      reader.readAsDataURL(value);
-    });
-  },
+const readBlobAsBase64 = async (value: Blob): Promise<string> => {
+  const reader = new FileReader();
+  return new Promise<string>((resolve, reject) => {
+    reader.onloadend = () => {
+      const base64 = reader.result;
+      if (typeof base64 !== "string") {
+        reject(new Error("FileReader result is not a string"));
+      } else {
+        resolve(base64);
+      }
+    };
+    reader.onerror = () => reject(new Error("Error reading file"));
+    reader.readAsDataURL(value);
+  });
 };
 
 const getProcessedValue = async (value: FormDataEntryValue): Promise<string> => {
   if (value instanceof Blob) {
-    // Only the base64 processor exists today; the lookup keeps new processors
-    // declarative. A Blob routed to a missing processor is an invariant break,
-    // not a silent string coercion.
-    if (!("base64" in processors)) {
-      throw new Error(`No processor registered for Blob field (processors: ${Object.keys(processors).join(", ")})`);
-    }
-    return await processors.base64(value);
+    // The one field type needing conversion today is the logo file input,
+    // serialised as a base64 data URL. A processor registry is not worth its
+    // interface while a single conversion exists.
+    return readBlobAsBase64(value);
   }
   if (typeof value !== "string") {
     throw new Error(`Unexpected form value type: ${typeof value}`);
