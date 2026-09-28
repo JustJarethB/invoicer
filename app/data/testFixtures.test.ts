@@ -1,11 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { makeClient, makeInvoice, makeLineItem, makePayment } from "./testFixtures";
+import { makeClient, makeInvoice, makeLineItem, makePayment, ownerEmptyInvoiceFixture } from "./testFixtures";
 
 describe("testFixtures", () => {
+  it("preserves the owner empty-invoice fixture exactly", () => {
+    expect(ownerEmptyInvoiceFixture).toEqual({
+      id: "1785798307",
+      date: "2026-08-03",
+      purchaseOrder: "---",
+      logo: { url: {} },
+      from: { name: "", streetAddress: "", city: "", county: "", postCode: "" },
+      to: { name: "", streetAddress: "", city: "", county: "", postCode: "" },
+      lineItems: [{ uuid: "89eac997-5d56-438e-9f28-dbfa98db3a2b" }],
+      payment: {},
+    });
+  });
+
   it("builds the canonical seed invoice the flow tests store", () => {
-    expect(JSON.stringify(makeInvoice())).toBe(
-      '{"id":"inv-1","date":"2026-01-01","purchaseOrder":"PO-1","logo":{"url":""},"from":{"name":"","streetAddress":"","city":"","county":"","postCode":""},"to":{"name":"Buyer","streetAddress":"","city":"","county":"","postCode":""},"lineItems":[{"uuid":"l1","type":"0","qty":2,"unitPrice":50}],"payments":[]}'
-    );
+    expect(makeInvoice()).toEqual({
+      date: "2026-01-01",
+      from: { city: "", county: "", name: "", postCode: "", streetAddress: "" },
+      id: "inv-1",
+      lineItems: [{ qty: 2, type: "0", unitPrice: 50, uuid: "l1" }],
+      logo: { url: "" },
+      payments: [],
+      purchaseOrder: "PO-1",
+      to: { city: "", county: "", name: "Buyer", postCode: "", streetAddress: "" },
+    });
   });
 
   it("applies invoice overrides on top of the defaults", () => {

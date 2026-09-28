@@ -1,24 +1,16 @@
-// TODO: terms/email/phone/info are universal
-// rest are dependent on the type of payment
-export type PaymentDetails = {
-  terms: string;
-  type: string;
-  bankName: string;
-  sortCode: string;
-  number: string;
-  emailAddress: string;
-  phoneNumber: string;
-  info: string;
-};
+import { z } from "zod/mini";
+import { type FormRecord, type PaymentDetails, paymentDetailsSchema } from "./schemas";
 
-/** Build PaymentDetails from a form record, defaulting absent fields to empty. */
-export const paymentDetailsFromRecord = (record: Record<string, string>): PaymentDetails => ({
-  terms: record.terms ?? "",
-  type: record.type ?? "",
-  bankName: record.bankName ?? "",
-  sortCode: record.sortCode ?? "",
-  number: record.number ?? "",
-  emailAddress: record.emailAddress ?? "",
-  phoneNumber: record.phoneNumber ?? "",
-  info: record.info ?? "",
-});
+/**
+ * PaymentDetails is derived from the zod schema in `~/data/schemas` and
+ * re-exported here so the rest of the app keeps importing it from this module.
+ */
+export type { PaymentDetails };
+
+/**
+ * Build PaymentDetails from a form record. The schema owns the empty-string
+ * defaults, so this is a plain parse. It always succeeds for formJson output
+ * (every field is a defaulted string); on schema drift the parse itself
+ * throws, mirroring clientFromForm.
+ */
+export const paymentDetailsFromRecord = (record: FormRecord): PaymentDetails => z.parse(paymentDetailsSchema, record);

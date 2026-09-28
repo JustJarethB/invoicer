@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "~/components/home/Button";
 import { Modal } from "~/components/Modal";
 import { TextInput } from "~/components/Inputs";
-import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
+import { type Client, clientFromForm, deleteClient, getClients, NULL_CLIENT, saveClient } from "~/data/client";
 import { formJson } from "~/utils/formJson";
 import { eventBus, withErrorReporting } from "~/utils/events";
 import { formJsonAddress } from "~/data/address";
@@ -63,11 +63,17 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
   };
   const { address } = client;
   const [isEditing, setIsEditing] = useState(false);
+  const [contactNameError, setContactNameError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      const { contactName, email, phone } = await formJson<Pick<Client, "contactName" | "phone" | "email">>(e.currentTarget);
+      const form = await formJson(e.currentTarget);
+      if (!form.contactName.trim()) {
+        setContactNameError("Display name is required");
+        return;
+      }
+      const { contactName, email, phone } = clientFromForm(form);
       const address = formJsonAddress(e.currentTarget);
       const updatedClient: Client = {
         id: client.id || randomUUID(),
@@ -89,7 +95,21 @@ const ClientPanel = ({ client, refreshCache }: { client: Client; refreshCache: (
         setIsEditing(true);
       }}
     >
-      <TextInput required name="contactName" className=" text-lg font-bold focus:ring-white" placeholder="Contact Name" defaultValue={client.contactName} />
+      <TextInput
+        required
+        name="contactName"
+        className=" text-lg font-bold focus:ring-white"
+        placeholder="Contact Name"
+        defaultValue={client.contactName}
+        onChange={(value) => {
+          if (value.trim()) setContactNameError(null);
+        }}
+      />
+      {contactNameError && (
+        <p role="alert" className="text-red-500 text-sm">
+          {contactNameError}
+        </p>
+      )}
       <TextInput name="name" placeholder="Name" defaultValue={address?.name} />
       <TextInput name="streetAddress" placeholder="Street Address" defaultValue={address?.streetAddress} />
       <TextInput name="city" placeholder="City/Town" defaultValue={address?.city} />

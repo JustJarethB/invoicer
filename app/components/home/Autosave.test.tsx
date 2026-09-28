@@ -28,9 +28,9 @@ afterEach(() => {
 describe("Autosave", () => {
   it("warns once per failure streak and re-arms after a successful save", async () => {
     listenForEvents();
-    const save = vi.spyOn(db, "save").mockRejectedValue(new Error("quota exceeded"));
+    const save = vi.spyOn(db, "saveForm").mockRejectedValue(new Error("quota exceeded"));
     render(
-      <Autosave name="test-form">
+      <Autosave name="from-address">
         <TextInput name="field" defaultValue="" onChange={() => {}} />
       </Autosave>
     );

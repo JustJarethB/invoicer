@@ -2,6 +2,35 @@ import { emptyAddress } from "./address";
 import type { Client } from "./client";
 import type { Invoice, LineItem, Payment } from "./invoice";
 
+export const ownerEmptyInvoiceFixture = {
+  id: "1785798307",
+  date: "2026-08-03",
+  purchaseOrder: "---",
+  logo: {
+    url: {},
+  },
+  from: {
+    name: "",
+    streetAddress: "",
+    city: "",
+    county: "",
+    postCode: "",
+  },
+  to: {
+    name: "",
+    streetAddress: "",
+    city: "",
+    county: "",
+    postCode: "",
+  },
+  lineItems: [
+    {
+      uuid: "89eac997-5d56-438e-9f28-dbfa98db3a2b",
+    },
+  ],
+  payment: {},
+} as const;
+
 export const makeLineItem = (overrides: Partial<LineItem> = {}): LineItem => ({ uuid: "l1", ...overrides });
 
 export const makePayment = (overrides: Partial<Payment> = {}): Payment => ({ amount: 100, date: "2026-01-01", ...overrides });

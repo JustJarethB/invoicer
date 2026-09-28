@@ -12,7 +12,7 @@
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:unit": "vitest --run app/utils app/data",
+    "test:unit": "vitest --run app/utils app/data app/db.test.ts",
     "test:integration": "vitest --run app/components app/routes",
     "test:e2e": "playwright test e2e/flows",
     "test:snapshots": "playwright test e2e/snapshots"
@@ -25,7 +25,8 @@
     "isbot": "^5.1.17",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router": "^7.5.0"
+    "react-router": "^7.5.0",
+    "zod": "^4.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

@@ -201,7 +201,7 @@ describe("notification call sites", () => {
         throw new Error("quota exceeded");
       });
       render(
-        <Autosave name="test-form">
+        <Autosave name="from-address">
           <TextInput name="field" defaultValue="" onChange={() => {}} />
         </Autosave>
       );
@@ -218,17 +218,18 @@ describe("notification call sites", () => {
   });
 
   describe("db", () => {
-    it("aggregates corrupt localStorage keys into a single storage.unreadable warning", async () => {
+    it("aggregates corrupt localStorage keys into one storage.unreadable warning per scan", async () => {
       listenForEvents();
       localStorage.setItem("not-json", "x");
+      expect(await db.getAll(["invoice"])).toHaveLength(0);
+      localStorage.setItem("also-not-json", "x");
+      expect(await db.getAll(["invoice"])).toHaveLength(0);
 
-      const result = await db.getAll<{ id: string }>(["invoice"]);
-
-      expect(result).toHaveLength(0);
       const unreadable = eventsOfType("storage", "unreadable");
-      expect(unreadable).toHaveLength(1);
+      expect(unreadable).toHaveLength(2);
       expect(unreadable[0].severity).toBe("warning");
       expect(unreadable[0].message).toBe("1 saved entry could not be read and was skipped");
+      expect(unreadable[1].message).toBe("2 saved entries could not be read and were skipped");
     });
   });
 

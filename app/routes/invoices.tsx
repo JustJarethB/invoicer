@@ -86,7 +86,7 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
+        const fetchedInvoices = await db.getAll(["invoice"]);
         setInvoices(fetchedInvoices);
       } catch (e) {
         eventBus.publish({

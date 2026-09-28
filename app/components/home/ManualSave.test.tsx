@@ -92,6 +92,33 @@ describe("ManualSave", () => {
     expect(icon).toHaveClass("text-amber-400");
   });
 
+  it("rejects an empty display name: message shown, nothing persisted, modal stays open", async () => {
+    // The name schema requires a non-empty contactName, so Save must not
+    // persist an empty-name client (regression: the schema accepted "" and
+    // the modal closed after saving it).
+    render(
+      <ManualSave onSave={saveAddressAsClient}>
+        <TextInput name="name" defaultValue="Acme" onChange={() => {}} />
+      </ManualSave>
+    );
+    const icon = document.querySelector("svg.cursor-pointer") as Element;
+
+    await userEvent.type(screen.getByRole("textbox"), "x");
+    await userEvent.click(icon);
+    expect(await screen.findByText("Save Client")).toBeInTheDocument();
+
+    // Leave the display name empty and save.
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    // The error message appears and the modal stays open.
+    expect(await screen.findByText("Enter a display name to save this client.")).toBeInTheDocument();
+    expect(screen.getByText("Save Client")).toBeInTheDocument();
+
+    // Nothing was persisted.
+    const clients = await getClients();
+    expect(clients).toHaveLength(0);
+  });
+
   it("does nothing when no onSave is provided", async () => {
     // onSave is optional — ManualSave is reusable for forms that don't confirm.
     render(
