@@ -134,9 +134,18 @@ export type Client = z.output<typeof clientSchema>;
 // Form boundaries (previously `formJson<T>` cast the DOM's word for it)
 // ---------------------------------------------------------------------------
 
+/**
+ * The one display-name rule both client forms apply. zod/mini's z.refine
+ * returns a $ZodCheck (not a schema), so it attaches via .check() rather
+ * than z.pipe: z.pipe(z.string(), z.refine(...)) parses correctly at
+ * runtime but fails typecheck. An all-whitespace name is still empty to
+ * the user, hence the trim.
+ */
+const nonEmptyName = z.string().check(z.refine((value) => value.trim().length > 0, "Display name is required"));
+
 /** Client contact fields captured by the clients page form. */
 export const clientFormSchema = z.object({
-  contactName: z.string().check(z.refine((value) => value.trim().length > 0, "Display name is required")),
+  contactName: nonEmptyName,
   email: z.string(),
   phone: z.string(),
 });
@@ -145,11 +154,7 @@ export type ClientForm = z.output<typeof clientFormSchema>;
 
 /** SaveClientModal only collects the display name. */
 export const clientNameFormSchema = z.object({
-  // zod/mini's z.refine returns a $ZodCheck (not a schema), so it attaches via
-  // .check() rather than z.pipe: z.pipe(z.string(), z.refine(...)) parses
-  // correctly at runtime but fails typecheck. An all-whitespace name is still
-  // empty to the user, hence the trim.
-  contactName: z.string().check(z.refine((value) => value.trim().length > 0, "Display name is required")),
+  contactName: nonEmptyName,
 });
 
 export type ClientNameForm = z.output<typeof clientNameFormSchema>;
@@ -205,10 +210,7 @@ export const parseInvoice = (data: unknown) => {
 /** Parse a persisted client record. */
 export const parseClient = (data: unknown) => z.safeParse(clientSchema, data);
 
-/** Parse the persisted client-key index. */
-export const parseClientKeys = (data: unknown) => z.safeParse(stringArraySchema, data);
-
-/** Parse a generic string-array blob (e.g. localStorage key tuples). */
+/** Parse a generic string-array blob (localStorage key tuples, the client-key index). */
 export const parseStringArray = (data: unknown) => z.safeParse(stringArraySchema, data);
 
 /** Parse an address persisted as a full record (the from-address key). */
@@ -231,3 +233,6 @@ export const parseClientNameForm = (data: unknown) => z.safeParse(clientNameForm
  * the runtime check the E1 cast was missing.
  */
 export const parseChargeTypeId = (value: string) => z.safeParse(chargeTypeIdSchema, value);
+
+/** Parse a persisted boolean (the showTutorial flag). */
+export const parseBoolean = (data: unknown) => z.safeParse(booleanSchema, data);

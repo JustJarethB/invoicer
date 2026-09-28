@@ -1,10 +1,6 @@
 import { logger } from "~/utils/logger";
 import { eventBus } from "~/utils/events";
-import { booleanSchema, parseAddress, parseClient, parseClientKeys, parseInvoice, parseLogo, parsePaymentDetails, parseStringArray } from "~/data/schemas";
-import { z } from "zod/mini";
-
-/** `z.safeParse` over the persisted-boolean schema (the showTutorial flag). */
-const booleanValidator = (data: unknown) => z.safeParse(booleanSchema, data);
+import { parseAddress, parseBoolean, parseClient, parseInvoice, parseLogo, parsePaymentDetails, parseStringArray } from "~/data/schemas";
 
 /**
  * Registry mapping a domain key's first segment to the validator for every
@@ -25,13 +21,13 @@ const booleanValidator = (data: unknown) => z.safeParse(booleanSchema, data);
  * rejected loudly rather than trusted.
  */
 const recordValidators = {
-  clientKeys: parseClientKeys,
+  clientKeys: parseStringArray,
   clients: parseClient,
   "from-address": parseAddress,
   invoice: parseInvoice,
   logo: parseLogo,
   "payment-details": parsePaymentDetails,
-  showTutorial: booleanValidator,
+  showTutorial: parseBoolean,
 } as const;
 
 type DomainKeys = keyof typeof recordValidators;
