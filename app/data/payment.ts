@@ -2,11 +2,6 @@ import { z } from "zod/mini";
 
 // TODO: terms/email/phone/info are universal
 // rest are dependent on the type of payment
-/**
- * Schema for a persisted PaymentDetails blob (the payment-details Autosave
- * key). Fields the payment form does not render default to "", the same
- * fallback paymentDetailsFromRecord applies at the form boundary.
- */
 export const paymentDetailsSchema = z.object({
   bankName: z._default(z.string(), ""),
   emailAddress: z._default(z.string(), ""),

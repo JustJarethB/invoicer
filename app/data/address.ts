@@ -1,11 +1,5 @@
 import { z } from "zod/mini";
 
-/**
- * Schema for a persisted Address record (the from-address Autosave key and
- * the address segment of client records). Fields absent from an older record
- * default to "", the same fallback addressFromRecord applies at the form
- * boundary.
- */
 export const addressSchema = z.object({
   city: z._default(z.string(), ""),
   county: z._default(z.string(), ""),
