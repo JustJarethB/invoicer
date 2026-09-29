@@ -21,7 +21,7 @@ export const ClientSchema = z.object({
 /** Schema for the persisted client-key index record. */
 export const ClientKeysSchema = z.array(z.string());
 
-export type Client = z.output<typeof ClientSchema>;
+export type Client = z.infer<typeof ClientSchema>;
 export const NULL_CLIENT: Client = {
   id: "",
   contactName: "",

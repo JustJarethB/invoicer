@@ -43,7 +43,7 @@ const BlankableMoneyString = z.pipe(
 /** Charge-type ids are fixed by the `chargeTypes` table below: "0".."3". */
 export const ChargeTypeIdSchema = z.enum(["0", "1", "2", "3"]);
 
-export type ChargeTypeId = z.output<typeof ChargeTypeIdSchema>;
+export type ChargeTypeId = z.infer<typeof ChargeTypeIdSchema>;
 
 /** A line on the invoice. Money fields (`qty`, `unitPrice`, `vatRate`) are
  * numbers once they leave the form boundary; older persisted records store
@@ -62,7 +62,7 @@ export const LineItemSchema = z.object({
   vatRate: z.optional(z.union([FiniteMoney, BlankableMoneyString])),
 });
 
-export type LineItem = z.output<typeof LineItemSchema>;
+export type LineItem = z.infer<typeof LineItemSchema>;
 
 /** A payment record. Legacy string `amount`s coerce to numbers here. */
 export const PaymentSchema = z.object({
@@ -72,7 +72,7 @@ export const PaymentSchema = z.object({
   reference: z.optional(z.string()),
 });
 
-export type Payment = z.output<typeof PaymentSchema>;
+export type Payment = z.infer<typeof PaymentSchema>;
 
 /**
  * Legacy logo url blobs. PR #50's owner fixture (id 1785798307) stores
@@ -99,7 +99,7 @@ const LegacyLogoUrl = z.union([
 /** A logo record: only `url` is meaningful. Legacy records may miss `url` or wrap it in an object. */
 export const LogoSchema = z.object({ url: z._default(LegacyLogoUrl, "") });
 
-export type Logo = z.output<typeof LogoSchema>;
+export type Logo = z.infer<typeof LogoSchema>;
 
 /** Schema for a persisted Invoice record (the `invoice` domain). */
 export const InvoiceSchema = z.object({
@@ -124,7 +124,7 @@ export const InvoiceSchema = z.object({
   to: AddressSchema,
 });
 
-export type Invoice = z.output<typeof InvoiceSchema>;
+export type Invoice = z.infer<typeof InvoiceSchema>;
 
 export type ChargeType = {
   id: ChargeTypeId;

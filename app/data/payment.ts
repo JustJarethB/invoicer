@@ -13,7 +13,7 @@ export const PaymentDetailsSchema = z.object({
   type: z._default(z.string(), ""),
 });
 
-export type PaymentDetails = z.output<typeof PaymentDetailsSchema>;
+export type PaymentDetails = z.infer<typeof PaymentDetailsSchema>;
 
 /** Build PaymentDetails from a form record, defaulting absent fields to empty. */
 export const paymentDetailsFromRecord = (record: Record<string, string>): PaymentDetails => ({

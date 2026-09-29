@@ -8,7 +8,7 @@ export const AddressSchema = z.object({
   streetAddress: z._default(z.string(), ""),
 });
 
-export type Address = z.output<typeof AddressSchema>;
+export type Address = z.infer<typeof AddressSchema>;
 
 export const emptyAddress = (): Address => ({
   name: "",
