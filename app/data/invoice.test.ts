@@ -154,6 +154,36 @@ describe("InvoiceSchema (legacy money strings)", () => {
     expect(InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: "Infinity", date: "2026-01-02" }] }).success).toBe(false);
     expect(InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: NaN }] }).success).toBe(false);
   });
+
+  it("rejects blank, whitespace, boolean, array and null amounts that z.coerce.number() would accept", () => {
+    // Empirical truth table for z.coerce.number() on zod/mini 4.6.5: blank->0,
+    // true->1, false->0, []->0, ["5"]->5, null->0. Every one of these must stay
+    // invalid on the persisted-record schema.
+    for (const amount of ["", "   ", true, false, [], ["5"], null]) {
+      const result = InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount, date: "2026-01-02" }] });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it("rejects boolean and array money on optional fields while keeping blank as absence", () => {
+    for (const qty of [true, false, [], ["5"], null, {}]) {
+      const result = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "0", qty }] });
+      expect(result.success).toBe(false);
+    }
+    const blank = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "0", qty: "  " }] });
+    expect(blank.success).toBe(true);
+    if (blank.success) expect(blank.data.lineItems[0].qty).toBeUndefined();
+  });
+
+  it("parses exponent-notation legacy strings per Number() semantics", () => {
+    const result = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "0", qty: "1e3", unitPrice: "2e1" }] });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lineItems[0].qty).toBe(1000);
+    expect(result.data.lineItems[0].unitPrice).toBe(20);
+    // Service: qty x unitPrice = 1000 x 20.
+    expect(invoiceTotal(result.data)).toBe(20000);
+  });
 });
 
 describe("InvoiceSchema (legacy logo blobs)", () => {
