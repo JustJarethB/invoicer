@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "../db";
 import { invoiceSchema } from "./invoice";
+import { ownerEmptyInvoiceFixture } from "./testFixtures";
 
 // Pins the validated read seam added for issue #43 (app/db.ts). The seam is
 // the fix for the PR #48 break mode: legacy records that #48's strict read
@@ -64,5 +65,16 @@ describe("db validated read seam", () => {
     expect(await db.getValidated(invoiceSchema, ["invoice", "missing"])).toBeNull();
     localStorage.setItem(JSON.stringify(["invoice", "junk"]), "{not json");
     expect(await db.getValidated(invoiceSchema, ["invoice", "junk"])).toBeNull();
+  });
+
+  it("keeps the owner's legacy empty-invoice record in a list read (logo.url stored as object)", async () => {
+    // PR #50 owner fixture, id 1785798307: before the legacy-logo
+    // normalization this record failed logoSchema and was silently dropped
+    // from the invoices list — the PR #48 break mode.
+    seed("owner-legacy", ownerEmptyInvoiceFixture);
+    const records = await db.getAllValidated(invoiceSchema, ["invoice"]);
+    expect(records.map((record) => record.id)).toEqual(["1785798307"]);
+    expect(records[0].logo).toEqual({ url: "" });
+    expect(localStorage.getItem(JSON.stringify(["invoice", "owner-legacy"]))).toBe(JSON.stringify(ownerEmptyInvoiceFixture));
   });
 });

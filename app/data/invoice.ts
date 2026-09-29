@@ -74,8 +74,30 @@ export const paymentSchema = z.object({
 
 export type Payment = z.output<typeof paymentSchema>;
 
-/** A logo record: only `url` is meaningful. Legacy records may miss `url`. */
-export const logoSchema = z.object({ url: z._default(z.string(), "") });
+/**
+ * Legacy logo url blobs. PR #50's owner fixture (id 1785798307) stores
+ * `logo.url` as an empty object, and the earlier editor double-wrapped it
+ * (`{ url: { url: <string> } }`). Both unwrap to a plain string; anything
+ * else (numbers, null, deeper nesting) stays invalid.
+ */
+const logoUrlObject = z.pipe(
+  z.object({ url: z._default(z.string(), "") }),
+  z.transform((blob) => blob.url)
+);
+const legacyLogoUrl = z.union([
+  z.string(),
+  z.pipe(
+    z.object({ url: z.optional(z.string()) }),
+    z.transform((blob) => blob.url ?? "")
+  ),
+  z.pipe(
+    z.object({ url: logoUrlObject }),
+    z.transform((blob) => blob.url)
+  ),
+]);
+
+/** A logo record: only `url` is meaningful. Legacy records may miss `url` or wrap it in an object. */
+export const logoSchema = z.object({ url: z._default(legacyLogoUrl, "") });
 
 export type Logo = z.output<typeof logoSchema>;
 
