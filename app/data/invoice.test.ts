@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Invoice, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
+import { type Invoice, invoiceSchema, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
 import { makeInvoice, makeLineItem, makePayment } from "./testFixtures";
 
 describe("linePrice", () => {
@@ -81,5 +81,77 @@ describe("paymentStatusOf", () => {
     );
     expect(summary.paymentStatus).toBe("overpaid");
     expect(summary.due).toBe(-100);
+  });
+});
+
+describe("invoiceSchema (legacy money strings)", () => {
+  // TODO(legacy-money-strings) resolution: older persisted invoices store
+  // money as strings. The schema coerces complete finite numeric strings to
+  // numbers (Number()-finite semantics: accepts "1e3", rejects
+  // "Infinity"/"NaN"/malformed), maps blank optional strings to absence
+  // (never zero), and keeps everything else invalid.
+  const legacyInvoice = {
+    id: "inv-legacy",
+    date: "2026-01-01",
+    purchaseOrder: "PO-1",
+    logo: { url: "" },
+    from: { name: "From Co" },
+    to: { name: "Buyer", streetAddress: "", city: "", county: "", postCode: "" },
+    lineItems: [{ uuid: "l1", type: "0", qty: "2", unitPrice: "150.00" }],
+    payments: [{ amount: "100", date: "2026-01-02" }],
+  };
+
+  it("parses a legacy record, coercing string money to numbers", () => {
+    const result = invoiceSchema.safeParse(legacyInvoice);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lineItems[0].qty).toBe(2);
+    expect(result.data.lineItems[0].unitPrice).toBe(150);
+    expect(result.data.payments[0].amount).toBe(100);
+  });
+
+  it("yields correct totals for a legacy record (string amounts never concatenate)", () => {
+    const result = invoiceSchema.safeParse(legacyInvoice);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const summary = paymentStatusOf(result.data);
+    expect(summary.totalDue).toBe(300);
+    expect(summary.totalPaid).toBe(100);
+    expect(summary.due).toBe(200);
+    expect(summary.paymentStatus).toBe("partial");
+    expect(invoiceTotal(result.data)).toBe(300);
+  });
+
+  it("maps blank optional money strings to absence, not zero", () => {
+    const result = invoiceSchema.safeParse({
+      ...legacyInvoice,
+      lineItems: [{ uuid: "l1", type: "0", qty: "", unitPrice: "   " }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lineItems[0].qty).toBeUndefined();
+    expect(result.data.lineItems[0].unitPrice).toBeUndefined();
+    expect(linePrice(result.data.lineItems[0])).toBe(0);
+  });
+
+  it("tolerates a legacy record without a payments array (or an explicit null)", () => {
+    const { payments: _omitted, ...withoutPayments } = legacyInvoice;
+    const absent = invoiceSchema.safeParse(withoutPayments);
+    expect(absent.success).toBe(true);
+    if (absent.success) expect(absent.data.payments).toEqual([]);
+    const nulled = invoiceSchema.safeParse({ ...legacyInvoice, payments: null });
+    expect(nulled.success).toBe(true);
+    if (nulled.success) expect(nulled.data.payments).toEqual([]);
+  });
+
+  it("keeps the legacy -1 charge type valid", () => {
+    const result = invoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "-1" }] });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects malformed or non-finite money instead of crashing or zeroing", () => {
+    expect(invoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", unitPrice: "1,50" }] }).success).toBe(false);
+    expect(invoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: "Infinity", date: "2026-01-02" }] }).success).toBe(false);
+    expect(invoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: NaN }] }).success).toBe(false);
   });
 });

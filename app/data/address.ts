@@ -1,10 +1,20 @@
-export type Address = {
-  name: string;
-  streetAddress: string;
-  city: string;
-  county: string;
-  postCode: string;
-};
+import { z } from "zod/mini";
+
+/**
+ * Schema for a persisted Address record (the from-address Autosave key and
+ * the address segment of client records). Fields absent from an older record
+ * default to "", the same fallback addressFromRecord applies at the form
+ * boundary.
+ */
+export const addressSchema = z.object({
+  city: z._default(z.string(), ""),
+  county: z._default(z.string(), ""),
+  name: z._default(z.string(), ""),
+  postCode: z._default(z.string(), ""),
+  streetAddress: z._default(z.string(), ""),
+});
+
+export type Address = z.output<typeof addressSchema>;
 
 export const emptyAddress = (): Address => ({
   name: "",

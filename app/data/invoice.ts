@@ -1,13 +1,111 @@
-import type { Address } from "./address";
-import type { PaymentDetails } from "./payment";
+import { z } from "zod/mini";
+import { addressSchema } from "./address";
+import { paymentDetailsSchema } from "./payment";
+
+// ---------------------------------------------------------------------------
+// Legacy money parsing (resolves TODO(legacy-money-strings) at the parse layer)
+// ---------------------------------------------------------------------------
+
+/** A usable money value at the parse layer: a finite number already. */
+const finiteMoney = z.number().check(z.refine(Number.isFinite, "Money must be a finite number"));
 
 /**
- * Charge types describe how a line contributes to the invoice total.
- * Service and Rental bill per unit; Expense is a reimbursable cost; Discount
- * subtracts a flat amount once (quantity is ignored).
+ * Legacy string form of a money quantity: a complete finite numeric string
+ * ("150", "150.25") parses to its number. Blank strings belong to
+ * `blankableMoneyString`, so an optional field maps blank to absence.
  */
+const numericMoneyString = z.pipe(
+  z.string().check(z.refine((value) => value.trim() !== "" && Number.isFinite(Number(value.trim())), "Money must be a complete finite numeric string")),
+  z.transform((value) => Number(value.trim()))
+);
+
+/**
+ * Legacy string form of an optional money field. A complete finite numeric
+ * string becomes its number; a blank (or whitespace-only) string becomes
+ * undefined — absence, not zero — matching the pre-schema shape where an
+ * empty optional field was simply not written. Anything else stays invalid.
+ */
+const blankableMoneyString = z.pipe(
+  z.string().check(
+    z.refine((value) => {
+      const trimmed = value.trim();
+      return trimmed === "" || Number.isFinite(Number(trimmed));
+    }, "Money must be a finite numeric string or blank")
+  ),
+  z.transform((value) => {
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : Number(trimmed);
+  })
+);
+
+// ---------------------------------------------------------------------------
+
+/** Charge-type ids are fixed by the `chargeTypes` table below: "0".."3". */
+export const chargeTypeIdSchema = z.enum(["0", "1", "2", "3"]);
+
+export type ChargeTypeId = z.output<typeof chargeTypeIdSchema>;
+
+/** A line on the invoice. Money fields (`qty`, `unitPrice`, `vatRate`) are
+ * numbers once they leave the form boundary; older persisted records store
+ * them as strings, so the schema coerces complete finite numeric strings and
+ * treats blank values as absence (never zero). Malformed values stay invalid.
+ */
+export const lineItemSchema = z.object({
+  date: z.optional(z.string()),
+  description: z.optional(z.string()),
+  name: z.optional(z.string()),
+  qty: z.optional(z.union([finiteMoney, blankableMoneyString])),
+  type: z.optional(z.union([z.literal("-1"), chargeTypeIdSchema])),
+  unit: z.optional(z.string()),
+  unitPrice: z.optional(z.union([finiteMoney, blankableMoneyString])),
+  uuid: z.string(),
+  vatRate: z.optional(z.union([finiteMoney, blankableMoneyString])),
+});
+
+export type LineItem = z.output<typeof lineItemSchema>;
+
+/** A payment record. Legacy string `amount`s coerce to numbers here. */
+export const paymentSchema = z.object({
+  amount: z.union([finiteMoney, numericMoneyString]),
+  date: z.string(),
+  method: z.optional(z.string()),
+  reference: z.optional(z.string()),
+});
+
+export type Payment = z.output<typeof paymentSchema>;
+
+/** A logo record: only `url` is meaningful. Legacy records may miss `url`. */
+export const logoSchema = z.object({ url: z._default(z.string(), "") });
+
+export type Logo = z.output<typeof logoSchema>;
+
+/** Schema for a persisted Invoice record (the `invoice` domain). */
+export const invoiceSchema = z.object({
+  date: z.string(),
+  from: addressSchema,
+  id: z.string(),
+  lineItems: z.array(lineItemSchema),
+  logo: logoSchema,
+  payment: z.optional(paymentDetailsSchema),
+  // Older persisted records legitimately lack `payments` (and some store an
+  // explicit null — the old `?? []` tolerated both). The pipe normalizes
+  // undefined AND null to [], so the inferred type is strictly Payment[]
+  // while tolerating both legacy shapes at the parse layer.
+  payments: z._default(
+    z.pipe(
+      z.union([z.array(paymentSchema), z.null()]),
+      z.transform((v) => v ?? [])
+    ),
+    []
+  ),
+  purchaseOrder: z.string(),
+  to: addressSchema,
+});
+
+export type Invoice = z.output<typeof invoiceSchema>;
+
 export type ChargeType = {
-  id: "0" | "1" | "2" | "3";
+  id: ChargeTypeId;
   label: string;
   calculation: (qty: number, unitPrice: number) => number;
   disabledFields?: (keyof LineItem)[];
@@ -36,41 +134,6 @@ export const chargeTypes = [
     disabledFields: ["qty", "unit"] as (keyof LineItem)[],
   },
 ] satisfies ChargeType[];
-
-/**
- * A line on the invoice. Money fields are numbers once they leave the form
- * boundary; an empty field is represented by absence of the property.
- */
-export type LineItem = {
-  uuid: string;
-  date?: string;
-  name?: string;
-  description?: string;
-  unit?: string;
-  qty?: number;
-  unitPrice?: number;
-  vatRate?: number;
-  type?: "-1" | ChargeType["id"];
-};
-
-export type Payment = {
-  amount: number;
-  date: string;
-  method?: string;
-  reference?: string;
-};
-
-export type Invoice = {
-  id: string;
-  date: string;
-  purchaseOrder: string;
-  logo: { url: string };
-  from: Address;
-  to: Address;
-  lineItems: LineItem[];
-  payment?: PaymentDetails;
-  payments: Payment[];
-};
 
 /** Price of a single line. Blank or untyped lines contribute nothing. */
 export const linePrice = ({ qty, type, unitPrice }: Pick<LineItem, "qty" | "unitPrice" | "type">) =>

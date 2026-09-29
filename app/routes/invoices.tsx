@@ -6,7 +6,7 @@ import { Button } from "~/components/home/Button";
 import { Status } from "~/components/home/Status";
 import { Modal } from "~/components/Modal";
 import { NumberInput } from "~/components/Inputs";
-import { type Invoice, type Payment, paymentStatusOf, type PaymentSummary } from "~/data/invoice";
+import { type Invoice, invoiceSchema, type Payment, paymentStatusOf, type PaymentSummary } from "~/data/invoice";
 import { db } from "~/db";
 import { useMobile } from "~/hooks";
 import type { Route } from "./+types/invoices";
@@ -86,7 +86,7 @@ const InvoiceProvider = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const fetchedInvoices = (await db.getAll(["invoice"])) as Invoice[];
+        const fetchedInvoices = await db.getAllValidated(invoiceSchema, ["invoice"]);
         setInvoices(fetchedInvoices);
       } catch (e) {
         eventBus.publish({
