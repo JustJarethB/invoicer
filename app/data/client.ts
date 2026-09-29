@@ -1,6 +1,6 @@
 import { z } from "zod/mini";
 import { db } from "~/db";
-import { addressSchema, emptyAddress } from "./address";
+import { AddressSchema, emptyAddress } from "./address";
 import { logger } from "~/utils/logger";
 
 /**
@@ -10,8 +10,8 @@ import { logger } from "~/utils/logger";
  * tolerance exists to preserve (see issue #43 thread; #48 shipped the same
  * strict shape). A failing client record falls back to NULL_CLIENT.
  */
-export const clientSchema = z.object({
-  address: addressSchema,
+export const ClientSchema = z.object({
+  address: AddressSchema,
   contactName: z.string(),
   email: z.string(),
   id: z.string(),
@@ -19,9 +19,9 @@ export const clientSchema = z.object({
 });
 
 /** Schema for the persisted client-key index record. */
-export const clientKeysSchema = z.array(z.string());
+export const ClientKeysSchema = z.array(z.string());
 
-export type Client = z.output<typeof clientSchema>;
+export type Client = z.output<typeof ClientSchema>;
 export const NULL_CLIENT: Client = {
   id: "",
   contactName: "",
@@ -50,10 +50,10 @@ export const deleteClient = async (key: string) => {
 };
 
 export const getClients = async (): Promise<Client[]> => {
-  const keys = (await db.getValidated(clientKeysSchema, ["clientKeys"])) ?? [];
+  const keys = (await db.getValidated(ClientKeysSchema, ["clientKeys"])) ?? [];
   const clients = await Promise.all(
     keys.map(async (key: string) => {
-      return (await db.getValidated(clientSchema, ["clients", key])) ?? NULL_CLIENT;
+      return (await db.getValidated(ClientSchema, ["clients", key])) ?? NULL_CLIENT;
     })
   );
   logger.debug("Loaded clients:", clients);

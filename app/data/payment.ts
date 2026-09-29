@@ -2,7 +2,7 @@ import { z } from "zod/mini";
 
 // TODO: terms/email/phone/info are universal
 // rest are dependent on the type of payment
-export const paymentDetailsSchema = z.object({
+export const PaymentDetailsSchema = z.object({
   bankName: z._default(z.string(), ""),
   emailAddress: z._default(z.string(), ""),
   info: z._default(z.string(), ""),
@@ -13,7 +13,7 @@ export const paymentDetailsSchema = z.object({
   type: z._default(z.string(), ""),
 });
 
-export type PaymentDetails = z.output<typeof paymentDetailsSchema>;
+export type PaymentDetails = z.output<typeof PaymentDetailsSchema>;
 
 /** Build PaymentDetails from a form record, defaulting absent fields to empty. */
 export const paymentDetailsFromRecord = (record: Record<string, string>): PaymentDetails => ({

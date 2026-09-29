@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
 import { type Client, getClients, NULL_CLIENT } from "~/data/client";
-import { type Address, addressSchema } from "~/data/address";
+import { type Address, AddressSchema } from "~/data/address";
 import { useLineItems, withLineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { AddressPanel } from "~/components/home/AddressPanel";
 import { Controls } from "~/components/home/Controls";
@@ -9,8 +9,8 @@ import { fieldFormattingOf, StandardField } from "~/components/home/StandardFiel
 import { Totals } from "~/components/home/Totals";
 import { LineItems } from "~/components/home/LineItems";
 import type { Route } from "./+types/invoice";
-import { type PaymentDetails, paymentDetailsFromRecord, paymentDetailsSchema } from "~/data/payment";
-import { type Invoice, type Logo, logoSchema } from "~/data/invoice";
+import { type PaymentDetails, paymentDetailsFromRecord, PaymentDetailsSchema } from "~/data/payment";
+import { type Invoice, type Logo, LogoSchema } from "~/data/invoice";
 import { Autosave } from "~/components/home/Autosave";
 import { db } from "~/db";
 import { ManualSave } from "~/components/home/ManualSave";
@@ -38,8 +38,8 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function clientLoader() {
-  const from: Address = (await db.getValidated(addressSchema, ["from-address"])) ?? NULL_CLIENT.address;
-  const payment: PaymentDetails = (await db.getValidated(paymentDetailsSchema, ["payment-details"])) ?? {
+  const from: Address = (await db.getValidated(AddressSchema, ["from-address"])) ?? NULL_CLIENT.address;
+  const payment: PaymentDetails = (await db.getValidated(PaymentDetailsSchema, ["payment-details"])) ?? {
     terms: "",
     type: "",
     bankName: "",
@@ -50,7 +50,7 @@ export async function clientLoader() {
     info: "",
   };
   const clients: Client[] = await getClients();
-  const logo: Logo | null = await db.getValidated(logoSchema, ["logo"]);
+  const logo: Logo | null = await db.getValidated(LogoSchema, ["logo"]);
   return { from, payment, clients, logo };
 }
 

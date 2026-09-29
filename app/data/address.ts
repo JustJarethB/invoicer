@@ -1,6 +1,6 @@
 import { z } from "zod/mini";
 
-export const addressSchema = z.object({
+export const AddressSchema = z.object({
   city: z._default(z.string(), ""),
   county: z._default(z.string(), ""),
   name: z._default(z.string(), ""),
@@ -8,7 +8,7 @@ export const addressSchema = z.object({
   streetAddress: z._default(z.string(), ""),
 });
 
-export type Address = z.output<typeof addressSchema>;
+export type Address = z.output<typeof AddressSchema>;
 
 export const emptyAddress = (): Address => ({
   name: "",

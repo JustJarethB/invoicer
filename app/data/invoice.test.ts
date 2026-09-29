@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Invoice, invoiceSchema, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
+import { type Invoice, InvoiceSchema, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
 import { makeInvoice, makeLineItem, makePayment, ownerEmptyInvoiceFixture } from "./testFixtures";
 
 describe("linePrice", () => {
@@ -84,7 +84,7 @@ describe("paymentStatusOf", () => {
   });
 });
 
-describe("invoiceSchema (legacy money strings)", () => {
+describe("InvoiceSchema (legacy money strings)", () => {
   // TODO(legacy-money-strings) resolution: older persisted invoices store
   // money as strings. The schema coerces complete finite numeric strings to
   // numbers (Number()-finite semantics: accepts "1e3", rejects
@@ -102,7 +102,7 @@ describe("invoiceSchema (legacy money strings)", () => {
   };
 
   it("parses a legacy record, coercing string money to numbers", () => {
-    const result = invoiceSchema.safeParse(legacyInvoice);
+    const result = InvoiceSchema.safeParse(legacyInvoice);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.lineItems[0].qty).toBe(2);
@@ -111,7 +111,7 @@ describe("invoiceSchema (legacy money strings)", () => {
   });
 
   it("yields correct totals for a legacy record (string amounts never concatenate)", () => {
-    const result = invoiceSchema.safeParse(legacyInvoice);
+    const result = InvoiceSchema.safeParse(legacyInvoice);
     expect(result.success).toBe(true);
     if (!result.success) return;
     const summary = paymentStatusOf(result.data);
@@ -123,7 +123,7 @@ describe("invoiceSchema (legacy money strings)", () => {
   });
 
   it("maps blank optional money strings to absence, not zero", () => {
-    const result = invoiceSchema.safeParse({
+    const result = InvoiceSchema.safeParse({
       ...legacyInvoice,
       lineItems: [{ uuid: "l1", type: "0", qty: "", unitPrice: "   " }],
     });
@@ -136,33 +136,33 @@ describe("invoiceSchema (legacy money strings)", () => {
 
   it("tolerates a legacy record without a payments array (or an explicit null)", () => {
     const { payments: _omitted, ...withoutPayments } = legacyInvoice;
-    const absent = invoiceSchema.safeParse(withoutPayments);
+    const absent = InvoiceSchema.safeParse(withoutPayments);
     expect(absent.success).toBe(true);
     if (absent.success) expect(absent.data.payments).toEqual([]);
-    const nulled = invoiceSchema.safeParse({ ...legacyInvoice, payments: null });
+    const nulled = InvoiceSchema.safeParse({ ...legacyInvoice, payments: null });
     expect(nulled.success).toBe(true);
     if (nulled.success) expect(nulled.data.payments).toEqual([]);
   });
 
   it("keeps the legacy -1 charge type valid", () => {
-    const result = invoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "-1" }] });
+    const result = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "-1" }] });
     expect(result.success).toBe(true);
   });
 
   it("rejects malformed or non-finite money instead of crashing or zeroing", () => {
-    expect(invoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", unitPrice: "1,50" }] }).success).toBe(false);
-    expect(invoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: "Infinity", date: "2026-01-02" }] }).success).toBe(false);
-    expect(invoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: NaN }] }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", unitPrice: "1,50" }] }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: "Infinity", date: "2026-01-02" }] }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: NaN }] }).success).toBe(false);
   });
 });
 
-describe("invoiceSchema (legacy logo blobs)", () => {
+describe("InvoiceSchema (legacy logo blobs)", () => {
   // Legacy logo normalization ported from PR #50's proven pattern (commit
   // 9a1c2c0 "fix: restore legacy invoice loading"): the owner's stored empty
   // invoice (id 1785798307) keeps `logo: { url: {} }`. Without unpicking it,
   // getAllValidated silently drops the record — the PR #48 incident class.
   it('parses the owner\'s stored empty-invoice fixture, coercing the object logo url to ""', () => {
-    const result = invoiceSchema.safeParse(ownerEmptyInvoiceFixture);
+    const result = InvoiceSchema.safeParse(ownerEmptyInvoiceFixture);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.logo).toEqual({ url: "" });
@@ -175,21 +175,21 @@ describe("invoiceSchema (legacy logo blobs)", () => {
   });
 
   it("unwraps a double-wrapped legacy logo url to its inner string", () => {
-    const result = invoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: { url: "https://x/logo.png" } } });
+    const result = InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: { url: "https://x/logo.png" } } });
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.logo).toEqual({ url: "https://x/logo.png" });
   });
 
   it("keeps a non-string, non-object logo url invalid", () => {
-    expect(invoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: 42 } }).success).toBe(false);
-    expect(invoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: null } }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: 42 } }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: null } }).success).toBe(false);
   });
 
   it("defaults a logo record with a missing url key to an empty string", () => {
     // Regression guard: the record-level default must survive the legacy
     // unwrap (`logo: {}` parsed to `{ url: "" }` before this tolerance).
-    const result = invoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: {} });
+    const result = InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: {} });
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.logo).toEqual({ url: "" });

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "../db";
-import { invoiceSchema } from "./invoice";
+import { InvoiceSchema } from "./invoice";
 import { ownerEmptyInvoiceFixture } from "./testFixtures";
 
 // Pins the validated read seam added for issue #43 (app/db.ts). The seam is
@@ -36,7 +36,7 @@ describe("db validated read seam", () => {
 
   it("coerces a legacy string-money record and preserves the stored JSON on read", async () => {
     seed("legacy", legacyString);
-    const record = await db.getValidated(invoiceSchema, ["invoice", "legacy"]);
+    const record = await db.getValidated(InvoiceSchema, ["invoice", "legacy"]);
     expect(record).not.toBeNull();
     if (!record) return; // the guard pattern invoice.test.ts uses; expect above already failed if null
     expect(record.lineItems[0].unitPrice).toBe(150);
@@ -50,29 +50,29 @@ describe("db validated read seam", () => {
     seed("bad", malformed);
     const raw = await db.get(["invoice", "bad"]);
     expect(raw).toEqual(malformed);
-    expect(await db.getValidated(invoiceSchema, ["invoice", "bad"])).toBeNull();
+    expect(await db.getValidated(InvoiceSchema, ["invoice", "bad"])).toBeNull();
   });
 
   it("drops schema-failing records from list reads and keeps key order", async () => {
     seed("z", { ...validNumeric, id: "z", lineItems: legacyString.lineItems });
     seed("a", { ...validNumeric, id: "a", lineItems: legacyString.lineItems });
     seed("wrong", { lineItems: "oops" });
-    const records = await db.getAllValidated(invoiceSchema, ["invoice"]);
+    const records = await db.getAllValidated(InvoiceSchema, ["invoice"]);
     expect(records.map((record) => record.id)).toEqual(["a", "z"]);
   });
 
   it("treats a missing key and unparseable JSON as absent", async () => {
-    expect(await db.getValidated(invoiceSchema, ["invoice", "missing"])).toBeNull();
+    expect(await db.getValidated(InvoiceSchema, ["invoice", "missing"])).toBeNull();
     localStorage.setItem(JSON.stringify(["invoice", "junk"]), "{not json");
-    expect(await db.getValidated(invoiceSchema, ["invoice", "junk"])).toBeNull();
+    expect(await db.getValidated(InvoiceSchema, ["invoice", "junk"])).toBeNull();
   });
 
   it("keeps the owner's legacy empty-invoice record in a list read (logo.url stored as object)", async () => {
     // PR #50 owner fixture, id 1785798307: before the legacy-logo
-    // normalization this record failed logoSchema and was silently dropped
+    // normalization this record failed LogoSchema and was silently dropped
     // from the invoices list — the PR #48 break mode.
     seed("owner-legacy", ownerEmptyInvoiceFixture);
-    const records = await db.getAllValidated(invoiceSchema, ["invoice"]);
+    const records = await db.getAllValidated(InvoiceSchema, ["invoice"]);
     expect(records.map((record) => record.id)).toEqual(["1785798307"]);
     expect(records[0].logo).toEqual({ url: "" });
     expect(localStorage.getItem(JSON.stringify(["invoice", "owner-legacy"]))).toBe(JSON.stringify(ownerEmptyInvoiceFixture));
