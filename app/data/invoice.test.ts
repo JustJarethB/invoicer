@@ -85,11 +85,6 @@ describe("paymentStatusOf", () => {
 });
 
 describe("InvoiceSchema (legacy money strings)", () => {
-  // TODO(legacy-money-strings) resolution: older persisted invoices store
-  // money as strings. The schema coerces complete finite numeric strings to
-  // numbers (Number()-finite semantics: accepts "1e3", rejects
-  // "Infinity"/"NaN"/malformed), maps blank optional strings to absence
-  // (never zero), and keeps everything else invalid.
   const legacyInvoice = {
     id: "inv-legacy",
     date: "2026-01-01",
@@ -156,9 +151,6 @@ describe("InvoiceSchema (legacy money strings)", () => {
   });
 
   it("rejects blank, whitespace, boolean, array and null amounts that z.coerce.number() would accept", () => {
-    // Empirical truth table for z.coerce.number() on zod/mini 4.6.5: blank->0,
-    // true->1, false->0, []->0, ["5"]->5, null->0. Every one of these must stay
-    // invalid on the persisted-record schema.
     for (const amount of ["", "   ", true, false, [], ["5"], null]) {
       const result = InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount, date: "2026-01-02" }] });
       expect(result.success).toBe(false);
@@ -181,27 +173,18 @@ describe("InvoiceSchema (legacy money strings)", () => {
     if (!result.success) return;
     expect(result.data.lineItems[0].qty).toBe(1000);
     expect(result.data.lineItems[0].unitPrice).toBe(20);
-    // Service: qty x unitPrice = 1000 x 20.
     expect(invoiceTotal(result.data)).toBe(20000);
   });
 });
 
 describe("InvoiceSchema (legacy logo blobs)", () => {
-  // Legacy logo normalization ported from PR #50's proven pattern (commit
-  // 9a1c2c0 "fix: restore legacy invoice loading"): the owner's stored empty
-  // invoice (id 1785798307) keeps `logo: { url: {} }`. Without unpicking it,
-  // getAllValidated silently drops the record — the PR #48 incident class.
   it('parses the owner\'s stored empty-invoice fixture, coercing the object logo url to ""', () => {
     const result = InvoiceSchema.safeParse(ownerEmptyInvoiceFixture);
     expect(result.success).toBe(true);
     if (!result.success) return;
     expect(result.data.logo).toEqual({ url: "" });
     expect(invoiceTotal(result.data)).toBe(0);
-    // Absent legacy `payments` normalize to [] and sum to 0: no thrown save/load,
-    // no string concatenation.
     expect(paymentStatusOf(result.data).totalPaid).toBe(0);
-    // paymentStatusOf labels an all-zero invoice "paid" (0 === 0): pre-existing
-    // behavior on main, outside #43's scope, so not pinned here.
   });
 
   it("unwraps a double-wrapped legacy logo url to its inner string", () => {
@@ -217,8 +200,6 @@ describe("InvoiceSchema (legacy logo blobs)", () => {
   });
 
   it("defaults a logo record with a missing url key to an empty string", () => {
-    // Regression guard: the record-level default must survive the legacy
-    // unwrap (`logo: {}` parsed to `{ url: "" }` before this tolerance).
     const result = InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: {} });
     expect(result.success).toBe(true);
     if (!result.success) return;

@@ -1,13 +1,6 @@
 import { eventBus } from "~/utils/events";
 import { logger } from "~/utils/logger";
 
-/**
- * Structural validator contract for the validated read seam (issue #43).
- * Deliberately library-agnostic: any parser exposing `safeParse(data: unknown)`
- * with zod's result shape satisfies it, so `db` never imports a validation
- * library and schemas stay co-located with their domain modules. Zod v4
- * schemas (imported from `zod/mini`) satisfy this contract directly.
- */
 type Validator<T> = {
   safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: unknown };
 };
@@ -65,18 +58,7 @@ const remove = async (keys: string[]) => {
   localStorage.removeItem(JSON.stringify(keys));
   return true;
 };
-/**
- * Validated read of one persisted record (issue #43). The caller supplies the
- * schema for the key's shape; the schema decides what the app accepts.
- *
- * Read-failure policy: a record that is missing, is not valid JSON, or fails
- * its schema is reported through the logger and treated as absent — `null`
- * here, and (via `getAllValidated`) filtered out of list reads. Legacy numeric
- * strings for money quantities, blank optional fields, and absent
- * legacy-only keys are accepted by the domain schemas (app/data/*), so this
- * path only skips genuinely malformed records. Stored JSON is never rewritten
- * on read; canonical values are persisted only on a deliberate save.
- */
+/** Validated read: missing, unparseable, or schema-failing records return null; stored JSON is never rewritten. */
 const getValidated = async <T>(validator: Validator<T>, keys: string[]): Promise<T | null> => {
   if (typeof localStorage === "undefined") return null;
   const data = localStorage.getItem(JSON.stringify(keys));
@@ -95,11 +77,7 @@ const getValidated = async <T>(validator: Validator<T>, keys: string[]): Promise
   }
   return result.data;
 };
-/**
- * Validated list read: every matching record is checked with the same schema
- * as `getValidated`, and records that fail are skipped. Matching keys are
- * sorted first, as in `getAll`, so list ordering is unchanged.
- */
+/** Validated list read: schema-failing records are skipped; keys are sorted as in getAll, preserving list ordering. */
 const getAllValidated = async <T>(validator: Validator<T>, keys: string[] = []): Promise<T[]> => {
   if (typeof localStorage === "undefined") return [];
   return (

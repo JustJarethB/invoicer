@@ -27,8 +27,7 @@ export const makeInvoice = (overrides: Partial<Invoice> = {}): Invoice => ({
   ...overrides,
 });
 
-/** Exact legacy empty-invoice record from the owner's storage (PR #50 fixture):
- * `logo.url` was stored as an empty object, and every money field is absent. */
+/** Exact legacy record from the owner's storage. */
 export const ownerEmptyInvoiceFixture = {
   id: "1785798307",
   date: "2026-08-03",

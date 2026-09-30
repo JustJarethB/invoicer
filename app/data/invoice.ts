@@ -2,29 +2,14 @@ import { z } from "zod/mini";
 import { AddressSchema } from "./address";
 import { PaymentDetailsSchema } from "./payment";
 
-// ---------------------------------------------------------------------------
-// Legacy money parsing (resolves TODO(legacy-money-strings) at the parse layer)
-// ---------------------------------------------------------------------------
-
-/** A usable money value at the parse layer: a finite number already. */
 const FiniteMoney = z.number().check(z.refine(Number.isFinite, "Money must be a finite number"));
 
-/**
- * Legacy string form of a money quantity: a complete finite numeric string
- * ("150", "150.25") parses to its number. Blank strings belong to
- * `BlankableMoneyString`, so an optional field maps blank to absence.
- */
 const NumericMoneyString = z.pipe(
   z.string().check(z.refine((value) => value.trim() !== "" && Number.isFinite(Number(value.trim())), "Money must be a complete finite numeric string")),
   z.transform((value) => Number(value.trim()))
 );
 
-/**
- * Legacy string form of an optional money field. A complete finite numeric
- * string becomes its number; a blank (or whitespace-only) string becomes
- * undefined — absence, not zero — matching the pre-schema shape where an
- * empty optional field was simply not written. Anything else stays invalid.
- */
+/** Blank (or whitespace-only) becomes undefined: absence, never zero. */
 const BlankableMoneyString = z.pipe(
   z.string().check(
     z.refine((value) => {
@@ -38,18 +23,10 @@ const BlankableMoneyString = z.pipe(
   })
 );
 
-// ---------------------------------------------------------------------------
-
-/** Charge-type ids are fixed by the `chargeTypes` table below: "0".."3". */
 export const ChargeTypeIdSchema = z.enum(["0", "1", "2", "3"]);
 
 export type ChargeTypeId = z.infer<typeof ChargeTypeIdSchema>;
 
-/** A line on the invoice. Money fields (`qty`, `unitPrice`, `vatRate`) are
- * numbers once they leave the form boundary; older persisted records store
- * them as strings, so the schema coerces complete finite numeric strings and
- * treats blank values as absence (never zero). Malformed values stay invalid.
- */
 export const LineItemSchema = z.object({
   date: z.optional(z.string()),
   description: z.optional(z.string()),
@@ -64,7 +41,6 @@ export const LineItemSchema = z.object({
 
 export type LineItem = z.infer<typeof LineItemSchema>;
 
-/** A payment record. Legacy string `amount`s coerce to numbers here. */
 export const PaymentSchema = z.object({
   amount: z.union([FiniteMoney, NumericMoneyString]),
   date: z.string(),
@@ -74,16 +50,11 @@ export const PaymentSchema = z.object({
 
 export type Payment = z.infer<typeof PaymentSchema>;
 
-/**
- * Legacy logo url blobs. PR #50's owner fixture (id 1785798307) stores
- * `logo.url` as an empty object, and the earlier editor double-wrapped it
- * (`{ url: { url: <string> } }`). Both unwrap to a plain string; anything
- * else (numbers, null, deeper nesting) stays invalid.
- */
 const LogoUrlObject = z.pipe(
   z.object({ url: z._default(z.string(), "") }),
   z.transform((blob) => blob.url)
 );
+/** Legacy blobs (url wrapped or double-wrapped in an object) unwrap to a string; anything else stays invalid. */
 const LegacyLogoUrl = z.union([
   z.string(),
   z.pipe(
@@ -96,12 +67,10 @@ const LegacyLogoUrl = z.union([
   ),
 ]);
 
-/** A logo record: only `url` is meaningful. Legacy records may miss `url` or wrap it in an object. */
 export const LogoSchema = z.object({ url: z._default(LegacyLogoUrl, "") });
 
 export type Logo = z.infer<typeof LogoSchema>;
 
-/** Schema for a persisted Invoice record (the `invoice` domain). */
 export const InvoiceSchema = z.object({
   date: z.string(),
   from: AddressSchema,
@@ -109,10 +78,7 @@ export const InvoiceSchema = z.object({
   lineItems: z.array(LineItemSchema),
   logo: LogoSchema,
   payment: z.optional(PaymentDetailsSchema),
-  // Older persisted records legitimately lack `payments` (and some store an
-  // explicit null — the old `?? []` tolerated both). The pipe normalizes
-  // undefined AND null to [], so the inferred type is strictly Payment[]
-  // while tolerating both legacy shapes at the parse layer.
+  // Legacy records may lack `payments` or store an explicit null; both normalize to [].
   payments: z._default(
     z.pipe(
       z.union([z.array(PaymentSchema), z.null()]),
