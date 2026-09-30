@@ -1,10 +1,14 @@
-export type Address = {
-  name: string;
-  streetAddress: string;
-  city: string;
-  county: string;
-  postCode: string;
-};
+import { z } from "zod/mini";
+
+export const AddressSchema = z.object({
+  city: z._default(z.string(), ""),
+  county: z._default(z.string(), ""),
+  name: z._default(z.string(), ""),
+  postCode: z._default(z.string(), ""),
+  streetAddress: z._default(z.string(), ""),
+});
+
+export type Address = z.infer<typeof AddressSchema>;
 
 export const emptyAddress = (): Address => ({
   name: "",

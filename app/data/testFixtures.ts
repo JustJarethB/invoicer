@@ -26,3 +26,33 @@ export const makeInvoice = (overrides: Partial<Invoice> = {}): Invoice => ({
   payments: [],
   ...overrides,
 });
+
+/** Exact legacy record from the owner's storage. */
+export const ownerEmptyInvoiceFixture = {
+  id: "1785798307",
+  date: "2026-08-03",
+  purchaseOrder: "---",
+  logo: {
+    url: {},
+  },
+  from: {
+    name: "",
+    streetAddress: "",
+    city: "",
+    county: "",
+    postCode: "",
+  },
+  to: {
+    name: "",
+    streetAddress: "",
+    city: "",
+    county: "",
+    postCode: "",
+  },
+  lineItems: [
+    {
+      uuid: "89eac997-5d56-438e-9f28-dbfa98db3a2b",
+    },
+  ],
+  payment: {},
+} as const;

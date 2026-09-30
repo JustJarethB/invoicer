@@ -1,13 +1,99 @@
-import type { Address } from "./address";
-import type { PaymentDetails } from "./payment";
+import { z } from "zod/mini";
+import { AddressSchema } from "./address";
+import { PaymentDetailsSchema } from "./payment";
 
-/**
- * Charge types describe how a line contributes to the invoice total.
- * Service and Rental bill per unit; Expense is a reimbursable cost; Discount
- * subtracts a flat amount once (quantity is ignored).
- */
+const FiniteMoney = z.number().check(z.refine(Number.isFinite, "Money must be a finite number"));
+
+const NumericMoneyString = z.pipe(
+  z.string().check(z.refine((value) => value.trim() !== "" && Number.isFinite(Number(value.trim())), "Money must be a complete finite numeric string")),
+  z.transform((value) => Number(value.trim()))
+);
+
+/** Blank (or whitespace-only) becomes undefined: absence, never zero. */
+const BlankableMoneyString = z.pipe(
+  z.string().check(
+    z.refine((value) => {
+      const trimmed = value.trim();
+      return trimmed === "" || Number.isFinite(Number(trimmed));
+    }, "Money must be a finite numeric string or blank")
+  ),
+  z.transform((value) => {
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : Number(trimmed);
+  })
+);
+
+export const ChargeTypeIdSchema = z.enum(["0", "1", "2", "3"]);
+
+export type ChargeTypeId = z.infer<typeof ChargeTypeIdSchema>;
+
+export const LineItemSchema = z.object({
+  date: z.optional(z.string()),
+  description: z.optional(z.string()),
+  name: z.optional(z.string()),
+  qty: z.optional(z.union([FiniteMoney, BlankableMoneyString])),
+  type: z.optional(z.union([z.literal("-1"), ChargeTypeIdSchema])),
+  unit: z.optional(z.string()),
+  unitPrice: z.optional(z.union([FiniteMoney, BlankableMoneyString])),
+  uuid: z.string(),
+  vatRate: z.optional(z.union([FiniteMoney, BlankableMoneyString])),
+});
+
+export type LineItem = z.infer<typeof LineItemSchema>;
+
+export const PaymentSchema = z.object({
+  amount: z.union([FiniteMoney, NumericMoneyString]),
+  date: z.string(),
+  method: z.optional(z.string()),
+  reference: z.optional(z.string()),
+});
+
+export type Payment = z.infer<typeof PaymentSchema>;
+
+const LogoUrlObject = z.pipe(
+  z.object({ url: z._default(z.string(), "") }),
+  z.transform((blob) => blob.url)
+);
+/** Legacy blobs (url wrapped or double-wrapped in an object) unwrap to a string; anything else stays invalid. */
+const LegacyLogoUrl = z.union([
+  z.string(),
+  z.pipe(
+    z.object({ url: z.optional(z.string()) }),
+    z.transform((blob) => blob.url ?? "")
+  ),
+  z.pipe(
+    z.object({ url: LogoUrlObject }),
+    z.transform((blob) => blob.url)
+  ),
+]);
+
+export const LogoSchema = z.object({ url: z._default(LegacyLogoUrl, "") });
+
+export type Logo = z.infer<typeof LogoSchema>;
+
+export const InvoiceSchema = z.object({
+  date: z.string(),
+  from: AddressSchema,
+  id: z.string(),
+  lineItems: z.array(LineItemSchema),
+  logo: LogoSchema,
+  payment: z.optional(PaymentDetailsSchema),
+  // Legacy records may lack `payments` or store an explicit null; both normalize to [].
+  payments: z._default(
+    z.pipe(
+      z.union([z.array(PaymentSchema), z.null()]),
+      z.transform((v) => v ?? [])
+    ),
+    []
+  ),
+  purchaseOrder: z.string(),
+  to: AddressSchema,
+});
+
+export type Invoice = z.infer<typeof InvoiceSchema>;
+
 export type ChargeType = {
-  id: "0" | "1" | "2" | "3";
+  id: ChargeTypeId;
   label: string;
   calculation: (qty: number, unitPrice: number) => number;
   disabledFields?: (keyof LineItem)[];
@@ -36,41 +122,6 @@ export const chargeTypes = [
     disabledFields: ["qty", "unit"] as (keyof LineItem)[],
   },
 ] satisfies ChargeType[];
-
-/**
- * A line on the invoice. Money fields are numbers once they leave the form
- * boundary; an empty field is represented by absence of the property.
- */
-export type LineItem = {
-  uuid: string;
-  date?: string;
-  name?: string;
-  description?: string;
-  unit?: string;
-  qty?: number;
-  unitPrice?: number;
-  vatRate?: number;
-  type?: "-1" | ChargeType["id"];
-};
-
-export type Payment = {
-  amount: number;
-  date: string;
-  method?: string;
-  reference?: string;
-};
-
-export type Invoice = {
-  id: string;
-  date: string;
-  purchaseOrder: string;
-  logo: { url: string };
-  from: Address;
-  to: Address;
-  lineItems: LineItem[];
-  payment?: PaymentDetails;
-  payments: Payment[];
-};
 
 /** Price of a single line. Blank or untyped lines contribute nothing. */
 export const linePrice = ({ qty, type, unitPrice }: Pick<LineItem, "qty" | "unitPrice" | "type">) =>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Invoice, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
-import { makeInvoice, makeLineItem, makePayment } from "./testFixtures";
+import { type Invoice, InvoiceSchema, invoiceTotal, linePrice, paymentStatusOf } from "./invoice";
+import { makeInvoice, makeLineItem, makePayment, ownerEmptyInvoiceFixture } from "./testFixtures";
 
 describe("linePrice", () => {
   it("calculates a service line total from quantity and unit price", () => {
@@ -81,5 +81,128 @@ describe("paymentStatusOf", () => {
     );
     expect(summary.paymentStatus).toBe("overpaid");
     expect(summary.due).toBe(-100);
+  });
+});
+
+describe("InvoiceSchema (legacy money strings)", () => {
+  const legacyInvoice = {
+    id: "inv-legacy",
+    date: "2026-01-01",
+    purchaseOrder: "PO-1",
+    logo: { url: "" },
+    from: { name: "From Co" },
+    to: { name: "Buyer", streetAddress: "", city: "", county: "", postCode: "" },
+    lineItems: [{ uuid: "l1", type: "0", qty: "2", unitPrice: "150.00" }],
+    payments: [{ amount: "100", date: "2026-01-02" }],
+  };
+
+  it("parses a legacy record, coercing string money to numbers", () => {
+    const result = InvoiceSchema.safeParse(legacyInvoice);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lineItems[0].qty).toBe(2);
+    expect(result.data.lineItems[0].unitPrice).toBe(150);
+    expect(result.data.payments[0].amount).toBe(100);
+  });
+
+  it("yields correct totals for a legacy record (string amounts never concatenate)", () => {
+    const result = InvoiceSchema.safeParse(legacyInvoice);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const summary = paymentStatusOf(result.data);
+    expect(summary.totalDue).toBe(300);
+    expect(summary.totalPaid).toBe(100);
+    expect(summary.due).toBe(200);
+    expect(summary.paymentStatus).toBe("partial");
+    expect(invoiceTotal(result.data)).toBe(300);
+  });
+
+  it("maps blank optional money strings to absence, not zero", () => {
+    const result = InvoiceSchema.safeParse({
+      ...legacyInvoice,
+      lineItems: [{ uuid: "l1", type: "0", qty: "", unitPrice: "   " }],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lineItems[0].qty).toBeUndefined();
+    expect(result.data.lineItems[0].unitPrice).toBeUndefined();
+    expect(linePrice(result.data.lineItems[0])).toBe(0);
+  });
+
+  it("tolerates a legacy record without a payments array (or an explicit null)", () => {
+    const { payments: _omitted, ...withoutPayments } = legacyInvoice;
+    const absent = InvoiceSchema.safeParse(withoutPayments);
+    expect(absent.success).toBe(true);
+    if (absent.success) expect(absent.data.payments).toEqual([]);
+    const nulled = InvoiceSchema.safeParse({ ...legacyInvoice, payments: null });
+    expect(nulled.success).toBe(true);
+    if (nulled.success) expect(nulled.data.payments).toEqual([]);
+  });
+
+  it("keeps the legacy -1 charge type valid", () => {
+    const result = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "-1" }] });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects malformed or non-finite money instead of crashing or zeroing", () => {
+    expect(InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", unitPrice: "1,50" }] }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: "Infinity", date: "2026-01-02" }] }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount: NaN }] }).success).toBe(false);
+  });
+
+  it("rejects blank, whitespace, boolean, array and null amounts that z.coerce.number() would accept", () => {
+    for (const amount of ["", "   ", true, false, [], ["5"], null]) {
+      const result = InvoiceSchema.safeParse({ ...legacyInvoice, payments: [{ amount, date: "2026-01-02" }] });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it("rejects boolean and array money on optional fields while keeping blank as absence", () => {
+    for (const qty of [true, false, [], ["5"], null, {}]) {
+      const result = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "0", qty }] });
+      expect(result.success).toBe(false);
+    }
+    const blank = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "0", qty: "  " }] });
+    expect(blank.success).toBe(true);
+    if (blank.success) expect(blank.data.lineItems[0].qty).toBeUndefined();
+  });
+
+  it("parses exponent-notation legacy strings per Number() semantics", () => {
+    const result = InvoiceSchema.safeParse({ ...legacyInvoice, lineItems: [{ uuid: "l1", type: "0", qty: "1e3", unitPrice: "2e1" }] });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lineItems[0].qty).toBe(1000);
+    expect(result.data.lineItems[0].unitPrice).toBe(20);
+    expect(invoiceTotal(result.data)).toBe(20000);
+  });
+});
+
+describe("InvoiceSchema (legacy logo blobs)", () => {
+  it('parses the owner\'s stored empty-invoice fixture, coercing the object logo url to ""', () => {
+    const result = InvoiceSchema.safeParse(ownerEmptyInvoiceFixture);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.logo).toEqual({ url: "" });
+    expect(invoiceTotal(result.data)).toBe(0);
+    expect(paymentStatusOf(result.data).totalPaid).toBe(0);
+  });
+
+  it("unwraps a double-wrapped legacy logo url to its inner string", () => {
+    const result = InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: { url: "https://x/logo.png" } } });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.logo).toEqual({ url: "https://x/logo.png" });
+  });
+
+  it("keeps a non-string, non-object logo url invalid", () => {
+    expect(InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: 42 } }).success).toBe(false);
+    expect(InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: { url: null } }).success).toBe(false);
+  });
+
+  it("defaults a logo record with a missing url key to an empty string", () => {
+    const result = InvoiceSchema.safeParse({ ...ownerEmptyInvoiceFixture, logo: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.logo).toEqual({ url: "" });
   });
 });

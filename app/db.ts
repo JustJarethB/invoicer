@@ -1,4 +1,9 @@
 import { eventBus } from "~/utils/events";
+import { logger } from "~/utils/logger";
+
+type Validator<T> = {
+  safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: unknown };
+};
 
 const matchPartialKeys = (keys: string[]) => {
   const unreadable: string[] = [];
@@ -53,9 +58,41 @@ const remove = async (keys: string[]) => {
   localStorage.removeItem(JSON.stringify(keys));
   return true;
 };
+/** Validated read: missing, unparseable, or schema-failing records return null; stored JSON is never rewritten. */
+const getValidated = async <T>(validator: Validator<T>, keys: string[]): Promise<T | null> => {
+  if (typeof localStorage === "undefined") return null;
+  const data = localStorage.getItem(JSON.stringify(keys));
+  if (!data) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data);
+  } catch (e) {
+    logger.error(`Stored data for ${JSON.stringify(keys)} could not be parsed as JSON and was skipped`, e);
+    return null;
+  }
+  const result = validator.safeParse(parsed);
+  if (!result.success) {
+    logger.error(`Stored data for ${JSON.stringify(keys)} failed schema validation and was skipped`, result.error);
+    return null;
+  }
+  return result.data;
+};
+/** Validated list read: schema-failing records are skipped; keys are sorted as in getAll, preserving list ordering. */
+const getAllValidated = async <T>(validator: Validator<T>, keys: string[] = []): Promise<T[]> => {
+  if (typeof localStorage === "undefined") return [];
+  return (
+    await Promise.all(
+      matchPartialKeys(keys)
+        .sort()
+        .map((keyStr) => getValidated(validator, JSON.parse(keyStr)))
+    )
+  ).filter((record) => record !== null);
+};
 export const db = {
   save,
   get,
   getAll,
   remove,
+  getValidated,
+  getAllValidated,
 };
