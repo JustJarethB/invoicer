@@ -94,8 +94,9 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
       <TutorialWizard />
       <Controls
         clients={clients}
-        loadClientAddress={(i) => {
-          setTo(clients[i].address);
+        loadClientAddress={(clientId) => {
+          const client = clients.find((c) => c.id === clientId);
+          if (client) setTo(client.address);
         }}
         saveInvoice={handleSaveInvoice}
       />
