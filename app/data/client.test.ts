@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { db } from "../db";
 import { type Client, deleteClient, getClients, NULL_CLIENT, saveClient } from "./client";
 import { emptyAddress } from "./address";
@@ -48,28 +48,108 @@ describe("client data layer", () => {
     expect(client).toBeNull();
   });
 
-  it("returns a placeholder when a stored client record is missing", async () => {
-    // getClients falls back to NULL_CLIENT if a key exists but the record does not.
-    // This prevents the Promise.all from throwing, but the resulting entry has an empty id.
+  it("returns an id-bearing placeholder when a stored client record is missing", async () => {
+    // getClients falls back to NULL_CLIENT if a key exists but the record does
+    // not, but the placeholder must keep the key's id: NULL_CLIENT has id ""
+    // and cannot be identified in the UI, and empty ids could collide.
     await saveClient("ghost", makeClient("ghost", "Ghost"));
     await db.remove(["clients", "ghost"]);
 
     const clients = await getClients();
     expect(clients).toHaveLength(1);
-    expect(clients[0]).toEqual(NULL_CLIENT);
+    expect(clients[0].id).toBe("ghost");
+    expect(clients[0].contactName).toBe("");
+    expect(clients[0]).toEqual({ ...NULL_CLIENT, id: "ghost" });
   });
 
-  it.skip("preserves the client id when the stored record is missing", async () => {
-    // TODO: This test documents a bug. When a client key exists but the record is missing,
-    // getClients returns NULL_CLIENT with an empty id. This creates an unidentifiable empty
-    // client card in the UI and can cause React key collisions. The key should be preserved
-    // so the entry remains identifiable. See app/data/client.ts:getClients.
-    await saveClient("ghost", makeClient("ghost", "Ghost"));
-    await db.remove(["clients", "ghost"]);
+  it("treats a missing clientKeys index as a first write, not corruption", async () => {
+    // An absent index has nothing to rebuild from; saving the first client
+    // creates it with just that key.
+    await saveClient("client-1", makeClient("client-1", "Alice"));
+
+    const raw = JSON.parse(localStorage.getItem(JSON.stringify(["clientKeys"])) as string);
+    expect(raw).toEqual(["client-1"]);
+  });
+
+  it("rebuilds a corrupt clientKeys index from stored client keys on save", async () => {
+    // A corrupt index blob must not read as "no clients saved": the next save
+    // would overwrite the index with only the new key and permanently orphan
+    // every previously saved client. saveClient rebuilds the index from the
+    // client storage keys on disk instead.
+    await saveClient("client-1", makeClient("client-1", "Alpha"));
+    await saveClient("client-2", makeClient("client-2", "Beta"));
+    localStorage.setItem(JSON.stringify(["clientKeys"]), "{corrupt");
+
+    await saveClient("client-3", makeClient("client-3", "Gamma"));
+
+    const raw = JSON.parse(localStorage.getItem(JSON.stringify(["clientKeys"])) as string);
+    expect(raw.sort()).toEqual(["client-1", "client-2", "client-3"]);
+  });
+
+  it("rebuilds a corrupt clientKeys index from stored client keys on delete", async () => {
+    // deleteClient writes the filtered index too, so it must also start from
+    // the rebuilt index, not from an empty list.
+    await saveClient("client-1", makeClient("client-1", "Alpha"));
+    await saveClient("client-2", makeClient("client-2", "Beta"));
+    await db.remove(["clients", "client-1"]);
+    localStorage.setItem(JSON.stringify(["clientKeys"]), "{corrupt");
+
+    await deleteClient("client-2");
+
+    const raw = JSON.parse(localStorage.getItem(JSON.stringify(["clientKeys"])) as string);
+    expect(raw).toEqual([]);
+  });
+
+  it("keeps a key whose stored record is unreadable (rebuild keeps the key)", async () => {
+    // The rebuild scans localStorage keys, not records: a key whose record is
+    // unreadable must survive a rebuild so the placeholder path can still
+    // surface it. (The ghost is created by corrupting the record VALUE, which
+    // keeps its storage key; a record removed via db.remove takes its key
+    // along — nothing remains to rebuild from, see the test below.)
+    await saveClient("client-1", makeClient("client-1", "Alpha"));
+    await saveClient("client-2", makeClient("client-2", "Beta"));
+    localStorage.setItem(JSON.stringify(["clients", "client-1"]), "{corrupt");
+    localStorage.setItem(JSON.stringify(["clientKeys"]), "{corrupt");
+
+    await saveClient("client-3", makeClient("client-3", "Gamma"));
 
     const clients = await getClients();
-    const ghost = clients.find((c) => c.id === "ghost");
-    expect(ghost).toBeDefined();
-    expect(ghost).not.toEqual(NULL_CLIENT);
+    expect(clients.map((c) => c.id).sort()).toEqual(["client-1", "client-2", "client-3"]);
+  });
+
+  it("does not resurrect a client whose record and storage key are both gone", async () => {
+    // db.remove deletes the storage key itself. After a corrupt-index rebuild
+    // nothing references the removed client, so it stays deleted — the rebuild
+    // cannot invent keys that no longer exist anywhere.
+    await saveClient("client-1", makeClient("client-1", "Alpha"));
+    await saveClient("client-2", makeClient("client-2", "Beta"));
+    await db.remove(["clients", "client-1"]);
+    localStorage.setItem(JSON.stringify(["clientKeys"]), "{corrupt");
+
+    await saveClient("client-3", makeClient("client-3", "Gamma"));
+
+    const clients = await getClients();
+    expect(clients.map((c) => c.id).sort()).toEqual(["client-2", "client-3"]);
+  });
+
+  it("throws instead of reporting success when saving the client record is rejected", async () => {
+    // db.save resolves false when persistence fails; saveClient must not let
+    // the caller read a success from that (withErrorReporting callers turn the
+    // throw into the client failed event). Reachable only via a false result,
+    // so the test drives it through a spy.
+    vi.spyOn(db, "save").mockResolvedValue(false);
+    await expect(saveClient("client-1", makeClient("client-1", "Alpha"))).rejects.toThrow("Client could not be saved");
+  });
+
+  it("throws instead of reporting success when saving the index is rejected", async () => {
+    // The index write-back uses db.save too; a false result must throw before
+    // saveClient returns, for the same reason as above.
+    vi.spyOn(db, "save").mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    await expect(saveClient("client-1", makeClient("client-1", "Alpha"))).rejects.toThrow("Client index could not be saved");
+  });
+
+  it("throws instead of reporting success when deleting the client record is rejected", async () => {
+    vi.spyOn(db, "remove").mockResolvedValue(false);
+    await expect(deleteClient("client-1")).rejects.toThrow("Client could not be deleted");
   });
 });

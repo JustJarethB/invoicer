@@ -42,3 +42,32 @@ describe("db", () => {
     expect(invoices.map((i) => i.id)).toEqual(["a", "z"]);
   });
 });
+
+describe("db.storedIds", () => {
+  it("returns the stored ids for a domain key namespace", async () => {
+    await db.save(["clients", "c1"], { id: "c1" });
+    await db.save(["clients", "c2"], { id: "c2" });
+    await db.save(["invoice", "i1"], { id: "i1" });
+
+    expect(await db.storedIds("clients")).toEqual(["c1", "c2"]);
+  });
+
+  it("skips unreadable, wrong-shape, and empty-id key segments", async () => {
+    localStorage.setItem("not-json", "x"); // unparseable: matchPartialKeys warns and skips it
+    localStorage.setItem(JSON.stringify(["clients"]), '["one segment"]');
+    localStorage.setItem(JSON.stringify(["clients", "a", "b"]), "{}");
+    localStorage.setItem(JSON.stringify(["clients", ""]), "x");
+    localStorage.setItem('["clients", 5]', "x");
+    localStorage.setItem(JSON.stringify(["clients", "ok"]), "{}");
+
+    expect(await db.storedIds("clients")).toEqual(["ok"]);
+  });
+
+  it("dedupes ids reached by different raw keys", async () => {
+    localStorage.setItem(JSON.stringify(["clients", "dup"]), "x");
+    // Same segments, non-canonical raw key: both parse to the same id.
+    localStorage.setItem('["clients", "dup"]', "y");
+
+    expect(await db.storedIds("clients")).toEqual(["dup"]);
+  });
+});

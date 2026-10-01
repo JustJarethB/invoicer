@@ -58,6 +58,31 @@ const remove = async (keys: string[]) => {
   localStorage.removeItem(JSON.stringify(keys));
   return true;
 };
+/**
+ * Rebuild material: the ids stored under a domain's `["<domain>", <id>]` keys,
+ * read from the localStorage keys alone — never from the records. A key whose
+ * record is missing or unreadable still appears, and no key-equals-record-id
+ * assumption is made (callers permit key != id).
+ */
+const storedIds = async (domain: string): Promise<string[]> => {
+  if (typeof localStorage === "undefined") return [];
+  const ids: string[] = [];
+  for (const keyStr of matchPartialKeys([domain]).sort()) {
+    let segments: unknown;
+    try {
+      segments = JSON.parse(keyStr);
+    } catch {
+      continue; // matchPartialKeys already warned about the unreadable key
+    }
+    if (!Array.isArray(segments) || segments.length !== 2) continue;
+    const [first, id] = segments;
+    // An empty id is never written by production callers and would collide
+    // with NULL_CLIENT's "" id, so it is skipped.
+    if (first !== domain || typeof id !== "string" || id === "") continue;
+    ids.push(id);
+  }
+  return Array.from(new Set(ids)).sort();
+};
 /** Validated read: missing, unparseable, or schema-failing records return null; stored JSON is never rewritten. */
 const getValidated = async <T>(validator: Validator<T>, keys: string[]): Promise<T | null> => {
   if (typeof localStorage === "undefined") return null;
@@ -95,4 +120,5 @@ export const db = {
   remove,
   getValidated,
   getAllValidated,
+  storedIds,
 };
