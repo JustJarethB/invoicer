@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { DateInput, ImageInput, TextInput } from "~/components/Inputs";
 import { type Client, getClients, NULL_CLIENT } from "~/data/client";
 import { type Address, AddressSchema } from "~/data/address";
@@ -21,10 +21,27 @@ import { HelpTooltip } from "~/components/Tooltip";
 import { DocumentIcon, TvIcon } from "@heroicons/react/24/outline";
 import { useThemeValue } from "~/components/ThemeSelector";
 import { eventBus, withErrorReporting } from "~/utils/events";
-import { addressFromRecord } from "~/data/address";
+import { addressFromRecord, emptyAddress } from "~/data/address";
 
 /** Read the logo url from a form record. */
 export const logoFromRecord = (record: Record<string, string>): { url: string } => ({ url: record.url ?? "" });
+
+/**
+ * Resolve a picked client id to the "To" address: a known id populates the
+ * address, an unknown one clears it back to the canonical empty shape and
+ * publishes a warning toast instead of leaving stale data behind.
+ */
+export const createClientAddressLoader =
+  (clients: Client[], setAddress: Dispatch<SetStateAction<Address>>) =>
+  (clientId: string): void => {
+    const client = clients.find((c) => c.id === clientId);
+    if (client) {
+      setAddress(client.address);
+      return;
+    }
+    setAddress(emptyAddress());
+    eventBus.publish({ type: "client", severity: "warning", message: "Selected client could not be found", context: { clientId, action: "not-found" } });
+  };
 
 const saveAddressAsClient = (record: Record<string, string>, close: () => void, onSaved: () => void) => (
   <SaveClientModal record={record} onClose={close} onSaved={onSaved} />
@@ -92,14 +109,7 @@ export default withLineItemProvider(function Home({ loaderData: { clients, ...lo
   return (
     <div>
       <TutorialWizard />
-      <Controls
-        clients={clients}
-        loadClientAddress={(clientId) => {
-          const client = clients.find((c) => c.id === clientId);
-          if (client) setTo(client.address);
-        }}
-        saveInvoice={handleSaveInvoice}
-      />
+      <Controls clients={clients} loadClientAddress={createClientAddressLoader(clients, setTo)} saveInvoice={handleSaveInvoice} />
 
       {theme === "dark" && <PreviewOptions paper={paper} setPaper={setPaper} />}
       <main data-theme={paper ? "light" : undefined} className="flex items-center justify-center not-print:pt-16 not-print:pb-4 not-print:relative">

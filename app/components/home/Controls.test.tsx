@@ -24,9 +24,7 @@ describe("Controls client selection", () => {
     await userEvent.click(screen.getByRole("button", { name: /Clients/ }));
     await userEvent.click(screen.getByRole("button", { name: "Beta" }));
     expect(loadClientAddress).toHaveBeenCalledTimes(1);
-    expect(loadClientAddress).toHaveBeenCalledWith("client-3");
-    expect(loadClientAddress).not.toHaveBeenCalledWith(1);
-    expect(loadClientAddress).not.toHaveBeenCalledWith("Beta");
+    expect(loadClientAddress.mock.calls[0]).toEqual(["client-3", expect.any(Number)]);
   });
 
   it("carries each client's id as the option value", () => {
@@ -40,6 +38,6 @@ describe("Controls client selection", () => {
     const loadClientAddress = renderControls([clients[2], clients[1], clients[0]]);
     await userEvent.click(screen.getByRole("button", { name: /Clients/ }));
     await userEvent.click(screen.getByRole("button", { name: "Alpha" }));
-    expect(loadClientAddress).toHaveBeenCalledWith("client-7");
+    expect(loadClientAddress.mock.calls[0]).toEqual(["client-7", expect.any(Number)]);
   });
 });
