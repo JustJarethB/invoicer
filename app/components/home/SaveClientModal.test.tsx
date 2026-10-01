@@ -44,4 +44,19 @@ describe("SaveClientModal", () => {
     expect(onClose).toHaveBeenCalled();
     expect(onSaved).toHaveBeenCalled();
   });
+
+  it("blocks the save and shows a recoverable message when the display name is empty", async () => {
+    vi.mocked(saveClient).mockResolvedValueOnce(undefined);
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    render(<SaveClientModal record={{ name: "Acme", streetAddress: "1 Way" }} onClose={onClose} onSaved={onSaved} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    expect(await screen.findByText("Enter a display name to save this client.")).toBeVisible();
+    expect(saveClient).not.toHaveBeenCalled();
+    expect(savedEvents()).toHaveLength(0);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
 });
