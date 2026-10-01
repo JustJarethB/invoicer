@@ -36,8 +36,9 @@ export const useLineItem = (id: string) => useLineItems().find((item) => item.uu
 export const useSetLineItem = (id: string) => {
   const { lineItems, setLineItems } = useContext(LineItemContext);
   return (item: LineItem) => {
+    const index = lineItems.findIndex((lineItem) => lineItem.uuid === id);
+    if (index === -1) return;
     const newLineItems = [...lineItems];
-    const index = newLineItems.findIndex((lineItem) => lineItem.uuid === id);
     newLineItems[index] = item;
     if (index === newLineItems.length - 1) {
       newLineItems.push(newLineItem());
