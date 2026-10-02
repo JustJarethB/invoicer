@@ -119,7 +119,7 @@ export const chargeTypes = [
     id: "3",
     label: "Discount",
     calculation: (_qty, unitPrice) => -unitPrice,
-    disabledFields: ["qty", "unit"] as (keyof LineItem)[],
+    disabledFields: ["qty", "unit"],
   },
 ] satisfies ChargeType[];
 
