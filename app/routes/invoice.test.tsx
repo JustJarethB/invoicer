@@ -4,7 +4,7 @@ import { emptyAddress } from "~/data/address";
 import { makeClient } from "~/data/testFixtures";
 import { type AppEvent, eventBus } from "~/utils/events";
 import { Toaster } from "~/components/Toaster";
-import { createClientAddressLoader } from "./invoice";
+import { createClientAddressLoader } from "~/data/client";
 
 const clients = [makeClient({ id: "client-7", contactName: "Alpha", address: { ...emptyAddress(), name: "Alpha House", city: "Springfield" } })];
 
