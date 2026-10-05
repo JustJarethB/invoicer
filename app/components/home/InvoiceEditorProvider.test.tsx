@@ -8,7 +8,7 @@ import { emptyAddress } from "~/data/address";
 import { makeClient, makeLineItem } from "~/data/testFixtures";
 import { paymentDetailsFromRecord } from "~/data/payment";
 import { type AppEvent, type AppEventType, eventBus } from "~/utils/events";
-import { type InvoiceDraftOps, InvoiceDraftProvider, useInvoiceDraft, useInvoiceDraftOps } from "./InvoiceDraftProvider";
+import { type InvoiceEditorOps, InvoiceEditorProvider, useInvoiceEditor, useInvoiceEditorOps } from "./InvoiceEditorProvider";
 
 const client = makeClient({ id: "client-7", contactName: "Alpha", address: { ...emptyAddress(), name: "Alpha House" } });
 
@@ -28,9 +28,9 @@ const eventsOfType = (type: AppEventType, action?: string) =>
   received.filter((event) => event.type === type && (action === undefined || event.context?.action === action));
 
 const NameProbe = ({ field }: { field: "to" | "date" }) => {
-  const draft = useInvoiceDraft();
-  if (field === "to") return <p data-testid="draft-to-name">{draft.to.name || "(empty)"}</p>;
-  return <p data-testid="draft-date">{draft.date}</p>;
+  const editor = useInvoiceEditor();
+  if (field === "to") return <p data-testid="editor-to-name">{editor.to.name || "(empty)"}</p>;
+  return <p data-testid="editor-date">{editor.date}</p>;
 };
 
 type StoredLineItem = { name?: string; qty?: number; unitPrice?: number };
@@ -47,9 +47,9 @@ type StoredInvoice = {
   to: unknown;
 };
 
-const DraftSetter = () => {
+const EditorSetter = () => {
   const setLine = useSetLineItem("l-1");
-  const { loadClientAddress, saveInvoice, setDate, setId, setPayment, setPurchaseOrder } = useInvoiceDraftOps();
+  const { loadClientAddress, saveInvoice, setDate, setId, setPayment, setPurchaseOrder } = useInvoiceEditorOps();
   return (
     <div>
       <button
@@ -76,22 +76,22 @@ const DraftSetter = () => {
   );
 };
 
-let seen: InvoiceDraftOps[] = [];
+let seen: InvoiceEditorOps[] = [];
 const OpsRecorder = () => {
-  const ops = useInvoiceDraftOps();
+  const ops = useInvoiceEditorOps();
   useEffect(() => {
     seen.push(ops);
   }, [ops]);
   return null;
 };
 
-const mountDraft = (extra?: React.ReactNode) =>
+const mountEditor = (extra?: React.ReactNode) =>
   render(
     <LineItemProvider initialLineItems={seededLineItems}>
-      <InvoiceDraftProvider clients={[client]} from={emptyAddress()} payment={paymentDetailsFromRecord({})} logo={null}>
-        <DraftSetter />
+      <InvoiceEditorProvider clients={[client]} from={emptyAddress()} payment={paymentDetailsFromRecord({})} logo={null}>
+        <EditorSetter />
         {extra}
-      </InvoiceDraftProvider>
+      </InvoiceEditorProvider>
     </LineItemProvider>
   );
 
@@ -103,9 +103,9 @@ afterEach(() => {
   cleanup();
 });
 
-describe("InvoiceDraftProvider", () => {
-  it("saveInvoice persists the current draft including fields just changed", async () => {
-    mountDraft();
+describe("InvoiceEditorProvider", () => {
+  it("saveInvoice persists the current editor including fields just changed", async () => {
+    mountEditor();
     await userEvent.click(screen.getByRole("button", { name: "set-fields" }));
     await userEvent.click(screen.getByRole("button", { name: "edit-line" }));
     await userEvent.click(screen.getByRole("button", { name: "save" }));
@@ -134,21 +134,21 @@ describe("InvoiceDraftProvider", () => {
 
   it("loads a known client into To and clears it back with a warning for an unknown id", async () => {
     listenForEvents();
-    mountDraft(<NameProbe field="to" />);
-    expect(screen.getByTestId("draft-to-name")).toHaveTextContent("(empty)");
+    mountEditor(<NameProbe field="to" />);
+    expect(screen.getByTestId("editor-to-name")).toHaveTextContent("(empty)");
 
     await userEvent.click(screen.getByRole("button", { name: "pick-known" }));
-    expect(await screen.findByTestId("draft-to-name")).toHaveTextContent("Alpha House");
+    expect(await screen.findByTestId("editor-to-name")).toHaveTextContent("Alpha House");
 
     await userEvent.click(screen.getByRole("button", { name: "pick-gone" }));
-    await vi.waitFor(() => expect(screen.getByTestId("draft-to-name")).toHaveTextContent("(empty)"), { timeout: 2000 });
+    await vi.waitFor(() => expect(screen.getByTestId("editor-to-name")).toHaveTextContent("(empty)"), { timeout: 2000 });
     expect(eventsOfType("client", "not-found")).toHaveLength(1);
     expect(eventsOfType("client", "not-found")[0].severity).toBe("warning");
     expect(eventsOfType("client", "not-found")[0].message).toBe("Selected client could not be found");
   });
 
-  it("keeps the ops context identity stable so ops subscribers skip draft keystrokes", async () => {
-    mountDraft(
+  it("keeps the ops context identity stable so ops subscribers skip editor keystrokes", async () => {
+    mountEditor(
       <>
         <OpsRecorder />
         <NameProbe field="date" />
@@ -157,21 +157,21 @@ describe("InvoiceDraftProvider", () => {
     expect(seen).toHaveLength(1);
 
     await userEvent.click(screen.getByRole("button", { name: "set-fields" }));
-    await vi.waitFor(() => expect(screen.getByTestId("draft-date")).toHaveTextContent("2026-02-02"), { timeout: 2000 });
+    await vi.waitFor(() => expect(screen.getByTestId("editor-date")).toHaveTextContent("2026-02-02"), { timeout: 2000 });
     expect(seen).toHaveLength(1);
   });
 
   it("throws outside the provider", () => {
     const OutsideReader = () => {
-      useInvoiceDraft();
+      useInvoiceEditor();
       return null;
     };
     const OutsideOps = () => {
-      useInvoiceDraftOps();
+      useInvoiceEditorOps();
       return null;
     };
-    expect(() => render(<OutsideReader />)).toThrow("useInvoiceDraft must be used inside InvoiceDraftProvider");
+    expect(() => render(<OutsideReader />)).toThrow("useInvoiceEditor must be used inside InvoiceEditorProvider");
     cleanup();
-    expect(() => render(<OutsideOps />)).toThrow("useInvoiceDraftOps must be used inside InvoiceDraftProvider");
+    expect(() => render(<OutsideOps />)).toThrow("useInvoiceEditorOps must be used inside InvoiceEditorProvider");
   });
 });

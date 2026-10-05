@@ -7,7 +7,7 @@ import { Controls } from "~/components/home/Controls";
 import { fieldFormattingOf, StandardField } from "~/components/home/StandardField";
 import { Totals } from "~/components/home/Totals";
 import { LineItems } from "~/components/home/LineItems";
-import { InvoiceDraftProvider, useInvoiceDraft, useInvoiceDraftOps } from "~/components/home/InvoiceDraftProvider";
+import { InvoiceEditorProvider, useInvoiceEditor, useInvoiceEditorOps } from "~/components/home/InvoiceEditorProvider";
 import { withLineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { ManualSave } from "~/components/home/ManualSave";
 import { SaveClientModal } from "~/components/home/SaveClientModal";
@@ -42,19 +42,19 @@ export async function clientLoader() {
 }
 
 const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
-  const draft = useInvoiceDraft();
-  const { setDate, setFrom, setId, setLogo, setPayment, setPurchaseOrder, setTo } = useInvoiceDraftOps();
+  const editor = useInvoiceEditor();
+  const { setDate, setFrom, setId, setLogo, setPayment, setPurchaseOrder, setTo } = useInvoiceEditorOps();
   // TODO: load logo from client
   const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" };
   const [paper, setPaper] = useState(false);
   const theme = useThemeValue();
   useEffect(() => {
     const title =
-      `Invoice ${draft.id}` +
-      (draft.to?.name ? ` - ${draft.to.name}` : "") +
-      (draft.purchaseOrder && draft.purchaseOrder !== "---" ? ` (PO: ${draft.purchaseOrder})` : "");
+      `Invoice ${editor.id}` +
+      (editor.to?.name ? ` - ${editor.to.name}` : "") +
+      (editor.purchaseOrder && editor.purchaseOrder !== "---" ? ` (PO: ${editor.purchaseOrder})` : "");
     document.title = title;
-  }, [draft.id, draft.to, draft.purchaseOrder]);
+  }, [editor.id, editor.to, editor.purchaseOrder]);
   return (
     <div>
       <TutorialWizard />
@@ -68,10 +68,10 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
             <div className="col-span-6 md:col-span-3 print:col-span-3">
               <Autosave onChange={(record) => setLogo(logoFromRecord(record))} name="logo">
                 <ImageInput
-                  className={`rounded ${draft.logo?.url ? "" : "print:hidden"}`}
+                  className={`rounded ${editor.logo?.url ? "" : "print:hidden"}`}
                   name="url"
                   alt="logo"
-                  defaultValue={draft.logo?.url}
+                  defaultValue={editor.logo?.url}
                   placeholder={placeholder.url}
                   style={{ maxHeight: "80px" }}
                 />
@@ -82,32 +82,32 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
                 <Container>
                   <div className="flex items-center">
                     <p className="font-bold px-2 whitespace-nowrap">Invoice Ref</p>
-                    <TextInput data-testid="invoice-ref" name="invoiceRef" className="w-full" value={draft.id} onChange={setId} />
+                    <TextInput data-testid="invoice-ref" name="invoiceRef" className="w-full" value={editor.id} onChange={setId} />
                   </div>
                   <div className="flex items-center">
                     <p className="font-bold px-2 whitespace-nowrap">
                       <HelpTooltip tooltip="The legal date of this invoice being served">Tax Date</HelpTooltip>
                     </p>
-                    <DateInput data-testid="tax-date" name="taxDate" className="w-full" value={draft.date} onChange={setDate} />
+                    <DateInput data-testid="tax-date" name="taxDate" className="w-full" value={editor.date} onChange={setDate} />
                   </div>
                   <div className="flex items-center">
                     <p className="font-bold px-2 whitespace-nowrap">
                       <HelpTooltip tooltip="If you weren't given a purchase order, leave this blank">PO / Reference</HelpTooltip>
                     </p>
-                    <TextInput name="purchaseOrder" className="w-full" value={draft.purchaseOrder} onChange={setPurchaseOrder} />
+                    <TextInput name="purchaseOrder" className="w-full" value={editor.purchaseOrder} onChange={setPurchaseOrder} />
                   </div>
                 </Container>
               </div>
             </div>
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
               <Autosave onChange={(record) => setFrom(addressFromRecord(record))} name="from-address">
-                <AddressPanel title="From:" address={draft.from} />
+                <AddressPanel title="From:" address={editor.from} />
               </Autosave>
             </div>
 
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
               <ManualSave onChange={(record) => setTo(addressFromRecord(record))} onSave={saveAddressAsClient}>
-                <AddressPanel title="To:" address={draft.to} />
+                <AddressPanel title="To:" address={editor.to} />
               </ManualSave>
             </div>
             <div className="col-span-6">
@@ -118,13 +118,13 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
                 <Container>
                   <h2>Payment:</h2>
                   <div className="p-2">
-                    <StandardField name="terms" title="Payment Terms" defaultValue={draft.payment.terms} />
-                    <StandardField name="sortCode" title="Sort Code" defaultValue={draft.payment.sortCode} {...fieldFormattingOf("sortCode")} />
-                    <StandardField name="number" title="Acc. Number" defaultValue={draft.payment.number} {...fieldFormattingOf("accountNumber")} />
-                    <StandardField name="bankName" title="Bank Name" defaultValue={draft.payment.bankName} />
-                    <StandardField name="emailAddress" title="Contact Email" defaultValue={draft.payment.emailAddress} />
-                    <StandardField name="phoneNumber" title="Contact Number" defaultValue={draft.payment.phoneNumber} />
-                    <StandardField name="info" title="Additional Information" defaultValue={draft.payment.info} />
+                    <StandardField name="terms" title="Payment Terms" defaultValue={editor.payment.terms} />
+                    <StandardField name="sortCode" title="Sort Code" defaultValue={editor.payment.sortCode} {...fieldFormattingOf("sortCode")} />
+                    <StandardField name="number" title="Acc. Number" defaultValue={editor.payment.number} {...fieldFormattingOf("accountNumber")} />
+                    <StandardField name="bankName" title="Bank Name" defaultValue={editor.payment.bankName} />
+                    <StandardField name="emailAddress" title="Contact Email" defaultValue={editor.payment.emailAddress} />
+                    <StandardField name="phoneNumber" title="Contact Number" defaultValue={editor.payment.phoneNumber} />
+                    <StandardField name="info" title="Additional Information" defaultValue={editor.payment.info} />
                   </div>
                 </Container>
               </Autosave>
@@ -141,9 +141,9 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
 
 export default withLineItemProvider(function Home({ loaderData: { clients, from, logo, payment } }: Route.ComponentProps) {
   return (
-    <InvoiceDraftProvider clients={clients} from={from} payment={payment} logo={logo}>
+    <InvoiceEditorProvider clients={clients} from={from} payment={payment} logo={logo}>
       <InvoiceEditor clients={clients} />
-    </InvoiceDraftProvider>
+    </InvoiceEditorProvider>
   );
 });
 

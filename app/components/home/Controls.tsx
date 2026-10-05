@@ -1,6 +1,6 @@
 import type { Client } from "~/data/client";
 import { memo } from "react";
-import { useInvoiceDraftOps } from "./InvoiceDraftProvider";
+import { useInvoiceEditorOps } from "./InvoiceEditorProvider";
 import { DropdownButton } from "./DropdownButton";
 import { Button } from "./Button";
 
@@ -8,9 +8,9 @@ export type ControlsProps = {
   clients: Client[];
 };
 
-/** memo: the parent re-renders on every draft keystroke; Controls reads only the ops context. */
+/** memo: the parent re-renders on every editor keystroke; Controls reads only the ops context. */
 export const Controls = memo(function Controls({ clients }: ControlsProps) {
-  const { loadClientAddress, saveInvoice } = useInvoiceDraftOps();
+  const { loadClientAddress, saveInvoice } = useInvoiceEditorOps();
   return (
     <div className="print:hidden sticky top-0 dark:bg-gray-900 bg-gray-50 shadow-sm z-10">
       <div className="container mx-auto">

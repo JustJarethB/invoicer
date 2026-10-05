@@ -7,7 +7,7 @@ import { type PaymentDetails } from "~/data/payment";
 import { db } from "~/db";
 import { eventBus, withErrorReporting } from "~/utils/events";
 
-export type InvoiceDraftState = {
+export type InvoiceEditorState = {
   date: string;
   from: Address;
   id: string;
@@ -17,7 +17,7 @@ export type InvoiceDraftState = {
   to: Address;
 };
 
-export type InvoiceDraftOps = {
+export type InvoiceEditorOps = {
   loadClientAddress: (clientId: string) => void;
   saveInvoice: () => Promise<void>;
   setDate: (date: string) => void;
@@ -29,18 +29,18 @@ export type InvoiceDraftOps = {
   setTo: (to: Address) => void;
 };
 
-const InvoiceDraftContext = createContext<InvoiceDraftState | null>(null);
-const InvoiceDraftOpsContext = createContext<InvoiceDraftOps | null>(null);
+const InvoiceEditorContext = createContext<InvoiceEditorState | null>(null);
+const InvoiceEditorOpsContext = createContext<InvoiceEditorOps | null>(null);
 
-export const useInvoiceDraft = (): InvoiceDraftState => {
-  const draft = useContext(InvoiceDraftContext);
-  if (!draft) throw new Error("useInvoiceDraft must be used inside InvoiceDraftProvider");
-  return draft;
+export const useInvoiceEditor = (): InvoiceEditorState => {
+  const editor = useContext(InvoiceEditorContext);
+  if (!editor) throw new Error("useInvoiceEditor must be used inside InvoiceEditorProvider");
+  return editor;
 };
 
-export const useInvoiceDraftOps = (): InvoiceDraftOps => {
-  const ops = useContext(InvoiceDraftOpsContext);
-  if (!ops) throw new Error("useInvoiceDraftOps must be used inside InvoiceDraftProvider");
+export const useInvoiceEditorOps = (): InvoiceEditorOps => {
+  const ops = useContext(InvoiceEditorOpsContext);
+  if (!ops) throw new Error("useInvoiceEditorOps must be used inside InvoiceEditorProvider");
   return ops;
 };
 
@@ -48,7 +48,7 @@ export const useInvoiceDraftOps = (): InvoiceDraftOps => {
  * Renders inside `LineItemProvider`: outside it, `useLineItems` falls back to
  * its empty default and save silently persists no line items.
  */
-export const InvoiceDraftProvider = ({
+export const InvoiceEditorProvider = ({
   children,
   clients,
   from,
@@ -77,32 +77,32 @@ export const InvoiceDraftProvider = ({
 
   const saveInvoice = useMemo(
     () => async (): Promise<void> => {
-      const draft = latest.current;
+      const editor = latest.current;
       const invoice: Invoice = {
         payments: [],
-        id: draft.id,
-        date: draft.date,
-        purchaseOrder: draft.purchaseOrder,
-        logo: draft.logo ?? { url: "" },
-        from: draft.from,
-        to: draft.to,
-        lineItems: draft.lineItems,
-        payment: draft.payment,
+        id: editor.id,
+        date: editor.date,
+        purchaseOrder: editor.purchaseOrder,
+        logo: editor.logo ?? { url: "" },
+        from: editor.from,
+        to: editor.to,
+        lineItems: editor.lineItems,
+        payment: editor.payment,
       };
-      await withErrorReporting({ type: "invoice", message: "Invoice could not be saved", context: { invoiceId: draft.id, action: "failed" } }, () =>
-        db.save(["invoice", draft.id], invoice)
+      await withErrorReporting({ type: "invoice", message: "Invoice could not be saved", context: { invoiceId: editor.id, action: "failed" } }, () =>
+        db.save(["invoice", editor.id], invoice)
       );
-      eventBus.publish({ type: "invoice", severity: "success", message: "Invoice saved", context: { invoiceId: draft.id, action: "saved" } });
+      eventBus.publish({ type: "invoice", severity: "success", message: "Invoice saved", context: { invoiceId: editor.id, action: "saved" } });
     },
     []
   );
   const loadClientAddress = useMemo(() => createClientAddressLoader(clients, setTo), [clients]);
 
-  const draft = useMemo<InvoiceDraftState>(
+  const editor = useMemo<InvoiceEditorState>(
     () => ({ id, date, from: fromState, logo: logoState, payment: paymentState, purchaseOrder, to }),
     [id, date, fromState, logoState, paymentState, purchaseOrder, to]
   );
-  const ops = useMemo<InvoiceDraftOps>(
+  const ops = useMemo<InvoiceEditorOps>(
     () => ({
       setId,
       setDate,
@@ -118,8 +118,8 @@ export const InvoiceDraftProvider = ({
   );
 
   return (
-    <InvoiceDraftContext.Provider value={draft}>
-      <InvoiceDraftOpsContext.Provider value={ops}>{children}</InvoiceDraftOpsContext.Provider>
-    </InvoiceDraftContext.Provider>
+    <InvoiceEditorContext.Provider value={editor}>
+      <InvoiceEditorOpsContext.Provider value={ops}>{children}</InvoiceEditorOpsContext.Provider>
+    </InvoiceEditorContext.Provider>
   );
 };

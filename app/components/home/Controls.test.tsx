@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Controls } from "./Controls";
-import { InvoiceDraftProvider, useInvoiceDraft } from "./InvoiceDraftProvider";
+import { InvoiceEditorProvider, useInvoiceEditor } from "./InvoiceEditorProvider";
 import { LineItemProvider } from "~/components/home/LineItems/LineItemProvider";
 import { emptyAddress } from "~/data/address";
 import { type Client, NULL_CLIENT } from "~/data/client";
@@ -29,17 +29,17 @@ const eventsOfType = (type: AppEventType, action?: string) =>
   received.filter((event) => event.type === type && (action === undefined || event.context?.action === action));
 
 const ToNameProbe = () => {
-  const draft = useInvoiceDraft();
-  return <p data-testid="to-address-name">{draft.to.name || "(empty)"}</p>;
+  const editor = useInvoiceEditor();
+  return <p data-testid="to-address-name">{editor.to.name || "(empty)"}</p>;
 };
 
 const renderControls = (loaded: Client[]) => {
   render(
     <LineItemProvider>
-      <InvoiceDraftProvider clients={loaded} from={emptyAddress()} payment={paymentDetailsFromRecord({})} logo={null}>
+      <InvoiceEditorProvider clients={loaded} from={emptyAddress()} payment={paymentDetailsFromRecord({})} logo={null}>
         <Controls clients={loaded} />
         <ToNameProbe />
-      </InvoiceDraftProvider>
+      </InvoiceEditorProvider>
     </LineItemProvider>
   );
 };
