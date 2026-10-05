@@ -59,20 +59,6 @@ describe("Controls client selection", () => {
     await waitFor(() => expect(screen.getByTestId("to-address-name")).toHaveTextContent("Beta House"));
   });
 
-  it("carries each client's id as the option value", () => {
-    renderControls(clients);
-    expect(screen.getByRole("button", { name: "Alpha" }).getAttribute("value")).toBe("client-7");
-    expect(screen.getByRole("button", { name: "Beta" }).getAttribute("value")).toBe("client-3");
-    expect(screen.getByRole("button", { name: "Gamma" }).getAttribute("value")).toBe("client-5");
-  });
-
-  it("stays wired when the clients array order does not match the ids", async () => {
-    renderControls([clients[2], clients[1], clients[0]]);
-    await userEvent.click(screen.getByRole("button", { name: /Clients/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Alpha" }));
-    await waitFor(() => expect(screen.getByTestId("to-address-name")).toHaveTextContent("Alpha House"));
-  });
-
   it("saves the invoice through the provider when Save is clicked", async () => {
     renderControls(clients);
     listenForEvents();

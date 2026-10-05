@@ -45,11 +45,8 @@ export const useInvoiceDraftOps = (): InvoiceDraftOps => {
 };
 
 /**
- * Owns the invoice draft fields so panels read them through hooks instead of
- * prop threading. Renders inside `LineItemProvider` because the save
- * operation needs the current line items too. Save operations read the
- * mirrored draft through a ref, keeping the returned operation callbacks
- * keystroke-stable so operations subscribers do not re-render on edits.
+ * Renders inside `LineItemProvider`: outside it, `useLineItems` falls back to
+ * its empty default and save silently persists no line items.
  */
 export const InvoiceDraftProvider = ({
   children,

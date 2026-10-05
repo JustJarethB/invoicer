@@ -8,11 +8,7 @@ export type ControlsProps = {
   clients: Client[];
 };
 
-/**
- * Presentation-only: draft values and operations arrive through hooks, clients
- * stays a prop. memo keeps Controls from re-rendering while the editors'
- * draft keystrokes flow through the value context.
- */
+/** memo: the parent re-renders on every draft keystroke; Controls reads only the ops context. */
 export const Controls = memo(function Controls({ clients }: ControlsProps) {
   const { loadClientAddress, saveInvoice } = useInvoiceDraftOps();
   return (

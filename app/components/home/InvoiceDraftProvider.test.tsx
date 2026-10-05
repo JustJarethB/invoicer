@@ -2,15 +2,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useEffect } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LineItemProvider } from "~/components/home/LineItems/LineItemProvider";
+import { LineItemProvider, useSetLineItem } from "~/components/home/LineItems/LineItemProvider";
 import { db } from "~/db";
 import { emptyAddress } from "~/data/address";
-import { makeClient } from "~/data/testFixtures";
+import { makeClient, makeLineItem } from "~/data/testFixtures";
 import { paymentDetailsFromRecord } from "~/data/payment";
 import { type AppEvent, type AppEventType, eventBus } from "~/utils/events";
 import { type InvoiceDraftOps, InvoiceDraftProvider, useInvoiceDraft, useInvoiceDraftOps } from "./InvoiceDraftProvider";
 
 const client = makeClient({ id: "client-7", contactName: "Alpha", address: { ...emptyAddress(), name: "Alpha House" } });
+
+const seededLineItems = [makeLineItem({ name: "Design", qty: 2, unitPrice: 50, type: "0", uuid: "l-1" }), makeLineItem({ uuid: "l-2" })];
 
 const received: AppEvent[] = [];
 let unsubscribe: () => void = () => {};
@@ -31,30 +33,36 @@ const NameProbe = ({ field }: { field: "to" | "date" }) => {
   return <p data-testid="draft-date">{draft.date}</p>;
 };
 
+type StoredLineItem = { name?: string; qty?: number; unitPrice?: number };
+
 type StoredInvoice = {
   date: string;
   from: unknown;
   id: string;
-  lineItems: unknown[];
+  lineItems: StoredLineItem[];
   logo: { url: string };
+  payment: { terms: string };
   payments: unknown[];
   purchaseOrder: string;
   to: unknown;
 };
 
 const DraftSetter = () => {
-  const { loadClientAddress, saveInvoice, setDate, setId, setPurchaseOrder } = useInvoiceDraftOps();
+  const setLine = useSetLineItem("l-1");
+  const { loadClientAddress, saveInvoice, setDate, setId, setPayment, setPurchaseOrder } = useInvoiceDraftOps();
   return (
     <div>
       <button
         onClick={() => {
           setId("SAVE-1");
           setDate("2026-02-02");
+          setPayment({ ...paymentDetailsFromRecord({}), terms: "Net 30" });
           setPurchaseOrder("PO-9");
         }}
       >
         set-fields
       </button>
+      <button onClick={() => setLine({ ...seededLineItems[0], name: "Edited" })}>edit-line</button>
       <button onClick={() => loadClientAddress("client-7")}>pick-known</button>
       <button onClick={() => loadClientAddress("gone-client")}>pick-gone</button>
       <button
@@ -79,7 +87,7 @@ const OpsRecorder = () => {
 
 const mountDraft = (extra?: React.ReactNode) =>
   render(
-    <LineItemProvider>
+    <LineItemProvider initialLineItems={seededLineItems}>
       <InvoiceDraftProvider clients={[client]} from={emptyAddress()} payment={paymentDetailsFromRecord({})} logo={null}>
         <DraftSetter />
         {extra}
@@ -99,6 +107,7 @@ describe("InvoiceDraftProvider", () => {
   it("saveInvoice persists the current draft including fields just changed", async () => {
     mountDraft();
     await userEvent.click(screen.getByRole("button", { name: "set-fields" }));
+    await userEvent.click(screen.getByRole("button", { name: "edit-line" }));
     await userEvent.click(screen.getByRole("button", { name: "save" }));
 
     await vi.waitFor(
@@ -117,7 +126,10 @@ describe("InvoiceDraftProvider", () => {
     expect(stored?.from).toEqual(emptyAddress());
     expect(stored?.to).toEqual(emptyAddress());
     expect(stored?.payments).toEqual([]);
-    expect(stored?.lineItems).toHaveLength(1);
+    expect(stored?.payment.terms).toBe("Net 30");
+    expect(stored?.lineItems).toHaveLength(2);
+    expect(stored?.lineItems[0]).toMatchObject({ name: "Edited", qty: 2, unitPrice: 50 });
+    expect(stored?.lineItems[1].name).toBeUndefined();
   });
 
   it("loads a known client into To and clears it back with a warning for an unknown id", async () => {
