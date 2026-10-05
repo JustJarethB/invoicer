@@ -98,6 +98,27 @@ export const TextInput = ({
 }: InputProps<"textarea">) => {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
+    // Keep an unfocused uncontrolled field's visible value in step with the
+    // parent's defaultValue. react-dom only re-applies a changed defaultValue
+    // while the textarea's DOM value is empty, so a parent state reset (e.g.
+    // the To address clearing when the selected client cannot be found)
+    // never reaches fields the user already populated or typed into. The
+    // write is skipped while the field holds focus, so a lagged parent echo
+    // (ManualSave's async form read) cannot clobber in-progress typing. A
+    // reset received while focused is not retried on blur alone (blur is not
+    // an effect trigger here); it is discarded unless a later render delivers
+    // a changed defaultValue while the field is unfocused. Controlled fields
+    // stay on the value-prop path, and inputs without a string defaultValue
+    // are never written.
+    if (
+      ref.current &&
+      value === undefined &&
+      typeof defaultValue === "string" &&
+      document.activeElement !== ref.current &&
+      ref.current.value !== defaultValue
+    ) {
+      ref.current.value = defaultValue;
+    }
     updateHeight();
   }, [value, defaultValue]);
   // we have print media related font size changes
