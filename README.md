@@ -117,7 +117,3 @@ This lets visitors open routes such as `/invoices` directly.
 - [Testing strategy](TESTING_STRATEGY.md)
 - [Issue tracker workflow](docs/agents/issue-tracker.md)
 - [React Router documentation](https://reactrouter.com/)
-
-The [original React Router template README](docs/react-router-template.md)
-is preserved unchanged for historical reference.
-Its server-rendering and deployment instructions are not current Invoicer instructions.
