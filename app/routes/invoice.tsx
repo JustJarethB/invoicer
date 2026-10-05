@@ -42,19 +42,16 @@ export async function clientLoader() {
 }
 
 const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
-  const editor = useInvoiceEditor();
+  const { date, from, id, logo, payment, purchaseOrder, to } = useInvoiceEditor();
   const { setDate, setFrom, setId, setLogo, setPayment, setPurchaseOrder, setTo } = useInvoiceEditorOps();
   // TODO: load logo from client
   const placeholder = { url: "//cdn.logo.com/hotlink-ok/enterprise/eid_422203f0-477b-492b-9847-689feab1452a/logo-dark-2020.png" };
   const [paper, setPaper] = useState(false);
   const theme = useThemeValue();
   useEffect(() => {
-    const title =
-      `Invoice ${editor.id}` +
-      (editor.to?.name ? ` - ${editor.to.name}` : "") +
-      (editor.purchaseOrder && editor.purchaseOrder !== "---" ? ` (PO: ${editor.purchaseOrder})` : "");
+    const title = `Invoice ${id}` + (to?.name ? ` - ${to.name}` : "") + (purchaseOrder && purchaseOrder !== "---" ? ` (PO: ${purchaseOrder})` : "");
     document.title = title;
-  }, [editor.id, editor.to, editor.purchaseOrder]);
+  }, [id, to, purchaseOrder]);
   return (
     <div>
       <TutorialWizard />
@@ -68,10 +65,10 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
             <div className="col-span-6 md:col-span-3 print:col-span-3">
               <Autosave onChange={(record) => setLogo(logoFromRecord(record))} name="logo">
                 <ImageInput
-                  className={`rounded ${editor.logo?.url ? "" : "print:hidden"}`}
+                  className={`rounded ${logo?.url ? "" : "print:hidden"}`}
                   name="url"
                   alt="logo"
-                  defaultValue={editor.logo?.url}
+                  defaultValue={logo?.url}
                   placeholder={placeholder.url}
                   style={{ maxHeight: "80px" }}
                 />
@@ -82,32 +79,32 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
                 <Container>
                   <div className="flex items-center">
                     <p className="font-bold px-2 whitespace-nowrap">Invoice Ref</p>
-                    <TextInput data-testid="invoice-ref" name="invoiceRef" className="w-full" value={editor.id} onChange={setId} />
+                    <TextInput data-testid="invoice-ref" name="invoiceRef" className="w-full" value={id} onChange={setId} />
                   </div>
                   <div className="flex items-center">
                     <p className="font-bold px-2 whitespace-nowrap">
                       <HelpTooltip tooltip="The legal date of this invoice being served">Tax Date</HelpTooltip>
                     </p>
-                    <DateInput data-testid="tax-date" name="taxDate" className="w-full" value={editor.date} onChange={setDate} />
+                    <DateInput data-testid="tax-date" name="taxDate" className="w-full" value={date} onChange={setDate} />
                   </div>
                   <div className="flex items-center">
                     <p className="font-bold px-2 whitespace-nowrap">
                       <HelpTooltip tooltip="If you weren't given a purchase order, leave this blank">PO / Reference</HelpTooltip>
                     </p>
-                    <TextInput name="purchaseOrder" className="w-full" value={editor.purchaseOrder} onChange={setPurchaseOrder} />
+                    <TextInput name="purchaseOrder" className="w-full" value={purchaseOrder} onChange={setPurchaseOrder} />
                   </div>
                 </Container>
               </div>
             </div>
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
               <Autosave onChange={(record) => setFrom(addressFromRecord(record))} name="from-address">
-                <AddressPanel title="From:" address={editor.from} />
+                <AddressPanel title="From:" address={from} />
               </Autosave>
             </div>
 
             <div className={`col-span-6 md:col-span-3 print:col-span-3`}>
               <ManualSave onChange={(record) => setTo(addressFromRecord(record))} onSave={saveAddressAsClient}>
-                <AddressPanel title="To:" address={editor.to} />
+                <AddressPanel title="To:" address={to} />
               </ManualSave>
             </div>
             <div className="col-span-6">
@@ -118,13 +115,13 @@ const InvoiceEditor = ({ clients }: { clients: Client[] }) => {
                 <Container>
                   <h2>Payment:</h2>
                   <div className="p-2">
-                    <StandardField name="terms" title="Payment Terms" defaultValue={editor.payment.terms} />
-                    <StandardField name="sortCode" title="Sort Code" defaultValue={editor.payment.sortCode} {...fieldFormattingOf("sortCode")} />
-                    <StandardField name="number" title="Acc. Number" defaultValue={editor.payment.number} {...fieldFormattingOf("accountNumber")} />
-                    <StandardField name="bankName" title="Bank Name" defaultValue={editor.payment.bankName} />
-                    <StandardField name="emailAddress" title="Contact Email" defaultValue={editor.payment.emailAddress} />
-                    <StandardField name="phoneNumber" title="Contact Number" defaultValue={editor.payment.phoneNumber} />
-                    <StandardField name="info" title="Additional Information" defaultValue={editor.payment.info} />
+                    <StandardField name="terms" title="Payment Terms" defaultValue={payment.terms} />
+                    <StandardField name="sortCode" title="Sort Code" defaultValue={payment.sortCode} {...fieldFormattingOf("sortCode")} />
+                    <StandardField name="number" title="Acc. Number" defaultValue={payment.number} {...fieldFormattingOf("accountNumber")} />
+                    <StandardField name="bankName" title="Bank Name" defaultValue={payment.bankName} />
+                    <StandardField name="emailAddress" title="Contact Email" defaultValue={payment.emailAddress} />
+                    <StandardField name="phoneNumber" title="Contact Number" defaultValue={payment.phoneNumber} />
+                    <StandardField name="info" title="Additional Information" defaultValue={payment.info} />
                   </div>
                 </Container>
               </Autosave>
