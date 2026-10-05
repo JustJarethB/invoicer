@@ -1,6 +1,7 @@
 import { z } from "zod/mini";
 import { db } from "~/db";
-import { AddressSchema, emptyAddress } from "./address";
+import { type Address, AddressSchema, emptyAddress } from "./address";
+import { eventBus } from "~/utils/events";
 import { logger } from "~/utils/logger";
 
 export const ClientSchema = z.object({
@@ -48,3 +49,20 @@ export const getClients = async (): Promise<Client[]> => {
   logger.debug("Loaded clients:", clients);
   return clients;
 };
+
+/**
+ * Resolve a picked client id to the "To" address: a known id populates the
+ * address, an unknown one clears it back to the canonical empty shape and
+ * publishes a warning toast instead of leaving stale data behind.
+ */
+export const createClientAddressLoader =
+  (clients: Client[], setAddress: (address: Address) => void) =>
+  (clientId: string): void => {
+    const client = clients.find((c) => c.id === clientId);
+    if (client) {
+      setAddress(client.address);
+      return;
+    }
+    setAddress(emptyAddress());
+    eventBus.publish({ type: "client", severity: "warning", message: "Selected client could not be found", context: { clientId, action: "not-found" } });
+  };

@@ -71,6 +71,9 @@ export const LogoSchema = z.object({ url: z._default(LegacyLogoUrl, "") });
 
 export type Logo = z.infer<typeof LogoSchema>;
 
+/** Read the logo url from a form record. */
+export const logoFromRecord = (record: Record<string, string>): Logo => ({ url: record.url ?? "" });
+
 export const InvoiceSchema = z.object({
   date: z.string(),
   from: AddressSchema,
